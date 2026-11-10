@@ -207,7 +207,7 @@ BufferInterfaceBlock const& UibGenerator::getPerViewUib() noexcept  {
             { "fogReserved0",            0, Type::FLOAT2, Precision::HIGH },
 
             // ------------------------------------------------------------------------------------
-            // Screen-space reflections [variant: SSR (i.e.: MNT | PCK | DEP)]
+            // Screen-space reflections [variant: SSR (i.e.: MNT | PCK | DEP | STE)]
             // ------------------------------------------------------------------------------------
             { "ssrReprojection",         0, Type::MAT4,  Precision::HIGH },
             { "ssrUvFromViewMatrix",     0, Type::MAT4,  Precision::HIGH },
@@ -240,6 +240,11 @@ BufferInterfaceBlock const& UibGenerator::getPerViewUib() noexcept  {
             { "extraDirReserved0",        0, Type::INT                     },
             { "extraDirReserved1",        0, Type::INT                     },
             { "extraDirReserved2",        0, Type::INT                     },
+
+            // ------------------------------------------------------------------------------------
+            // Motion vectors [variant: MOT]
+            // ------------------------------------------------------------------------------------
+            { "prevClipFromWorldMatrix",  0, Type::MAT4, Precision::HIGH },
 
             // bring PerViewUib to 2 KiB
             { "reserved", sizeof(PerViewUib::reserved)/16, Type::FLOAT4 }

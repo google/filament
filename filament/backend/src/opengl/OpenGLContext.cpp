@@ -466,6 +466,13 @@ void OpenGLContext::initBugs(Bugs* bugs, Extensions const& exts,
                 // Renderer of the form [Mesa Intel(R) HD Graphics 505 (APL 3)]
                 // b/405252622
                 bugs->disable_invalidate_framebuffer = true;
+
+                // Seen on
+                // [Intel]
+                // [Mesa Intel(R) Arc(tm) A750 Graphics (DG2)]
+                // [4.6 (Core Profile) Mesa 26.0.8-1ubuntu0.3]
+                // [4.60]
+                bugs->disable_framebuffer_fetch_extension = true;
             }
         } else if (strstr(renderer, "PowerVR")) {
             // PowerVR GPU
@@ -711,6 +718,7 @@ void OpenGLContext::initExtensionsGLES(Extensions* ext, GLint major, GLint minor
     ext->EXT_texture_compression_bptc = exts.has("GL_EXT_texture_compression_bptc"sv);
     ext->EXT_texture_cube_map_array = exts.has("GL_EXT_texture_cube_map_array"sv) || exts.has("GL_OES_texture_cube_map_array"sv);
     ext->EXT_texture_filter_anisotropic = exts.has("GL_EXT_texture_filter_anisotropic"sv);
+    ext->EXT_texture_norm16 = exts.has("GL_EXT_texture_norm16"sv);
 #if !defined(FILAMENT_IOS)
     ext->EXT_texture_sRGB = exts.has("GL_EXT_sRGB"sv);
 #endif  // !defined(FILAMENT_IOS)
@@ -786,6 +794,7 @@ void OpenGLContext::initExtensionsGL(Extensions* ext, GLint major, GLint minor) 
     ext->EXT_texture_compression_s3tc_srgb = exts.has("GL_EXT_texture_compression_s3tc_srgb"sv);
     ext->EXT_texture_cube_map_array = true;
     ext->EXT_texture_filter_anisotropic = exts.has("GL_EXT_texture_filter_anisotropic"sv);
+    ext->EXT_texture_norm16 = true;
     ext->EXT_texture_sRGB = exts.has("GL_EXT_texture_sRGB"sv);
     ext->GOOGLE_cpp_style_line_directive = exts.has("GL_GOOGLE_cpp_style_line_directive"sv);
     ext->KHR_parallel_shader_compile = exts.has("GL_KHR_parallel_shader_compile"sv);

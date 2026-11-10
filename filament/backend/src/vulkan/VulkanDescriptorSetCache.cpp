@@ -381,15 +381,7 @@ void VulkanDescriptorSetCache::updateSampler(fvkmemory::resource_ptr<VulkanDescr
     }
 
     VkDescriptorSet const vkset = set->getVkSet();
-    VkImageSubresourceRange range = texture->getPrimaryViewRange();
-    VkImageViewType const expectedType = texture->getViewType();
-    if (any(texture->usage & TextureUsage::DEPTH_ATTACHMENT) &&
-            expectedType == VK_IMAGE_VIEW_TYPE_2D) {
-        // If the sampler is part of a mipmapped depth texture, where one of the level *can* be
-        // an attachment, then the range for this view has exactly one level and one layer.
-        range.levelCount = 1;
-        range.layerCount = 1;
-    }
+    VkImageSubresourceRange const range = texture->getPrimaryViewRange();
     VkDescriptorImageInfo info = {
         .sampler = sampler,
         .imageView = texture->getView(range),

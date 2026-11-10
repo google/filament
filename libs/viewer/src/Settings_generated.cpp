@@ -70,6 +70,12 @@ int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, uint8_t* val) {
     return i + 1;
 }
 
+int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, int8_t* val) {
+    CHECK_TOKTYPE(tokens[i], JSMN_PRIMITIVE);
+    *val = strtol(jsonChunk + tokens[i].start, nullptr, 10);
+    return i + 1;
+}
+
 int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, uint16_t* val) {
     CHECK_TOKTYPE(tokens[i], JSMN_PRIMITIVE);
     *val = strtol(jsonChunk + tokens[i].start, nullptr, 10);
@@ -977,6 +983,32 @@ int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, GuardBandOption
 }
 
 std::ostream& operator<<(std::ostream& out, const GuardBandOptions& in) {
+    return out << "{\n"
+        << "\"enabled\": " << to_string(in.enabled) << "\n"
+        << "}";
+}
+
+int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, MotionVectorsOptions* out) {
+    CHECK_TOKTYPE(tokens[i], JSMN_OBJECT);
+    int size = tokens[i++].size;
+    for (int j = 0; j < size; ++j) {
+        const jsmntok_t tok = tokens[i];
+        CHECK_KEY(tok);
+        if (compare(tok, jsonChunk, "enabled") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->enabled);
+        } else {
+            slog.w << "Invalid MotionVectorsOptions key: '" << STR(tok, jsonChunk) << "'" << io::endl;
+            i = parse(tokens, i + 1);
+        }
+        if (i < 0) {
+            slog.e << "Invalid MotionVectorsOptions value: '" << STR(tok, jsonChunk) << "'" << io::endl;
+            return i;
+        }
+    }
+    return i;
+}
+
+std::ostream& operator<<(std::ostream& out, const MotionVectorsOptions& in) {
     return out << "{\n"
         << "\"enabled\": " << to_string(in.enabled) << "\n"
         << "}";

@@ -43,11 +43,18 @@ Filament.initWebGPU = async function() {
         });
     }
 
-    const requiredFeatures = [];
+    // These lists mirror REQUIRED_FEATURES and OPTIONAL_FEATURES in the native backend
+    // (filament/backend/src/webgpu/platform/WebGPUPlatform.cpp). On WASM, the backend uses this
+    // device as-is and does not perform its own adapter validation, so it happens here instead.
+    const filamentRequiredFeatures = [
+        'rg11b10ufloat-renderable',
+    ];
     const optionalFeatures = [
         'immediates',
         'chromium-experimental-immediate-data',
-        'rg11b10ufloat-renderable',
+        // Linear filtering of r32float, rg32float, and rgba32float textures. Not all GPUs support
+        // it, so it is optional. Without it, the backend reports fp32 formats as unfilterable
+        // (e.g. high-precision VSM is disabled) and falls back to nearest filtering for fp32 blits.
         'float32-filterable',
         'float32-blendable',
         'depth-clip-control',
@@ -56,6 +63,12 @@ Filament.initWebGPU = async function() {
         'texture-compression-etc2',
         'texture-compression-astc'
     ];
+    const missingFeatures = filamentRequiredFeatures.filter((f) => !adapter.features.has(f));
+    if (missingFeatures.length > 0) {
+        console.warn("WebGPU adapter is missing feature(s) required by Filament: " +
+                missingFeatures.join(", ") + ". Rendering may fail.");
+    }
+    const requiredFeatures = filamentRequiredFeatures.filter((f) => adapter.features.has(f));
     for (const feature of optionalFeatures) {
         if (adapter.features.has(feature)) {
             requiredFeatures.push(feature);

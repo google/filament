@@ -169,6 +169,10 @@ value_object<View::GuardBandOptions>("View$GuardBandOptions")
     .field("enabled", &View::GuardBandOptions::enabled)
     ;
 
+value_object<View::MotionVectorsOptions>("View$MotionVectorsOptions")
+    .field("enabled", &View::MotionVectorsOptions::enabled)
+    ;
+
 value_object<View::VsmShadowOptions>("View$VsmShadowOptions")
     .field("anisotropy", &View::VsmShadowOptions::anisotropy)
     .field("mipmapping", &View::VsmShadowOptions::mipmapping)

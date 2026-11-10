@@ -843,4 +843,111 @@ std::vector<uint8_t> makeMeshoptSparseAccessorOobGlb() {
     return assembleGlb(std::move(json), std::move(bin));
 }
 
+std::vector<uint8_t> makeTranslationAnimationGlb(TranslationAnimationOptions const& options) {
+    constexpr uint32_t kTimestampCount = 2u;
+    constexpr uint32_t kTranslationBytes = kTimestampCount * 3u * sizeof(float);
+
+    // Lay out the timeline. Without a stride the two timestamps are packed; with a stride the
+    // second timestamp starts `timelineByteStride` bytes after the first and the gap is padded.
+    const uint32_t stride = options.timelineByteStride;
+    EXPECT_TRUE(stride == 0u || (stride >= 8u && stride % 4u == 0u))
+            << "timelineByteStride must be 0 or a multiple of 4 that is at least 8";
+    const uint32_t timelineBytes = stride ? stride * (kTimestampCount - 1u) + sizeof(float)
+                                          : kTimestampCount * sizeof(float);
+
+    std::vector<uint8_t> timeline(timelineBytes, 0);
+    {
+        float* floats = reinterpret_cast<float*>(timeline.data());
+        const size_t floatsPerKey = stride ? stride / sizeof(float) : 1u;
+        for (size_t i = 0; i < timelineBytes / sizeof(float); ++i) {
+            floats[i] = kTranslationAnimationStridePadding;
+        }
+        floats[0] = 0.0f;
+        floats[floatsPerKey] = options.lastTimestamp;
+    }
+
+    // Translations: (0, 0, 0) followed by kTranslationAnimationEnd.
+    std::vector<uint8_t> translations(kTranslationBytes, 0);
+    {
+        float* floats = reinterpret_cast<float*>(translations.data());
+        floats[3] = kTranslationAnimationEnd.x;
+        floats[4] = kTranslationAnimationEnd.y;
+        floats[5] = kTranslationAnimationEnd.z;
+    }
+
+    // Buffer 0 is the GLB BIN chunk. When the timeline is placed in an unloaded buffer, the BIN
+    // chunk only contains the translations and buffer 1 (no URI) nominally holds the timeline.
+    std::string buffers;
+    std::string timelineView;
+    std::string translationView;
+    std::vector<uint8_t> bin;
+    if (options.timelineInUnloadedBuffer) {
+        bin = translations;
+        buffers = "    { \"byteLength\": " + std::to_string(kTranslationBytes) + " },\n"
+                  "    { \"byteLength\": " + std::to_string(timelineBytes) + " }\n";
+        timelineView = "{ \"buffer\": 1, \"byteOffset\": 0, \"byteLength\": " +
+                std::to_string(timelineBytes);
+        translationView = "{ \"buffer\": 0, \"byteOffset\": 0, \"byteLength\": " +
+                std::to_string(options.outputViewByteLength) + " }";
+    } else {
+        bin = timeline;
+        bin.insert(bin.end(), translations.begin(), translations.end());
+        buffers = "    { \"byteLength\": " + std::to_string(bin.size()) + " }\n";
+        timelineView = "{ \"buffer\": 0, \"byteOffset\": 0, \"byteLength\": " +
+                std::to_string(timelineBytes);
+        translationView = "{ \"buffer\": 0, \"byteOffset\": " + std::to_string(timelineBytes) +
+                ", \"byteLength\": " + std::to_string(options.outputViewByteLength) + " }";
+    }
+    if (stride) {
+        timelineView += ", \"byteStride\": " + std::to_string(stride);
+    }
+    timelineView += " }";
+
+    std::string json = std::string(R"({
+  "asset": { "version": "2.0" },
+  "buffers": [
+)") + buffers + R"(  ],
+  "bufferViews": [
+    )" + timelineView + R"(,
+    )" + translationView + R"(
+  ],
+  "accessors": [
+    {
+      "bufferView": 0,
+      "componentType": 5126,
+      "count": )" + std::to_string(kTimestampCount) + R"(,
+      "type": "SCALAR",
+      "min": [0],
+      "max": [1]
+    },
+    {
+      "bufferView": 1,
+      "byteOffset": )" + std::to_string(options.outputAccessorByteOffset) + R"(,
+      "componentType": 5126,
+      "count": )" + std::to_string(kTimestampCount) + R"(,
+      "type": "VEC3"
+    }
+  ],
+  "animations": [
+    {
+      "samplers": [
+        { "input": 0, "interpolation": "LINEAR", "output": 1 }
+      ],
+      "channels": [
+        { "sampler": 0, "target": { "node": 0, "path": "translation" } }
+      ]
+    }
+  ],
+  "nodes": [
+    { "name": "animated" }
+  ],
+  "scenes": [
+    { "nodes": [0] }
+  ],
+  "scene": 0
+})";
+
+    return assembleGlb(std::move(json), std::move(bin));
+}
+
 } // namespace test

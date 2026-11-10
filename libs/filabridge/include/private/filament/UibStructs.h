@@ -26,6 +26,8 @@
 #include <array>
 #include <string_view>
 
+#include <stddef.h>
+
 /*
  * Here we define all the UBOs known by filament as C structs. It is used by filament to
  * fill the uniform values and get the interface block names. It is also used by filabridge to
@@ -195,7 +197,7 @@ struct PerViewUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
     math::float2 fogReserved0;
 
     // --------------------------------------------------------------------------------------------
-    // Screen-space reflections [variant: SSR (i.e.: MNT | PCK | DEP)]
+    // Screen-space reflections [variant: SSR (i.e.: MNT | PCK | DEP | STE)]
     // --------------------------------------------------------------------------------------------
     math::mat4f ssrReprojection;
     math::mat4f ssrUvFromViewMatrix;
@@ -231,8 +233,15 @@ struct PerViewUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
     int32_t extraDirReserved1;
     int32_t extraDirReserved2;
 
+    // --------------------------------------------------------------------------------------------
+    // Motion vectors [variant: MOT]
+    // --------------------------------------------------------------------------------------------
+    // Previous render's unjittered clip-from-world matrix, expressed in this frame's shader world
+    // space. Mono: motion vectors are disabled with stereo.
+    math::mat4f prevClipFromWorldMatrix;
+
     // bring PerViewUib to 2 KiB
-    math::float4 reserved[9];
+    math::float4 reserved[5];
 };
 
 // 2 KiB == 128 float4s
@@ -251,7 +260,11 @@ struct PerRenderableData {
     // TODO: We need a better solution, this currently holds the average local scale for the renderable
     float userData;
 
-    math::float4 reserved[8];
+    // Motion vectors [variant: MOT]: previous-from-current world transform of this draw,
+    // in shader world space. Identity when the draw didn't move.
+    std140::mat44 prevWorldFromWorldMatrix;  // std140 offset 128
+
+    math::float4 reserved[4];
 
     static uint32_t packFlagsChannels(
             bool skinning, uint8_t morphing, bool contactShadows, bool hasInstanceBuffer,
@@ -274,6 +287,10 @@ static_assert(std::is_trivially_default_constructible_v<PerRenderableData>,
 
 static_assert(sizeof(PerRenderableData) == 256,
         "sizeof(PerRenderableData) must be 256 bytes");
+
+// must match the std140 layout of PerRenderableData in surface_types.glsl
+static_assert(offsetof(PerRenderableData, prevWorldFromWorldMatrix) == 128,
+        "PerRenderableData::prevWorldFromWorldMatrix must be at std140 offset 128");
 
 struct alignas(256) PerRenderableUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
     static constexpr std::string_view _name{ "ObjectUniforms" };

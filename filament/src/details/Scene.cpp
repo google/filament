@@ -25,6 +25,7 @@
 
 #include "details/Camera.h"
 #include "details/Engine.h"
+#include "details/InstanceBuffer.h"
 #include "details/Skybox.h"
 #include "details/View.h"
 
@@ -40,6 +41,7 @@
 #include <utils/compiler.h>
 #include <utils/debug.h>
 #include <utils/Entity.h>
+#include <utils/EntityInstanceMap.h>
 #include <utils/EntityManager.h>
 #include <utils/Invocable.h>
 #include <utils/Mutex.h>
@@ -61,6 +63,8 @@
 #include <tuple>
 #include <utility>
 
+#include <string.h>
+
 using namespace filament::backend;
 using namespace filament::math;
 using namespace utils;
@@ -70,62 +74,134 @@ namespace filament {
 // Explicitly define the architectural boundaries we rely on
 constexpr size_t BITSET_PAGE_BITS = (1U << PagedArenaBitset::FILAMENT_PAGE_SHIFT);
 constexpr size_t FILAMENT_INDEX_SPACE = 1U << FILAMENT_GENERATION_SHIFT;
-constexpr size_t MAX_POSSIBLE_ID = 1U << (FILAMENT_GENERATION_SHIFT + FILAMENT_GENERATION_BITS);
+constexpr size_t MAX_POSSIBLE_ID = 1U << PagedArenaBitset::DOMAIN_BITS;
 constexpr size_t MAX_POSSIBLE_PAGES = MAX_POSSIBLE_ID / BITSET_PAGE_BITS;
 
-//  Generation Alignment Guarantee
+static_assert(MAX_POSSIBLE_ID == FILAMENT_INDEX_SPACE,
+    "FATAL: PagedArenaBitset domain must match the 17-bit Entity index space.");
+
+// Page Alignment Guarantee
 static_assert((FILAMENT_INDEX_SPACE % BITSET_PAGE_BITS) == 0,
     "FATAL (PERFORMANCE): Bitset Page Size must perfectly divide the "
-    "Entity Index Space. This ensures that recycled entities (new generations) "
-    "align perfectly with page boundaries and do not fragment the Arena.");
+    "Entity Index Space.");
 
 // PagedArenaBitset L2 Directory Capacity Guarantee
 static_assert(MAX_POSSIBLE_PAGES <= std::numeric_limits<uint16_t>::max(),
-    "FATAL (OVERFLOW): The maximum possible Entity ID exceeds the capacity "
+    "FATAL (OVERFLOW): The maximum possible Entity Index exceeds the capacity "
     "of the PagedArenaBitset's 16-bit L2 Directory. You must either increase "
     "the Directory index type to uint32_t or increase the Page Size.");
 
 // ------------------------------------------------------------------------------------------------
 
 FScene::FScene(FEngine& engine) :
-    mEngine(engine) {
-    EntityManager& em = engine.getEntityManager();
-    em.registerChangeCallback(this,
-            [pending = mPendingDestroyed](Slice<const Entity> entities) {
-                LockGuard const lock(pending->lock);
-                for (Entity const e : entities) {
-                    pending->entities.add(e.getId());
-                }
-            });
+    mEngine(engine),
+    mSceneManager(engine.getEntityManager()) {
 }
 
-FScene::~FScene() noexcept {
-    mEngine.getEntityManager().unregisterChangeCallback(this);
+FScene::~FScene() noexcept = default;
+
+void FScene::gc() noexcept {
+    mSceneManager.gc(this, &FScene::destroyComponents);
 }
 
-void FScene::flushPendingDestroyed() noexcept {
-    {
-        LockGuard const lock(mPendingDestroyed->lock);
-        if (mPendingDestroyed->entities.empty()) {
-            return;
-        }
-        mPendingDestroyed->entities.swap(mTempPendingDestroyed);
-        mPendingDestroyed->entities.clear();
-    }
-    mEntities.difference(mTempPendingDestroyed);
+void FScene::pruneDestroyedEntities() noexcept {
+    mSceneManager.catchupCurrentGarbage();
+    gc();
+}
+
+void FScene::destroyComponents(Entity const* entities, size_t const count) noexcept {
+    mSceneManager.removeComponents(entities, count);
     for (FView* view : mRegisteredViews) {
         if (auto* cache = view->getSceneCache(); cache) {
-            cache->destroyedEntities.merge(mTempPendingDestroyed);
+            for (size_t i = 0; i < count; ++i) {
+                Entity const e = entities[i];
+                cache->renderableCache.remove(e);
+                cache->lightCache.remove(e);
+                cache->directionalLights.remove(EntityManager::getIndex(e));
+            }
+            cache->hasEvictedEntities = true;
         }
     }
-    mTempPendingDestroyed.clear();
 }
+
+template<typename SoAType, typename Extra, size_t EntityColumn, size_t... CachedColumns>
+UTILS_NOINLINE
+std::pair<uint32_t, bool>
+SoaCache<SoAType, Extra, EntityColumn, CachedColumns...>::insertNew(
+        Entity const e, double3 const& translation) {
+    // acquire() only gets here when getInstance(e) returned 0, i.e. the slot for e's 17-bit index
+    // is either empty or still holds a stale generation of that index. The latter must never
+    // happen (see the SceneCacheData invariant): insert() would orphan the stale row, remove()
+    // could no longer find it, and pruneStaleRows() would never terminate.
+    assert_invariant(mIndexMap.getArray().get(EntityManager::getIndex(e)) == 0);
+    uint32_t const index = static_cast<uint32_t>(mSoA.size());
+    mSoA.push_back();
+    mSoA.template elementAt<EntityColumn>(index) = e;
+    mTranslations.push_back(translation);
+    if constexpr (kHasExtra) {
+        mExtras.emplace_back();
+    }
+    mIndexMap.insert(e, index + 1u);
+    return { index, true };
+}
+
+template std::pair<uint32_t, bool> SceneCacheData::RenderableCache::insertNew(
+        Entity, double3 const&);
+template std::pair<uint32_t, bool> SceneCacheData::LightCache::insertNew(
+        Entity, double3 const&);
 
 SceneCacheData::SceneCacheData() noexcept = default;
 SceneCacheData::~SceneCacheData() noexcept = default;
 
+bool PrevTransform::bitwiseEquals(PrevTransform const& other) const noexcept {
+    return memcmp(&world, &other.world, sizeof(world)) == 0 &&
+           memcmp(&lo, &other.lo, sizeof(lo)) == 0;
+}
+
+mat4f const* SceneCacheData::MotionVectorsState::trackInstanceBuffer(
+        FInstanceBuffer const& ib) noexcept {
+    InstanceBufferHistory& history = instanceBuffers.try_emplace(ib.getUid()).first.value();
+    history.lastSeen = renderIndex;
+    if (history.locals.empty()) {
+        // No history yet: the entry is new, possibly inserted earlier at this render by another
+        // renderable using the same buffer.
+        history.pendingSnapshot = &ib;
+        return nullptr;
+    }
+    if (history.revision == ib.getRevision()) {
+        return nullptr;
+    }
+    // The snapshot is taken at commit, so that all the renderables using this buffer see the same
+    // history at this render.
+    history.pendingSnapshot = &ib;
+    assert_invariant(history.locals.size() == ib.getInstanceCount());
+    return history.locals.data();
+}
+
+void SceneCacheData::MotionVectorsState::reset() noexcept {
+    // reset() runs between frames; processDeferredUpdates() and prepareMotionVectors() always
+    // fill and drain `moved` within one FView::prepare().
+    assert_invariant(moved.empty());
+    instanceBuffers.clear();
+    hasHistory = false;
+    hasMovingRenderables = false;
+}
+
+void SceneCacheData::commitMovedRenderables() noexcept {
+#if defined(FILAMENT_SUPPORTS_MOTION_VECTORS)
+    auto& soa = renderableCache.getSoA();
+    for (auto const& [e, currTransform] : motionVectors.moved) {
+        uint32_t const index = renderableCache.getIndex(e);
+        assert_invariant(index != 0xFFFFFFFF);
+        renderableCache.extraAt(index) = currTransform;
+        soa.elementAt<FScene::VISIBILITY_STATE>(index).motionMoved = false;
+    }
+    motionVectors.moved.clear();
+#endif
+}
+
 bool SceneCacheData::hasDirtyEntities() const noexcept {
-    return !removedEntities.empty() || !dirtyEntities.empty() || !destroyedEntities.empty();
+    return hasEvictedEntities || !dirtyEntities.empty();
 }
 
 void SceneCacheData::resize(size_t const renderableCount, size_t const lightCount) {
@@ -135,6 +211,11 @@ void SceneCacheData::resize(size_t const renderableCount, size_t const lightCoun
     if (renderableData.capacity() < renderableDataCapacity) {
         renderableData.clear();
         renderableData.setCapacity(renderableDataCapacity);
+        // updateUBOs() uploads whole rows, but some bytes are never written (reserved fields,
+        // std140 padding, prevWorldFromWorldMatrix without motion vectors). Zero them so stale
+        // heap data can't reach the GPU.
+        memset(renderableData.data<FScene::UBO>(), 0,
+                renderableDataCapacity * sizeof(PerRenderableData));
     }
     renderableData.resize(renderableCount);
 
@@ -177,15 +258,10 @@ void SceneCacheData::resize(size_t const renderableCount, size_t const lightCoun
     }
 }
 
-void FScene::flushNotifications() const noexcept {
-    mEngine.getEntityManager().flushNotifications();
-    mEngine.getTransformManager().ensureWorldTransformsUpToDate();
-}
-
 UTILS_NOINLINE
 static void updateRenderableCache(
         FEngine& engine,
-        SceneCacheData::RenderableCache& cache,
+        SceneCacheData& sceneCache,
         Entity const e,
         FRenderableManager::Instance const ri,
         FTransformManager::Instance const ti,
@@ -213,8 +289,30 @@ static void updateRenderableCache(
     float const scale = (length(transform[0].xyz) + length(transform[1].xyz) +
             length(transform[2].xyz)) / 3.0f;
 
-    uint32_t const index = cache.acquire(e, rotatedTranslation);
+    auto& cache = sceneCache.renderableCache;
+    auto const [index, inserted] = cache.acquire(e, rotatedTranslation);
     auto& soa = cache.getSoA();
+
+#if defined(FILAMENT_SUPPORTS_MOTION_VECTORS)
+    auto& mv = sceneCache.motionVectors;
+    // The world transform in its exact stored representation. An entity without a Transform
+    // component uses the null instance, whose world transform is the identity: destroying the
+    // component of a renderable therefore reports a motion to the identity, like any other
+    // transform change.
+    PrevTransform const currTransform{ tcm.getWorldTransform(ti), tcm.getWorldTranslationLo(ti) };
+    PrevTransform& prevTransform = cache.extraAt(index);
+    if (inserted || sceneCache.needsFullUpdate || !mv.hasHistory) {
+        prevTransform = currTransform;
+    } else if (!currTransform.bitwiseEquals(prevTransform)) {
+        // The previous transform is advanced by commitMovedRenderables(), once this render has
+        // used it.
+        visibility.motionMoved = true;
+        mv.moved.emplace_back(e, currTransform);
+    }
+#else
+    (void)inserted;
+#endif
+
     soa.elementAt<FScene::RENDERABLE_ENTITY>(index) = e;
     soa.elementAt<FScene::WORLD_TRANSFORM>(index) = mat4f{ shaderWorldRotation };
     soa.elementAt<FScene::VISIBILITY_STATE>(index) = visibility;
@@ -255,7 +353,7 @@ static void updateLightCache(
         d = normalize(mat3f::getTransformForNormals(shaderWorldRotation) * d);
     }
 
-    uint32_t const index = cache.acquire(e, rotatedPosition);
+    auto const [index, _] = cache.acquire(e, rotatedPosition);
     auto& soa = cache.getSoA();
     soa.elementAt<FScene::LIGHT_ENTITY>(index) = e;
     soa.elementAt<FScene::RADIUS>(index) = r;
@@ -267,26 +365,35 @@ static void updateLightCache(
 bool FScene::processDeferredUpdates(mat3 const& worldRotation, bool shadowReceiversAreCasters,
         SceneCacheData& cache) noexcept {
     FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_FILAMENT);
+    assert_invariant(cache.motionVectors.moved.empty());
 
     FEngine& engine = mEngine;
     FTransformManager const& tcm = engine.getTransformManager();
     tcm.ensureWorldTransformsUpToDate();
 
-    flushPendingDestroyed();
+    pruneDestroyedEntities();
+
+    EntitySet const& sceneEntities = mSceneManager.getEntityBitset();
 
     if (UTILS_UNLIKELY(cache.needsFullUpdate)) {
-        cache.directionalLights.intersect(mEntities);
-        auto checkRemoved = [&](Entity const* entities, size_t const count) {
-            for (size_t i = 0; i < count; ++i) {
-                if (uint32_t const id = entities[i].getId(); !mEntities[id]) {
-                    cache.removedEntities.add(id);
+        // Directional lights bitset is rebuilt from scratch below when viewStateChanged is true.
+        cache.directionalLights.clear();
+        auto pruneStaleRows = [&](auto& soaCache, auto entityColTag) {
+            constexpr size_t Col = decltype(entityColTag)::value;
+            size_t i = 0;
+            while (i < soaCache.size()) {
+                Entity const e = soaCache.getSoA().template elementAt<Col>(i);
+                if (!mSceneManager.hasComponent(e)) {
+                    soaCache.remove(e);
+                } else {
+                    ++i;
                 }
             }
         };
-        checkRemoved(cache.renderableCache.getSoA().data<RENDERABLE_ENTITY>(),
-                cache.renderableCache.size());
-        checkRemoved(cache.lightCache.getSoA().data<LIGHT_ENTITY>(),
-                cache.lightCache.size());
+        pruneStaleRows(cache.renderableCache,
+                std::integral_constant<size_t, RENDERABLE_ENTITY>{});
+        pruneStaleRows(cache.lightCache,
+                std::integral_constant<size_t, LIGHT_ENTITY>{});
     }
 
     bool const viewStateChanged = (cache.needsFullUpdate ||
@@ -298,43 +405,25 @@ bool FScene::processDeferredUpdates(mat3 const& worldRotation, bool shadowReceiv
         return false;
     }
 
-    // Process deferred removals from the Scene _and_ dead entities.
     EntityManager const& em = engine.getEntityManager();
     FRenderableManager const& rcm = engine.getRenderableManager();
     FLightManager const& lcm = engine.getLightManager();
-
-    // Every registered View receives every destroyed entity. Do NOT filter them by mEntities:
-    // flushPendingDestroyed() has already removed them from mEntities while they may still be in
-    // this View's cache. SoaCache::remove() is a no-op for entities that aren't cached.
-    if (UTILS_UNLIKELY(!cache.destroyedEntities.empty() || !cache.removedEntities.empty())) {
-        // Merge the entities that were removed from the scene (but could have been re-added!).
-        cache.destroyedEntities.merge(cache.removedEntities);
-        // Cache invalidation and scene removal.
-        cache.destroyedEntities.forEachSetBit([&](uint32_t const bit) {
-            Entity const e = Entity::import(int32_t(bit));
-            cache.renderableCache.remove(e);
-            cache.lightCache.remove(e);
-            cache.directionalLights.remove(bit);
-            // An Entity could have been re-added, so it could be in mEntities at this point; in
-            // that case, it will also be in dirtyEntities.
-            assert_invariant(!cache.removedEntities[bit] ||
-                    (!mEntities[bit] || cache.dirtyEntities[bit]));
-        });
-        cache.destroyedEntities.clear();
-        cache.removedEntities.clear();
-    }
 
     // Check the states that require a full cache rebuild
     if (UTILS_LIKELY(viewStateChanged)) {
         cache.previousWorldRotation = worldRotation;
         cache.previousShadowReceiversAreCasters = shadowReceiversAreCasters;
-        cache.dirtyEntities.copyFrom(mEntities); // Mark all as dirty for full rebuild
+        cache.dirtyEntities.copyFrom(sceneEntities); // Mark all as dirty for full rebuild
     }
 
     // Process modified entities. Entities without a TransformManager component (common for lights)
     // use the null TransformManager instance (0), whose world transform is identity.
-    em.getAliveEntities(mTempAliveEntities);
-    EntitySet::intersect(&mTempActiveDirty, mEntities, cache.dirtyEntities, mTempAliveEntities);
+    // Note: no alive-entity filter is needed here because pruneDestroyedEntities() above already
+    // flushed notifications and evicted all destroyed entities from sceneEntities. Any entity
+    // destroyed concurrently on another thread after that point remains EBR-protected by
+    // mSceneManager (so getEntity() stays exact), still has valid main-thread components for this
+    // frame, and will be evicted on the next pruneDestroyedEntities() / gc().
+    EntitySet::intersect(&mTempActiveDirty, sceneEntities, cache.dirtyEntities);
     EntitySet const& activeDirty = mTempActiveDirty;
 
     // remove (from the cache) renderables that have lost their RenderableManager component
@@ -344,7 +433,7 @@ bool FScene::processDeferredUpdates(mat3 const& worldRotation, bool shadowReceiv
         // An entity needs to be removed if it is dirty but no longer has the component.
         EntitySet::difference(&mTempToRemoveRenderables, activeDirty, rcm.getEntityBitset());
         mTempToRemoveRenderables.forEachSetBit([&](uint32_t const bit) {
-            Entity const e = Entity::import(int32_t(bit));
+            Entity const e = em.getEntity(bit);
             cache.renderableCache.remove(e);
         });
     }
@@ -356,36 +445,34 @@ bool FScene::processDeferredUpdates(mat3 const& worldRotation, bool shadowReceiv
         // An entity needs to be removed if it is dirty but no longer has the component.
         EntitySet::difference(&mTempToRemoveLights, activeDirty, lcm.getEntityBitset());
         mTempToRemoveLights.forEachSetBit([&](uint32_t const bit) {
-            Entity const e = Entity::import(int32_t(bit));
+            Entity const e = em.getEntity(bit);
             cache.lightCache.remove(e);
             cache.directionalLights.remove(bit);
         });
     }
 
     renderableEntities.extractTo(mTempExtractedRenderables);
-    for (uint32_t const id : mTempExtractedRenderables) {
-        Entity const e = Entity::import(int32_t(id));
+    for (uint32_t const index : mTempExtractedRenderables) {
+        Entity const e = em.getEntity(index);
         auto const ri = rcm.getInstance(e);
-        // Renderables with an instance count of 0 are not drawn, so we skip them entirely.
-        if (UTILS_LIKELY(rcm.getInstancesInfo(ri).count)) {
-            auto const ti = tcm.getInstance(e);
-            updateRenderableCache(engine, cache.renderableCache, e, ri, ti,
-                    worldRotation, shadowReceiversAreCasters);
-        } else {
+        if (UTILS_UNLIKELY(rcm.getInstancesInfo(ri).count == 0)) {
             cache.renderableCache.remove(e);
+            continue;
         }
+        updateRenderableCache(engine, cache, e, ri, tcm.getInstance(e),
+                worldRotation, shadowReceiversAreCasters);
     }
 
     lightEntities.extractTo(mTempExtractedLights);
-    for (uint32_t const id : mTempExtractedLights) {
-        Entity const e = Entity::import(int32_t(id));
+    for (uint32_t const index : mTempExtractedLights) {
+        Entity const e = em.getEntity(index);
         auto const li = lcm.getInstance(e);
         auto const ti = tcm.getInstance(e);
         if (lcm.isDirectionalLight(li)) {
             cache.lightCache.remove(e);
-            cache.directionalLights.add(id);
+            cache.directionalLights.add(index);
         } else {
-            cache.directionalLights.remove(id);
+            cache.directionalLights.remove(index);
             updateLightCache(engine, cache.lightCache, e, li, ti, worldRotation);
         }
     }
@@ -394,7 +481,7 @@ bool FScene::processDeferredUpdates(mat3 const& worldRotation, bool shadowReceiv
     auto& directionalInstances = mTempDirectionalInstances;
     directionalInstances.clear();
     cache.directionalLights.forEachSetBit([&](uint32_t const bit) {
-        Entity const e = Entity::import(int32_t(bit));
+        Entity const e = em.getEntity(bit);
         if (auto const li = lcm.getInstance(e)) {
             directionalInstances.emplace_back(li, tcm.getInstance(e));
         }
@@ -464,6 +551,7 @@ bool FScene::processDeferredUpdates(mat3 const& worldRotation, bool shadowReceiv
     }
 
     cache.dirtyEntities.clear();
+    cache.hasEvictedEntities = false;
     cache.needsFullUpdate = false;
     return true;
 }
@@ -474,8 +562,6 @@ void FScene::prepare(JobSystem&,
         bool const shadowReceiversAreCasters,
         SceneCacheData& cache) noexcept {
     FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_FILAMENT);
-
-    flushNotifications();
 
     processDeferredUpdates(worldTransform.upperLeft(), shadowReceiversAreCasters, cache);
 
@@ -691,6 +777,7 @@ void FScene::terminate(FEngine&) {
         unregisterView(view);
         view->detachScene(this);
     }
+    mSceneManager.clearAll();
 }
 
 void FScene::prepareDynamicLights(const CameraInfo& camera,
@@ -786,11 +873,12 @@ void FScene::registerView(FView* view) {
         FTransformManager& tcm = engine.getTransformManager();
         if (auto* cache = view->getSceneCache(); cache) {
             cache->needsFullUpdate = true;
+            cache->hasEvictedEntities = false;
             cache->dirtyEntities.clear();
-            cache->removedEntities.clear();
-            rcm.registerBitset(&cache->dirtyEntities, &mEntities);
-            lcm.registerBitset(&cache->dirtyEntities, &mEntities);
-            tcm.registerBitset(&cache->dirtyEntities, &mEntities);
+            EntitySet const& entities = mSceneManager.getEntityBitset();
+            rcm.registerBitset(&cache->dirtyEntities, &entities);
+            lcm.registerBitset(&cache->dirtyEntities, &entities);
+            tcm.registerBitset(&cache->dirtyEntities, &entities);
         }
     }
 }
@@ -799,7 +887,7 @@ void FScene::unregisterView(FView* view) {
     auto it = std::find(mRegisteredViews.begin(), mRegisteredViews.end(), view);
     assert_invariant(it != mRegisteredViews.end());
     if (it != mRegisteredViews.end()) {
-        flushPendingDestroyed();
+        pruneDestroyedEntities();
         auto& engine = mEngine;
         FRenderableManager& rcm = engine.getRenderableManager();
         FLightManager& lcm = engine.getLightManager();
@@ -815,16 +903,16 @@ void FScene::unregisterView(FView* view) {
 
 UTILS_NOINLINE
 void FScene::addEntity(Entity const entity) {
-    // A destroyed (or null) Entity can never be rendered. It must not enter mEntities either:
-    // its EntityManager destruction notification was delivered before this call, so nothing
-    // would ever prune it.
+    // A destroyed (or null) Entity can never be rendered. It must not enter mSceneManager either:
+    // its EntityManager destruction epoch may already have been sealed.
     if (UTILS_UNLIKELY(!mEngine.getEntityManager().isAlive(entity))) {
         return;
     }
-    if (!mEntities.fetchAdd(entity.getId())) {
+    if (mSceneManager.tryAddComponent(entity).added) {
+        uint32_t const index = EntityManager::getIndex(entity);
         for (FView* view : mRegisteredViews) {
             if (auto* cache = view->getSceneCache(); cache) {
-                cache->dirtyEntities.add(entity.getId());
+                cache->dirtyEntities.add(index);
             }
         }
     }
@@ -839,10 +927,14 @@ void FScene::addEntities(Slice<const Entity> entities) {
 
 UTILS_NOINLINE
 void FScene::remove(Entity const entity) {
-    if (mEntities.fetchRemove(entity.getId())) {
+    if (mSceneManager.removeComponent(entity) != 0) {
+        uint32_t const index = EntityManager::getIndex(entity);
         for (FView* view : mRegisteredViews) {
             if (auto* cache = view->getSceneCache(); cache) {
-                cache->removedEntities.add(entity.getId());
+                cache->renderableCache.remove(entity);
+                cache->lightCache.remove(entity);
+                cache->directionalLights.remove(index);
+                cache->hasEvictedEntities = true;
             }
         }
     }
@@ -857,12 +949,18 @@ void FScene::removeEntities(Slice<const Entity> entities) {
 
 UTILS_NOINLINE
 void FScene::removeAllEntities() noexcept {
-    for (FView* view : mRegisteredViews) {
-        if (auto* cache = view->getSceneCache(); cache) {
-            cache->removedEntities.merge(mEntities);
+    if (!mSceneManager.empty()) {
+        mSceneManager.clearAll();
+        for (FView* view : mRegisteredViews) {
+            if (auto* cache = view->getSceneCache(); cache) {
+                cache->renderableCache.clear();
+                cache->lightCache.clear();
+                cache->directionalLights.clear();
+                cache->dirtyEntities.clear();
+                cache->hasEvictedEntities = true;
+            }
         }
     }
-    mEntities.clear();
 }
 
 UTILS_NOINLINE
@@ -870,7 +968,8 @@ size_t FScene::getRenderableCount() const noexcept {
     FEngine& engine = mEngine;
     EntityManager const& em = engine.getEntityManager();
     FRenderableManager const& rcm = engine.getRenderableManager();
-    return EntitySet::intersectSize(em.getAliveEntities(), rcm.getEntityBitset(), mEntities);
+    return EntitySet::intersectSize(
+            em.getAliveEntities(), rcm.getEntityBitset(), mSceneManager.getEntityBitset());
 }
 
 UTILS_NOINLINE
@@ -878,12 +977,13 @@ size_t FScene::getLightCount() const noexcept {
     FEngine& engine = mEngine;
     EntityManager const& em = engine.getEntityManager();
     FLightManager const& lcm = engine.getLightManager();
-    return EntitySet::intersectSize(em.getAliveEntities(), lcm.getEntityBitset(), mEntities);
+    return EntitySet::intersectSize(
+            em.getAliveEntities(), lcm.getEntityBitset(), mSceneManager.getEntityBitset());
 }
 
 UTILS_NOINLINE
 bool FScene::hasEntity(Entity const entity) const noexcept {
-    return mEntities[entity.getId()];
+    return mSceneManager.hasComponent(entity);
 }
 
 UTILS_NOINLINE
@@ -900,8 +1000,11 @@ void FScene::setSkybox(FSkybox* skybox) noexcept {
 
 UTILS_NOINLINE
 void FScene::forEach(Invocable<void(Entity)>&& functor) const noexcept {
-    mEntities.forEachSetBit([&](uint32_t const bit) {
-        functor(Entity::import(int32_t(bit)));
-    });
+    Slice<const Entity> const entities{
+        mSceneManager.getEntities(), mSceneManager.getComponentCount()
+    };
+    for (Entity const e : entities) {
+        functor(e);
+    }
 }
 } // namespace filament

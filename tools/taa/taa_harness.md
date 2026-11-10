@@ -22,6 +22,50 @@ This alone is sufficient after editing `taa.mat` — it is a source of `libfilam
 dependency chain (material compile → resource package → `taa.cpp` → `libfilament.a` →
 `taa_harness`) is wired correctly through ninja. No need for a full `build.sh`.
 
+## Upscaler qualification benchmark (`--benchmark` & `--compare`)
+
+*(For the developer-facing user guide on running the benchmark and interpreting its scores, see
+[benchmark.md](benchmark.md).)*
+
+When evaluating `taa.mat` changes or comparing tuned `-s` `TemporalAntiAliasingOptions` presets,
+pass `--benchmark` (`-b`).
+
+Instead of running a single model, `--benchmark` executes a curated 10-scenario suite across four
+scenes (`Fox.glb`, `DamagedHelmet.glb`, `SubpixelStar.glb`, and `SSRReflection.glb`, at `-u 2 -F box`
+by default) and distills the results into **3 headline qualification metrics** in decibels (dB,
+where higher is always better: `+3 dB` = 2x less error energy, `+6 dB` = 2x lower RMS error)
+alongside their direct physical units:
+
+1. **`Spatial Quality` (dB & Correlated Detail %)** — Static converged accuracy combining
+   whole-frame and silhouette MSE on real geometry (`fox_static`, `helmet_static`) with
+   phase-correlated Laplacian detail transfer (`detail_transfer_mean`, including `star_static`),
+   so neither blur nor ghosting/ringing overshoot (`spurious_hf_mean`) can game the score.
+2. **`Temporal Stability` (dB & Top-1% / Sub-Pixel Flicker RMS)** — Worst-1% pixel residual
+   temporal shimmer (`residual_flicker_top1pct_rms`) and `SubpixelStar` ring flicker
+   (`subpixel_ring_flicker_rms`) across static scenes plus a `0.1` render-texel/frame slow camera
+   drift (`fox_drift`).
+3. **`Motion Robustness` (dB & Dynamic Edge RMSE)** — Combines `edge_rmse_mean`, `edge_ghost_peak`,
+   and unrecovered post-motion `edge_tail_error` across:
+   - **Tracked Motion** (`helmet_cam_rotate`, `helmet_cam_dolly`, `fox_obj_translate`,
+     `helmet_obj_spin` with `motionVectors = true`)
+   - **Unmodeled Motion** (`fox_skinned_run` skeletal animation clip `-A 2`, and `ssr_reflection`
+     sliding specular reflection with SSR enabled)
+
+Example side-by-side qualification of Filament's default TAA vs a custom `-s` preset:
+
+```bash
+H=./out/cmake-debug/tools/taa/taa_harness
+cat > /tmp/adaptive.json <<'EOF'
+{ "view": { "taa": { "motionAdaptiveHistory": true, "historyReprojection": true } } }
+EOF
+$H -b --label "Filament TAA" -o /tmp/bench_default.json
+$H -b -s /tmp/adaptive.json --label "TAA (Adaptive)" -o /tmp/bench_adaptive.json
+$H --compare /tmp/bench_default.json,/tmp/bench_adaptive.json
+```
+
+Pass `-F lanczos` explicitly with `-b` when you want an upscaler-neutral 256-sample true Lanczos-2
+reference instead of the fast 32-sample `-F box` default.
+
 ## Before/after workflow for a TAA change
 
 1. `tools/taa/taa_harness_baseline.json` in this directory is a checked-in run against the
@@ -106,7 +150,7 @@ One `(regime, upscaling)` pair. `-e` (headless) with no `-r`/`-u` sweeps all 3 r
 |---|---|---|
 | `static` | nothing | ghost-free by construction; measures flicker and steady-state sharpness |
 | `camera` | camera (orbit or dolly, see `--camera-motion`) | expected ghost-free; disocclusions should resolve in a handful of frames |
-| `object` | glTF animation | interior ghosting on the moving object is **expected and not a bug** — Filament has no per-object motion vectors. What should still recover is the dis/occluded silhouette. |
+| `object` | `--object-motion animation` (default): the glTF clip; `translate`: the asset's root entity dollies screen-right; `spin`: it rotates about its vertical axis | `animation` on a skinned asset (Fox) deforms the mesh, which per-object motion vectors do not cover, so interior ghosting on it is **expected and not a bug** and `view.motionVectors.enabled` changes nothing. `translate` and `spin` are rigid, i.e. exactly what the motion vectors pass reports: with motion vectors on, interior ghosting should go away and only the dis/occluded silhouette should still have to recover; with them off, the interior smears. |
 
 Motion runs for the first half of the capture window then **stops** — frames past the midpoint
 of `--frames` are a static hold, not moving footage. This is deliberate (it turns the second half
@@ -121,15 +165,46 @@ cleanly.
 
 | scene | what it is for |
 |---|---|
-| `third_party/models/Fox/Fox.glb` | the default, and what the checked-in baseline is generated from. Thin limbs, hard silhouettes, and the only scene here with animation — so the only one whose `object` regime measures anything. **`-A` matters**: 0 (`Survey`, the default) barely moves, 1 is `Walk`, 2 is `Run`. |
-| `third_party/models/DamagedHelmet/DamagedHelmet.glb` | specular and normal-mapped content Fox has none of; it is what made two upscaling bugs visible that Fox alone missed. No checked-in baseline — generate one before leaning on it. |
+| `third_party/models/Fox/Fox.glb` | the default, and what the checked-in baseline is generated from. Thin limbs, hard silhouettes, and the only scene here with a *skinned* animation. **`-A` matters**: 0 (`Survey`, the default) barely moves, 1 is `Walk`, 2 is `Run`. With `--object-motion translate` it is also the rigid moving-object scene with the hardest silhouettes. |
+| `third_party/models/DamagedHelmet/DamagedHelmet.glb` | specular and normal-mapped content Fox has none of; it is what made two upscaling bugs visible that Fox alone missed. No checked-in baseline — generate one before leaning on it. With `--object-motion spin` it is the moving-object scene whose *interior* has the most to lose to camera-only reprojection: highlights slide across the surface as it turns. |
+| `third_party/models/BusterDrone/scene.gltf` | the only real-content asset with a *rigid* node animation (propellers, hull parts; no skin, a few morph weights), so the one `--object-motion animation` scene where motion vectors apply. 39 meshes, textured; `-A 0` is the only clip. The propellers move many render texels per frame — expect the `|v| >= 1` "no previous position" path to fire on them under upscaling. |
 | `tools/taa/models/SubpixelStar/SubpixelStar.glb` | sub-pixel flicker on thin high-contrast geometry (below). |
 | `tools/taa/models/ParallaxPillar/ParallaxPillar.glb` | a chroma-distinct silhouette edge under camera parallax. |
 | `tools/taa/models/SSRReflection/SSRReflection.glb` | chroma motion from a view-dependent reflection on a geometrically static surface. |
 
-Only Fox has animation. On every other scene the `object` regime plays nothing and therefore
-measures exactly what `static` does — identical numbers, not a second data point. Don't read them
-as one.
+Only Fox and BusterDrone have animation. On every other scene `--object-motion animation` plays
+nothing and therefore measures exactly what `static` does — identical numbers, not a second data
+point. Don't read them as one. `translate` and `spin` move any scene.
+
+### Measuring motion vectors
+
+`view.motionVectors.enabled` (through `-s`) only changes what TAA does on pixels whose object
+*rigidly* moved, so measure it on a rigid `object` run and compare on/off:
+
+```bash
+cat > /tmp/mv_on.json <<'EOF'
+{ "view": { "motionVectors": { "enabled": true } } }
+EOF
+H=./out/cmake-debug/tools/taa/taa_harness
+$H -e -r object --object-motion spin -F box -q -o /tmp/spin_off.json third_party/models/DamagedHelmet/DamagedHelmet.glb
+$H -e -r object --object-motion spin -F box -q -s /tmp/mv_on.json -o /tmp/spin_on.json third_party/models/DamagedHelmet/DamagedHelmet.glb
+```
+
+What to look at: `edge_ghost_peak` and `edge_rmse_mean` (the interior and trailing-edge smear
+camera-only reprojection leaves behind), `edge_recovery_frames` (whether the dis/occluded strip
+still resolves), and `sharpness_mean` (interior detail that misaligned history blurs away). A
+`translate` run at the camera dolly's default speed is the same experiment with the roles
+swapped; `--camera-motion translate` vs `--object-motion translate` should then agree closely
+with motion vectors on, and disagree without them.
+
+Measured on lavapipe, `-F box -M 4`, motion vectors off → on: DamagedHelmet `translate`
+edge_rmse_mean 0.167 → 0.028 (1:1) and 0.192 → 0.054 (2:1), `spin` 0.148 → 0.050 and 0.179 →
+0.087; Fox `translate` 0.102 → 0.032 and 0.129 → 0.052; edge_ghost_peak drops by 3-14x in every
+case. BusterDrone `animation` barely changes (its propellers are thin and fast; the body moves a
+few texels), so it is a smoke test, not a measurement. With `motionAdaptiveHistory` on, a moving
+object re-arms the global `motionHoldFrames` hold; that is what the numbers above include, and
+removing the trigger costs 3-11% of edge_rmse_mean on these scenes (the derivation is in
+`filament/src/materials/antiAliasing/taa/taa.md`).
 
 ### Ring-binned flicker, with `SubpixelStar`
 
@@ -139,10 +214,13 @@ every orientation, and contrast is exactly 1.0 regardless of the harness's IBL a
 generator is checked in beside it — spoke count sets which feature widths land on screen, and
 needs retuning for any `-S` other than 512.
 
-The aggregate metrics are the wrong tool here, for the reason under `flicker_variance` above: the
-failure lives in a few thousand pixels near the centre. Dump a full jitter cycle and bin the
-per-pixel temporal standard deviation by radius instead — that turns the sweep into a curve of
-flicker against feature width, which is what makes the failure legible:
+The whole-frame `flicker_variance` metric is the wrong tool here, for the reason under
+`flicker_variance` below: the failure lives in a few thousand pixels near the centre. When the
+model filename is `SubpixelStar.glb`, `taa_harness` automatically computes and emits the four
+concentric sub-pixel wedge-width rings natively in the JSON (`subpixel_flicker_0_22px`,
+`subpixel_flicker_0_34px`, `subpixel_flicker_0_53px`, `subpixel_flicker_0_80px`, and
+`subpixel_ring_flicker_rms`). You can also dump a full jitter cycle and inspect the radial curve
+directly:
 
 ```bash
 ./out/cmake-debug/tools/taa/taa_harness -e -r static -u 1 -n 16 -F box -R 8 -q \
@@ -183,6 +261,21 @@ Fox and quietly puts the third column back up near `defaults` has broken it.
   quantization) — read `edge_ghost_peak` for the part actually caused by motion.
 - **`edge_ghost_peak`** — worst captured frame's edge error, **with the frame-0 floor already
   subtracted out**. This is "how bad did it get," isolated from reference-definition noise.
+- **`edge_tail_error`** — residual edge error above the frame-0 floor on the final captured frame
+  (half a capture window after motion stopped); isolates unrecovered stale-history lock.
+- **`detail_transfer_mean`** / **`edge_detail_transfer_mean`** — phase-correlated Laplacian
+  projection $\langle \nabla^2 I, \nabla^2 R \rangle / \|\nabla^2 R\|^2$. Unlike `sharpness_mean`,
+  only high-frequency detail that is *in phase* with the reference counts positively (`1.0` =
+  matches reference detail); ghost double-edges and out-of-phase ringing cannot inflate it.
+- **`spurious_hf_mean`** — orthogonal / overshoot Laplacian residual relative to the reference,
+  isolating high-frequency ringing, aliasing, and ghost-edge energy.
+- **`flicker_top1pct_rms`** / **`residual_flicker_top1pct_rms`** — RMS temporal standard deviation
+  over the worst 1% of pixels (without / with per-frame ground truth subtracted), avoiding the
+  whole-frame background dilution of `flicker_variance` and isolating shimmer even during slow
+  camera drift (`0.1` tx/frame).
+- **`subpixel_flicker_0_22px`** .. **`0_80px`** / **`subpixel_ring_flicker_rms`** — emitted
+  automatically on static `SubpixelStar.glb` runs for feature widths of `0.22`, `0.34`, `0.53`, and
+  `0.80` output pixels.
 - **`edge_recovery_frames`** — frames after motion stops until edge error returns to within 25%
   of the peak-minus-floor transient. **`-1` means it never recovered within the capture window** —
   that's a real finding, not a missing value; don't filter it out as `NaN`.
@@ -245,10 +338,14 @@ Fox and quietly puts the third column back up near `defaults` has broken it.
 
 | flag | default | for |
 |---|---|---|
-| `-r static,camera,object` | all three | which regimes to run |
-| `-u 1,2` | `1,2` | upscaling factors |
+| `-b`, `--benchmark` | off | run the 10-scenario upscaler qualification benchmark and print the 3-metric scorecard |
+| `--label <name>` | auto | display name for this configuration in benchmark scorecards and `--compare` |
+| `--compare <a.json,b.json,...>` | off | print a side-by-side comparison table of benchmark JSON files (runs standalone without GPU) |
+| `--ssr` | off | enable screen-space reflections (automatically enabled on `ssr_reflection` in `--benchmark`) |
+| `-r static,camera,object` | all three | which regimes to run (single-model mode) |
+| `-u 1,2` | `2` (`-b`) / `1,2` | upscaling factors |
 | `-S` | 512 | output resolution (square) |
-| `-F box\|lanczos\|lanczos-filament` | `lanczos` | reference reconstruction kernel — see Gotchas above |
+| `-F box\|lanczos\|lanczos-filament` | `box` (`-b`) / `lanczos` | reference reconstruction kernel — see Gotchas above |
 | `-M` | 0 (off) | MSAA cross-check sample count; capped at 4 by the CLI (8x silently renders identically to 4x on hardware without 8x support, e.g. Apple silicon, so the flag doesn't offer it) |
 | `-W` | 64 | warmup frames before motion; measured-converged, don't lower casually |
 | `-n` | 16 | capture frames (should stay a full jitter cycle for flicker metrics) |
@@ -256,11 +353,13 @@ Fox and quietly puts the third column back up near `defaults` has broken it.
 | `--camera-motion rotate\|translate` | `rotate` | orbit vs pure dolly (parallax only, no rotation) |
 | `--camera-speed` | 90 (deg/s) | rotate-mode angular speed |
 | `--camera-texels-per-frame` | 3.5 | translate-mode parallax speed, in render-resolution texels/frame at the target's depth |
-| `--camera-translation-align as-requested\|pixel\|subpixel` | `as-requested` | isolates history-buffer resampling specifically — `pixel` = every reprojection an exact texel fetch, `subpixel` = every reprojection a half-texel fetch |
-| `-A` | 0 | which glTF animation the `object` regime plays — **check this**, the default is often not the one that moves; see Test scenes |
-| `--object-speed` | 1.0 | animation playback multiplier, object regime |
+| `--camera-translation-align as-requested\|pixel\|subpixel` | `as-requested` | isolates history-buffer resampling specifically — `pixel` = every reprojection an exact texel fetch, `subpixel` = every reprojection a half-texel fetch. Also applies to `--object-motion translate` |
+| `--object-motion animation\|translate\|spin` | `animation` | what the `object` regime moves: the glTF clip, the asset's root entity dollying screen-right, or the root entity spinning about its vertical axis. Only the last two are rigid, i.e. visible to motion vectors |
+| `-A` | 0 | which glTF animation `--object-motion animation` plays — **check this**, the default is often not the one that moves; see Test scenes |
+| `--object-speed` | 0 (= mode default: 1.0 / 90) | `animation`: playback multiplier; `spin`: degrees/second |
+| `--object-texels-per-frame` | 3.5 | `translate` speed, in render-resolution texels/frame at the target's depth — same convention and default as `--camera-texels-per-frame` |
 | `-d <dir>` | off | dump captures/references/amplified diffs/mask as PNGs — use this to actually *look at* a discrepancy the numbers flag |
-| `-s <settings.json>` | off | full `TemporalAntiAliasingOptions` via the same JSON `gltf_viewer`'s viewer reads/writes (`enabled`/`upscaling` are schedule-owned and ignored) |
+| `-s <settings.json>` | off | full `TemporalAntiAliasingOptions` and `MotionVectorsOptions` via the same JSON `gltf_viewer`'s viewer reads/writes (TAA `enabled`/`upscaling` are schedule-owned and ignored) |
 | `-q` | auto | suppress the progress bar (auto-on already when stderr isn't a terminal) |
 | `--visualize-disocclusion` | off | replace every frame with `taa.mat`'s disocclusion rejection mask (white = history fully rejected) -- pair with `-d`, and ignore that run's metrics |
 
@@ -272,6 +371,7 @@ Fox and quietly puts the third column back up near `defaults` has broken it.
   "size": 512, "warmup_frames": 64, "capture_frames": 16,
   "reference_filter": "lanczos-filament", "reference_samples": 256, "msaa": 4,
   "camera_motion": "rotate", "camera_speed_deg_per_sec": 90,
+  "object_motion": "animation", "animation": 0, "object_speed": 1,   // or object_texels_per_frame / object_speed_deg_per_sec
   "records": [
     { "regime": "static", "upscaling": 1, "metric": "edge_rmse_mean", "value": 0.0212 },
     ...
@@ -371,8 +471,7 @@ with a per-pixel delta from a `-d` dump before believing a change matters, and s
 No disocclusion-mask-specific *metrics* -- `--visualize-disocclusion` renders the mask so it can
 be dumped and looked at (see "Debugging `depthDisocclusion` specifically" above), but nothing
 aggregates it into the JSON, so "how many texels fired" still has to be counted out of the dumped
-PNGs by hand. Same for the ring-binned flicker curve under "Test scenes": both live in throwaway
-Python around the tool rather than in it.
+PNGs by hand.
 
 The silhouette mask is a luminance-gradient heuristic on the reference image, not a true
 depth-edge mask. One backend per run — nothing here is cross-backend validated. Every scene under

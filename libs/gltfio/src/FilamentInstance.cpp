@@ -21,6 +21,7 @@
 
 #include <utils/JobSystem.h>
 #include <utils/Log.h>
+#include <utils/Logger.h>
 #include <utils/Panic.h>
 
 using namespace filament;
@@ -47,7 +48,9 @@ Animator* FFilamentInstance::getAnimator() const noexcept {
 }
 
 void FFilamentInstance::createAnimator() {
-    if (mAnimator == nullptr && mOwner->mResourcesLoaded) {
+    // The Animator reads the source buffers, so it must not be created when loadResources()
+    // failed, e.g. because the asset did not pass validation.
+    if (mAnimator == nullptr && mOwner->mResourcesValid) {
         mAnimator = new Animator(mOwner, this);
     }
 }
@@ -104,6 +107,11 @@ void FFilamentInstance::recomputeBoundingBoxes() {
 
     FILAMENT_CHECK_PRECONDITION(mOwner->mResourcesLoaded)
             << "Do not call recomputeBoundingBoxes before loadResources or asyncBeginLoad";
+
+    if (UTILS_UNLIKELY(!mOwner->mResourcesValid)) {
+        LOG(ERROR) << "Cannot recompute bounding boxes, resources failed to load.";
+        return;
+    }
 
     auto& rm = mOwner->mEngine->getRenderableManager();
     auto& tm = mOwner->mEngine->getTransformManager();

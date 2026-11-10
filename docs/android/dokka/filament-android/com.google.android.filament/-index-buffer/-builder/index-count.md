@@ -17,4 +17,4 @@ main
 
 | | |
 |---|---|
-| indexCount | Number of indices the IndexBuffer can hold. |
+| indexCount | Number of indices the IndexBuffer can hold. Must not exceed MAX_INDEX_COUNT (2^backend::INDEX_COUNT_BITS - 1). |

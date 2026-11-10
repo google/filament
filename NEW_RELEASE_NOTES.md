@@ -6,10 +6,15 @@
 appropriate header in [RELEASE_NOTES.md](./RELEASE_NOTES.md).
 
 ## Release notes for next branch cut
-- filamat: convert FOG variant into a specialization constant. [⚠️ **Recompile Materials**]
-- engine: in `AsynchronousMode::AMORTIZATION`, queued async operations now run at the end of each
-  frame and in `Renderer::skipFrame()`, within a per-frame time budget set by the new
-  `Engine::Config::asynchronousFrameBudget` (2 ms by default), instead of 5 operations per backend
-  tick. Metal now runs them every frame too
-- java: `Engine.Config.asynchronousFrameBudget` (in nanoseconds) is added
-- web: `Engine$Config.asynchronousFrameBudgetMs` is added
+- backend: added 16-bit normalized texture formats (`R16`, `RG16`, `RGB16`, `RGBA16`, and `*_SNORM`).
+- webgpu: preserve fragment depth writes and discard in depth-only render passes (#10717).
+- gltf: `KHR_materials_iridescence` is now supported
+- gltf: `KHR_materials_anisotropy` is now supported
+- gltf: `KHR_materials_diffuse_transmission` is now supported
+- materials: the new `diffuseTransmission` and `diffuseTransmissionColor` material properties can be
+  used in the lit (standard) shading model to create diffusely transmitting (translucent) surfaces
+- variant: completely remove FOG variant bit
+- opengl: key the program binary cache on the final shader source instead of the user material
+  code; remove the `MAT_UUID` material chunk. [⚠️ **Recompile Materials**]
+- engine: fix `RenderTarget` validation rejecting layers of 2D-array textures at mip levels above 0
+  (the layer count was halved per level as for 3D textures)

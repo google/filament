@@ -59,8 +59,25 @@
  *     every one a half-texel fetch (the worst case), and comparing the two at the same speed
  *     attributes whatever changes to that resampling and nothing else translate mode does.
  *
- * --object-speed is the same idea for the object regime: a multiplier on animation playback time,
- * for when the authored animation itself moves too little to measure.
+ * How the object regime moves
+ * ----------------------------
+ * --object-motion picks what the object regime actually moves:
+ *
+ *   - animation: the glTF clip (-A), played through gltfio's Animator. --object-speed multiplies
+ *     playback time, for when the authored clip itself moves too little to measure. A skinned
+ *     asset (Fox) DEFORMS here, which per-object motion vectors do not cover, so this mode cannot
+ *     show what view.motionVectors changes.
+ *   - translate: the asset's root entity dollies screen-right through the TransformManager, by
+ *     --object-texels-per-frame render-resolution texels at the target's depth, with the same
+ *     --camera-translation-align policy as the camera dolly. The mirror image of camera translate:
+ *     identical screen-space speed, but now it is the object that moved, which is exactly what the
+ *     motion vectors pass reports and camera reprojection alone cannot see.
+ *   - spin: the root entity rotates about the vertical axis through its bounds centre at
+ *     --object-speed degrees/second. Screen-space speed varies across the model, and specular
+ *     highlights slide over the surface, which is the content camera-only reprojection smears.
+ *
+ * translate and spin are pure functions of the shot, like the camera modes, so the per-frame
+ * references track them for free.
  *
  * Determinism
  * -----------
@@ -168,6 +185,7 @@
 #include <atomic>
 #include <cfloat>
 #include <cmath>
+#include <cstddef>
 #include <cstdint>
 #include <cstdio>
 #include <cstdlib>
@@ -303,9 +321,9 @@ enum class Regime : uint8_t {
     // to be ghost-free, and disocclusions (which here are pure parallax) are expected to resolve
     // quickly.
     CAMERA,
-    // Scene animates, camera still. Filament has no per-object motion vectors, so interior
-    // ghosting is EXPECTED here and is reported, not failed; what matters is that the
-    // dis/occluded edges recover.
+    // Scene animates, camera still. Per-object motion vectors are off by default (and do not yet
+    // cover skinning/morphing), so interior ghosting is EXPECTED here and is reported, not failed;
+    // what matters is that the dis/occluded edges recover.
     OBJECT,
 };
 
@@ -395,9 +413,91 @@ struct Shot {
     uint8_t msaaSamples = 0;
 };
 
-struct Run {
+// How the camera moves during the CAMERA regime.
+enum class CameraMotion : uint8_t {
+    // Orbit around the target at a fixed distance, always re-aimed at it. Mixes rotation with a
+    // small amount of parallax (the eye itself moves along an arc), and the apparent screen-space
+    // speed varies across the frame -- near zero at the target, fastest at the silhouette.
+    ROTATE,
+    // A pure dolly: eye translates, orientation held fixed (the look-at point translates by the
+    // same vector, so the view direction never changes). No rotation at all, so every pixel's
+    // motion is pure parallax, and -- unlike ROTATE -- its magnitude is exactly known and
+    // uniform for scene content at the target's depth, which is what makes camera-texels-per-
+    // frame and camera-translation-align meaningful only in this mode.
+    TRANSLATE,
+};
+
+// Whether a TRANSLATE step lands exactly on a render-resolution texel or deliberately does not.
+// This is the one lever that isolates history-buffer RESAMPLING from everything else TAA does:
+// reprojecting last frame's history samples a non-integer number of texels away forces a
+// bilinear fetch of the history texture on every single frame, where an exact integer step
+// fetches the same texel it already held. Two runs at the same speed, differing only in this,
+// attribute whatever changes to that resampling specifically.
+enum class TranslationAlign : uint8_t {
+    // Whatever fractional part --camera-texels-per-frame happens to have.
+    AS_REQUESTED,
+    // Rounded to the nearest integer texel count: every frame's reprojection is an exact texel
+    // fetch, the best case for history sampling.
+    PIXEL,
+    // Forced to exactly a half-texel fractional part: every frame's reprojection falls precisely
+    // between four texels, the worst case for history sampling.
+    SUBPIXEL,
+};
+
+// What the OBJECT regime moves. See "How the object regime moves" at the top of the file.
+enum class ObjectMotion : uint8_t {
+    // The glTF clip, through gltfio's Animator. A skinned asset deforms, which per-object motion
+    // vectors do not cover.
+    ANIMATION,
+    // The asset's root entity dollies screen-right through the TransformManager, the mirror image
+    // of CameraMotion::TRANSLATE: same texel speed, same alignment policy, opposite reference
+    // frame. The motion is rigid, so it is exactly what the motion vectors pass reports.
+    TRANSLATE,
+    // The root entity rotates about the vertical axis through its bounds centre.
+    SPIN,
+};
+
+struct RunConfig {
+    std::string label;
+    int assetIndex = 0;
     Regime regime = Regime::STATIC;
     float upscaling = 1.0f;
+    CameraMotion cameraMotion = CameraMotion::ROTATE;
+    double cameraRotateSpeedDegPerSec = 90.0;
+    double cameraTexelsPerFrame = 3.5;
+    TranslationAlign cameraTranslationAlign = TranslationAlign::AS_REQUESTED;
+    ObjectMotion objectMotion = ObjectMotion::ANIMATION;
+    double objectTexelsPerFrame = 3.5;
+    double objectSpeed = 1.0;
+    uint32_t animation = 0;
+    bool motionVectorsEnabled = false;
+    bool ssrEnabled = false;
+    bool deduplicateStaticHoldReferences = false;
+};
+
+struct RunMetrics {
+    double rmseMean = 0.0;
+    double edgeRmseMean = 0.0;
+    double sharpnessMean = 0.0;
+    double edgeSharpnessMean = 0.0;
+    double detailTransferMean = 0.0;
+    double edgeDetailTransferMean = 0.0;
+    double spuriousHfMean = 0.0;
+    double flickerVariance = 0.0;
+    double edgeFlickerVariance = 0.0;
+    double flickerTop1PctRms = 0.0;
+    double residualFlickerTop1PctRms = 0.0;
+    double subpixelRingFlickerRms = 0.0;
+    bool hasSubpixelRings = false;
+    double edgeGhostPeak = 0.0;
+    double edgeTailError = 0.0;
+    double edgeEndRmse = 0.0;
+    double edgeRecoveryFrames = 0.0;
+};
+
+struct Run {
+    RunConfig config;
+    RunMetrics summary;
     // Accumulators for the reference phase, in linear light, summed over the jitter samples and
     // divided at the end. STATIC has a single reference shared by every captured frame, since
     // the scene state does not change.
@@ -660,6 +760,186 @@ double highFrequencyEnergy(LinearImage const& img, std::vector<uint8_t> const* m
     return count ? sum / double(count) : 0.0;
 }
 
+// Phase-aligned Laplacian decomposition of `capture` against `reference`:
+//
+//     L_capture = alpha * L_ref + L_ortho,    <L_ortho, L_ref> = 0
+//
+// Unaligned `sharpness` (||L_capture||^2 / ||L_ref||^2) cannot tell true detail apart from ghost
+// double-edges, aliasing, or ringing overshoot -- all of which carry high Laplacian energy and
+// make a broken upscaler read as "sharper" than ground truth. Projecting `L_capture` onto `L_ref`
+// yields `detailTransfer = alpha` (1.0 = matches reference detail in phase, < 1.0 = attenuated /
+// blurred), while the orthogonal residual ||L_ortho|| / ||L_ref|| plus any positive overshoot
+// max(0, alpha - 1) isolates spurious high-frequency artifacts (`spuriousHfRms`).
+struct LaplacianComparison {
+    double detailTransfer = 0.0;
+    double spuriousHfRms = 0.0;
+};
+
+LaplacianComparison compareLaplacians(LinearImage const& capture, LinearImage const& reference,
+        std::vector<uint8_t> const* mask = nullptr) {
+    uint32_t const w = capture.getWidth();
+    uint32_t const h = capture.getHeight();
+    double capSum = 0.0;
+    double refSum = 0.0;
+    double dotSum = 0.0;
+    size_t count = 0;
+    for (uint32_t y = 1; y + 1 < h; y++) {
+        for (uint32_t x = 1; x + 1 < w; x++) {
+            if (mask && !(*mask)[size_t(y) * w + x]) {
+                continue;
+            }
+            double const lc = 4.0 * luma(capture.getPixelRef(x, y))
+                    - luma(capture.getPixelRef(x - 1, y)) - luma(capture.getPixelRef(x + 1, y))
+                    - luma(capture.getPixelRef(x, y - 1)) - luma(capture.getPixelRef(x, y + 1));
+            double const lr = 4.0 * luma(reference.getPixelRef(x, y))
+                    - luma(reference.getPixelRef(x - 1, y)) - luma(reference.getPixelRef(x + 1, y))
+                    - luma(reference.getPixelRef(x, y - 1)) - luma(reference.getPixelRef(x, y + 1));
+            capSum += lc * lc;
+            refSum += lr * lr;
+            dotSum += lc * lr;
+            count++;
+        }
+    }
+    if (count == 0 || refSum <= 0.0) {
+        return {};
+    }
+    double const alpha = dotSum / refSum;
+    double const sharpnessRatio = capSum / refSum;
+    double const orthoEnergyRatio = std::max(0.0, sharpnessRatio - alpha * alpha);
+    double const overshoot = std::max(0.0, alpha - 1.0);
+    return {
+        .detailTransfer = alpha,
+        .spuriousHfRms = std::sqrt(orthoEnergyRatio + overshoot * overshoot),
+    };
+}
+
+// RMS temporal standard deviation over the highest-variance `fraction` (default 1%) of pixels.
+// Whole-frame `flicker_variance` averages over ~95% flat background/interior texels and dilutes
+// localized sub-pixel or specular shimmer by two orders of magnitude. When `references` is
+// non-null, per-frame ground truth is subtracted first (`capture[k] - reference[k]`): on a static
+// scene `reference` is constant and cancels out identically, while on a slow camera drift (0.1
+// texels/frame) subtracting `reference[k]` removes the legitimate sub-texel motion of edges and
+// isolates temporal popping / disocclusion instability.
+double topFractionTemporalRms(std::vector<LinearImage> const& captures,
+        std::vector<LinearImage> const* references, double const fraction = 0.01) {
+    if (captures.size() < 2) {
+        return 0.0;
+    }
+    uint32_t const w = captures[0].getWidth();
+    uint32_t const h = captures[0].getHeight();
+    size_t const pixelCount = size_t(w) * h;
+    std::vector<double> pixelVariances(pixelCount, 0.0);
+    double const invN = 1.0 / double(captures.size());
+
+    for (uint32_t y = 0; y < h; y++) {
+        for (uint32_t x = 0; x < w; x++) {
+            double channelVarSum = 0.0;
+            for (int c = 0; c < 3; c++) {
+                double mean = 0.0;
+                for (size_t k = 0; k < captures.size(); k++) {
+                    double v = double(captures[k].getPixelRef(x, y)[c]);
+                    if (references && !references->empty()) {
+                        size_t const rk = std::min(k, references->size() - 1);
+                        v -= double((*references)[rk].getPixelRef(x, y)[c]);
+                    }
+                    mean += v;
+                }
+                mean *= invN;
+                double var = 0.0;
+                for (size_t k = 0; k < captures.size(); k++) {
+                    double v = double(captures[k].getPixelRef(x, y)[c]);
+                    if (references && !references->empty()) {
+                        size_t const rk = std::min(k, references->size() - 1);
+                        v -= double((*references)[rk].getPixelRef(x, y)[c]);
+                    }
+                    double const d = v - mean;
+                    var += d * d;
+                }
+                channelVarSum += var * invN;
+            }
+            pixelVariances[size_t(y) * w + x] = channelVarSum / 3.0;
+        }
+    }
+
+    size_t const topCount = std::clamp<size_t>(
+            size_t(std::ceil(double(pixelCount) * fraction)), 1, pixelCount);
+    auto pivot = pixelVariances.end() - ptrdiff_t(topCount);
+    std::nth_element(pixelVariances.begin(), pivot, pixelVariances.end());
+    double sum = 0.0;
+    for (auto it = pivot; it != pixelVariances.end(); ++it) {
+        sum += *it;
+    }
+    return std::sqrt(sum / double(topCount));
+}
+
+// Ring-binned sub-pixel luminance temporal standard deviation on `SubpixelStar.glb` (a 256-spoke
+// Siemens star whose wedge width shrinks linearly toward its centre at (256, 275) for -S 512).
+// Four concentric annuli correspond to feature widths of 0.22, 0.34, 0.53 and 0.80 output pixels.
+struct SubpixelRingMetrics {
+    double ringStd[4] = {};
+    double rms = 0.0;
+};
+
+SubpixelRingMetrics subpixelRingFlicker(std::vector<LinearImage> const& captures) {
+    SubpixelRingMetrics out = {};
+    if (captures.size() < 2) {
+        return out;
+    }
+    uint32_t const w = captures[0].getWidth();
+    uint32_t const h = captures[0].getHeight();
+    double const scale = double(h) / 512.0;
+    double const cx = 256.0 * scale;
+    double const cy = 275.0 * scale;
+    constexpr double kRingBounds[4][2] = {
+        { 14.0, 22.0 },
+        { 22.0, 34.0 },
+        { 34.0, 52.0 },
+        { 52.0, 78.0 },
+    };
+    double ringSum[4] = {};
+    size_t ringCount[4] = {};
+    double const invN = 1.0 / double(captures.size());
+
+    for (uint32_t y = 0; y < h; y++) {
+        for (uint32_t x = 0; x < w; x++) {
+            double const r = std::hypot(double(x) - cx, double(y) - cy);
+            int ringIdx = -1;
+            for (int b = 0; b < 4; b++) {
+                if (r >= kRingBounds[b][0] * scale && r < kRingBounds[b][1] * scale) {
+                    ringIdx = b;
+                    break;
+                }
+            }
+            if (ringIdx < 0) {
+                continue;
+            }
+            double mean = 0.0;
+            for (auto const& f: captures) {
+                mean += double(luma(f.getPixelRef(x, y)));
+            }
+            mean *= invN;
+            double var = 0.0;
+            for (auto const& f: captures) {
+                double const d = double(luma(f.getPixelRef(x, y))) - mean;
+                var += d * d;
+            }
+            ringSum[ringIdx] += std::sqrt(var * invN);
+            ringCount[ringIdx]++;
+        }
+    }
+    double rmsAccum = 0.0;
+    int validRings = 0;
+    for (int b = 0; b < 4; b++) {
+        if (ringCount[b] > 0) {
+            out.ringStd[b] = ringSum[b] / double(ringCount[b]);
+            rmsAccum += out.ringStd[b] * out.ringStd[b];
+            validRings++;
+        }
+    }
+    out.rms = validRings > 0 ? std::sqrt(rmsAccum / double(validRings)) : 0.0;
+    return out;
+}
+
 // World-space bounds of everything the asset will draw.
 Aabb worldBounds(Engine* engine, FilamentAsset const* asset) {
     auto const& rcm = engine->getRenderableManager();
@@ -732,41 +1012,14 @@ void writePng(LinearImage const& img, Path const& path) {
 // Application state
 // ------------------------------------------------------------------------------------------------
 
-// How the camera moves during the CAMERA regime.
-enum class CameraMotion : uint8_t {
-    // Orbit around the target at a fixed distance, always re-aimed at it. Mixes rotation with a
-    // small amount of parallax (the eye itself moves along an arc), and the apparent screen-space
-    // speed varies across the frame -- near zero at the target, fastest at the silhouette.
-    ROTATE,
-    // A pure dolly: eye translates, orientation held fixed (the look-at point translates by the
-    // same vector, so the view direction never changes). No rotation at all, so every pixel's
-    // motion is pure parallax, and -- unlike ROTATE -- its magnitude is exactly known and
-    // uniform for scene content at the target's depth, which is what makes camera-texels-per-
-    // frame and camera-translation-align meaningful only in this mode.
-    TRANSLATE,
-};
-
-// Whether a TRANSLATE step lands exactly on a render-resolution texel or deliberately does not.
-// This is the one lever that isolates history-buffer RESAMPLING from everything else TAA does:
-// reprojecting last frame's history samples a non-integer number of texels away forces a
-// bilinear fetch of the history texture on every single frame, where an exact integer step
-// fetches the same texel it already held. Two runs at the same speed, differing only in this,
-// attribute whatever changes to that resampling specifically.
-enum class TranslationAlign : uint8_t {
-    // Whatever fractional part --camera-texels-per-frame happens to have.
-    AS_REQUESTED,
-    // Rounded to the nearest integer texel count: every frame's reprojection is an exact texel
-    // fetch, the best case for history sampling.
-    PIXEL,
-    // Forced to exactly a half-texel fractional part: every frame's reprojection falls precisely
-    // between four texels, the worst case for history sampling.
-    SUBPIXEL,
-};
-
 struct Options {
     Path model;
     Path output = "taa_metrics.json";
     Path dumpDirectory;
+    std::string label;
+    std::vector<Path> compareFiles;
+    bool benchmark = false;
+    bool ssrEnabled = false;
     uint32_t size = 512;
     // Measured on a static scene: TAA sharpness is 0.96x converged at 8 frames, 0.87x at 16,
     // 0.985x at 32, 0.996x at 40, and indistinguishable from a 192-frame warmup by 48 (feedback's
@@ -786,11 +1039,18 @@ struct Options {
     // parallax, is the point of a translation test). Deliberately not integral by default, so
     // AS_REQUESTED alignment does not silently coincide with PIXEL.
     double cameraTexelsPerFrame = 3.5;
+    // Shared by the camera dolly and ObjectMotion::TRANSLATE: the question it answers (exact vs
+    // half-texel history fetches) is the same whichever side moved.
     TranslationAlign cameraTranslationAlign = TranslationAlign::AS_REQUESTED;
-    // Multiplies elapsed animation time in the OBJECT regime. The animation itself sets the
-    // natural time scale, so unlike the camera there is no principled default speed -- 1.0 is
-    // "play it as authored" and this exists for when that turns out to move too little to
-    // measure, the same complaint camera rotation had at its old default.
+    ObjectMotion objectMotion = ObjectMotion::ANIMATION;
+    // ObjectMotion::TRANSLATE's speed, with the camera dolly's convention and default, so a
+    // translate/translate pair of runs differs only in which side moved.
+    double objectTexelsPerFrame = 3.5;
+    // ANIMATION: multiplies elapsed animation time. The animation itself sets the natural time
+    // scale, so unlike the camera there is no principled default speed -- 1.0 is "play it as
+    // authored" and this exists for when that turns out to move too little to measure, the same
+    // complaint camera rotation had at its old default.
+    // SPIN: degrees per second, defaulting to the camera orbit's speed (see --camera-speed).
     double objectSpeed = 1.0;
     float edgeThreshold = 0.08f;
     float diffGain = 8.0f;
@@ -798,6 +1058,7 @@ struct Options {
     TemporalAntiAliasingOptions::JitterPattern jitterPattern =
             TemporalAntiAliasingOptions::JitterPattern::HALTON_23_X16;
     TemporalAntiAliasingOptions taaOptions = {};
+    MotionVectorsOptions motionVectorsOptions = {};
     ReferenceFilter referenceFilter = ReferenceFilter::LANCZOS;
     // Which glTF animation the object regime plays. It matters: a survey/idle clip barely moves,
     // and a regime that does not move measures nothing.
@@ -817,6 +1078,20 @@ struct Options {
     std::vector<float> upscalings;
 };
 
+struct LoadedAsset {
+    Path path;
+    FilamentAsset* asset = nullptr;
+    FilamentInstance* instance = nullptr;
+    // The asset's root transform as loaded. ObjectMotion::TRANSLATE/SPIN compose their motion
+    // onto this every shot, and every other mode restores it, so a run never inherits the pose
+    // the previous run left behind.
+    mat4f rootRestTransform;
+    // Framing, derived once from the asset bounds so the camera path is scale-independent.
+    float3 target = {};
+    float radius = 1.0f;
+    bool isSubpixelStar = false;
+};
+
 struct App {
     Options options;
 
@@ -831,13 +1106,9 @@ struct App {
     gltfio::ResourceLoader* resourceLoader = nullptr;
     gltfio::TextureProvider* stbDecoder = nullptr;
     gltfio::TextureProvider* ktxDecoder = nullptr;
-    FilamentAsset* asset = nullptr;
-    FilamentInstance* instance = nullptr;
+    std::vector<LoadedAsset> assets;
+    int activeAssetIndex = -1;
     Entity sunlight;
-
-    // Framing, derived once from the asset bounds so the camera path is scale-independent.
-    float3 target = {};
-    float radius = 1.0f;
 
     std::vector<Run> runs;
     std::vector<Shot> shots;
@@ -878,73 +1149,194 @@ struct App {
 // Schedule construction
 // ------------------------------------------------------------------------------------------------
 
+void addScheduledRun(App* app, RunConfig const& cfg) {
+    Options const& o = app->options;
+    int const runIndex = int(app->runs.size());
+    Run run;
+    run.config = cfg;
+
+    // With nothing moving there is only one scene state, so one reference serves every captured
+    // frame. Moving regimes advance for the first half of `captureFrames` and then hold still, so
+    // `motionFrames + 1` unique poses cover the entire capture window when deduplicating the
+    // static hold.
+    size_t const motionFrames = std::max<size_t>(1, o.captureFrames / 2);
+    size_t const movingRefs = cfg.deduplicateStaticHoldReferences
+            ? std::min<size_t>(o.captureFrames, motionFrames + 1)
+            : size_t(o.captureFrames);
+    size_t const referenceCount = (cfg.regime == Regime::STATIC) ? 1 : movingRefs;
+    run.references.resize(referenceCount);
+    run.referenceWeight.assign(referenceCount, 0.0);
+    run.captures.resize(o.captureFrames);
+    app->runs.push_back(std::move(run));
+
+    // SSR reads the previous frame's colour history, so prime one uncaptured frame at the initial
+    // pose before any MSAA, aliased, or reference sample is read back.
+    if (cfg.ssrEnabled) {
+        Shot prime;
+        prime.taaEnabled = false;
+        prime.runIndex = runIndex;
+        prime.destination = Destination::NONE;
+        app->shots.push_back(prime);
+    }
+
+    if (o.msaaSamples > 1) {
+        Shot shot;
+        shot.taaEnabled = false;
+        shot.runIndex = runIndex;
+        shot.destination = Destination::MSAA;
+        shot.msaaSamples = o.msaaSamples;
+        app->shots.push_back(shot);
+    }
+    {
+        Shot shot;
+        shot.taaEnabled = false;
+        shot.runIndex = runIndex;
+        shot.destination = Destination::ALIASED;
+        app->shots.push_back(shot);
+    }
+
+    for (size_t r = 0; r < referenceCount; r++) {
+        double const motionTime = motionTimeForFrame(r, o.captureFrames, o.stepSeconds);
+        size_t const frameIndex = motionFrameIndex(r, o.captureFrames);
+        if (cfg.ssrEnabled && r > 0) {
+            Shot prime;
+            prime.motionTime = motionTime;
+            prime.motionFrameIndex = frameIndex;
+            prime.taaEnabled = false;
+            prime.runIndex = runIndex;
+            prime.destination = Destination::NONE;
+            app->shots.push_back(prime);
+        }
+        for (uint32_t s = 0; s < o.referenceSamples; s++) {
+            Shot shot;
+            shot.motionTime = motionTime;
+            shot.motionFrameIndex = frameIndex;
+            shot.taaEnabled = false;
+            shot.jitter = haltonJitter(s, o.referenceFilter);
+            shot.weight = filterWeight(shot.jitter, o.referenceFilter);
+            shot.runIndex = runIndex;
+            shot.destination = Destination::REFERENCE;
+            shot.slot = int(r);
+            app->shots.push_back(shot);
+        }
+    }
+
+    for (uint32_t w = 0; w < o.warmupFrames; w++) {
+        Shot shot;
+        shot.runIndex = runIndex;
+        app->shots.push_back(shot);
+    }
+
+    for (uint32_t k = 0; k < o.captureFrames; k++) {
+        Shot shot;
+        shot.motionTime = motionTimeForFrame(k, o.captureFrames, o.stepSeconds);
+        shot.motionFrameIndex = motionFrameIndex(k, o.captureFrames);
+        shot.runIndex = runIndex;
+        shot.destination = Destination::CAPTURE;
+        shot.slot = int(k);
+        app->shots.push_back(shot);
+    }
+}
+
 void buildSchedule(App* app) {
     Options const& o = app->options;
+    if (!o.benchmark) {
+        for (float const upscaling: o.upscalings) {
+            for (Regime const regime: o.regimes) {
+                RunConfig cfg;
+                cfg.label = toString(regime);
+                cfg.assetIndex = 0;
+                cfg.regime = regime;
+                cfg.upscaling = upscaling;
+                cfg.cameraMotion = o.cameraMotion;
+                cfg.cameraRotateSpeedDegPerSec = o.cameraRotateSpeedDegPerSec;
+                cfg.cameraTexelsPerFrame = o.cameraTexelsPerFrame;
+                cfg.cameraTranslationAlign = o.cameraTranslationAlign;
+                cfg.objectMotion = o.objectMotion;
+                cfg.objectTexelsPerFrame = o.objectTexelsPerFrame;
+                cfg.objectSpeed = o.objectSpeed;
+                cfg.animation = o.animation;
+                cfg.motionVectorsEnabled = o.motionVectorsOptions.enabled;
+                cfg.ssrEnabled = o.ssrEnabled;
+                cfg.deduplicateStaticHoldReferences = false;
+                addScheduledRun(app, cfg);
+            }
+        }
+        return;
+    }
+
+    // Benchmark suite: 10 curated scenarios grouped by asset (0 = Fox, 1 = DamagedHelmet,
+    // 2 = SubpixelStar, 3 = SSRReflection) to minimize scene switches while covering all three
+    // axes of the TAA trilemma (Spatial Quality, Temporal Stability, and Tracked/Unmodeled Motion).
     for (float const upscaling: o.upscalings) {
-        for (Regime const regime: o.regimes) {
-            int const runIndex = int(app->runs.size());
-            Run run;
-            run.regime = regime;
-            run.upscaling = upscaling;
+        auto makeBase = [&](char const* label, int const assetIndex, Regime const regime) {
+            RunConfig cfg;
+            cfg.label = label;
+            cfg.assetIndex = assetIndex;
+            cfg.regime = regime;
+            cfg.upscaling = upscaling;
+            cfg.motionVectorsEnabled = true;
+            cfg.deduplicateStaticHoldReferences = true;
+            return cfg;
+        };
 
-            // With nothing moving there is only one scene state, so one reference serves every
-            // captured frame. The other regimes need one per frame: the reference has to track
-            // the scene, or the "error" being reported is just the motion.
-            size_t const referenceCount = (regime == Regime::STATIC) ? 1 : o.captureFrames;
-            run.references.resize(referenceCount);
-            run.referenceWeight.assign(referenceCount, 0.0);
-            run.captures.resize(o.captureFrames);
-            app->runs.push_back(std::move(run));
+        // Asset 0: Fox.glb (hard silhouettes, rigid translation & skinned Run animation)
+        addScheduledRun(app, makeBase("fox_static", 0, Regime::STATIC));
+        {
+            RunConfig cfg = makeBase("fox_drift", 0, Regime::CAMERA);
+            cfg.cameraMotion = CameraMotion::TRANSLATE;
+            cfg.cameraTexelsPerFrame = 0.1;
+            cfg.cameraTranslationAlign = TranslationAlign::AS_REQUESTED;
+            addScheduledRun(app, cfg);
+        }
+        {
+            RunConfig cfg = makeBase("fox_obj_translate", 0, Regime::OBJECT);
+            cfg.objectMotion = ObjectMotion::TRANSLATE;
+            cfg.objectTexelsPerFrame = 3.5;
+            cfg.cameraTranslationAlign = TranslationAlign::AS_REQUESTED;
+            addScheduledRun(app, cfg);
+        }
+        {
+            RunConfig cfg = makeBase("fox_skinned_run", 0, Regime::OBJECT);
+            cfg.objectMotion = ObjectMotion::ANIMATION;
+            cfg.animation = 2; // Run clip (vertex deformation not covered by rigid MVs)
+            cfg.objectSpeed = 1.0;
+            addScheduledRun(app, cfg);
+        }
 
-            if (o.msaaSamples > 1) {
-                Shot shot;
-                shot.taaEnabled = false;
-                shot.runIndex = runIndex;
-                shot.destination = Destination::MSAA;
-                shot.msaaSamples = o.msaaSamples;
-                app->shots.push_back(shot);
-            }
-            {
-                Shot shot;
-                shot.taaEnabled = false;
-                shot.runIndex = runIndex;
-                shot.destination = Destination::ALIASED;
-                app->shots.push_back(shot);
-            }
+        // Asset 1: DamagedHelmet.glb (normal maps, specular highlights, camera & spin motion)
+        addScheduledRun(app, makeBase("helmet_static", 1, Regime::STATIC));
+        {
+            RunConfig cfg = makeBase("helmet_cam_rotate", 1, Regime::CAMERA);
+            cfg.cameraMotion = CameraMotion::ROTATE;
+            cfg.cameraRotateSpeedDegPerSec = 90.0;
+            addScheduledRun(app, cfg);
+        }
+        {
+            RunConfig cfg = makeBase("helmet_cam_dolly", 1, Regime::CAMERA);
+            cfg.cameraMotion = CameraMotion::TRANSLATE;
+            cfg.cameraTexelsPerFrame = 3.5;
+            cfg.cameraTranslationAlign = TranslationAlign::SUBPIXEL;
+            addScheduledRun(app, cfg);
+        }
+        {
+            RunConfig cfg = makeBase("helmet_obj_spin", 1, Regime::OBJECT);
+            cfg.objectMotion = ObjectMotion::SPIN;
+            cfg.objectSpeed = 90.0;
+            addScheduledRun(app, cfg);
+        }
 
-            for (size_t r = 0; r < referenceCount; r++) {
-                double const motionTime =
-                        motionTimeForFrame(r, o.captureFrames, o.stepSeconds);
-                size_t const frameIndex = motionFrameIndex(r, o.captureFrames);
-                for (uint32_t s = 0; s < o.referenceSamples; s++) {
-                    Shot shot;
-                    shot.motionTime = motionTime;
-                    shot.motionFrameIndex = frameIndex;
-                    shot.taaEnabled = false;
-                    shot.jitter = haltonJitter(s, o.referenceFilter);
-                    shot.weight = filterWeight(shot.jitter, o.referenceFilter);
-                    shot.runIndex = runIndex;
-                    shot.destination = Destination::REFERENCE;
-                    shot.slot = int(r);
-                    app->shots.push_back(shot);
-                }
-            }
+        // Asset 2: SubpixelStar.glb (Siemens star sub-pixel geometry resolution & ring flicker)
+        addScheduledRun(app, makeBase("star_static", 2, Regime::STATIC));
 
-            for (uint32_t w = 0; w < o.warmupFrames; w++) {
-                Shot shot;
-                shot.runIndex = runIndex;
-                app->shots.push_back(shot);
-            }
-
-            for (uint32_t k = 0; k < o.captureFrames; k++) {
-                Shot shot;
-                shot.motionTime = motionTimeForFrame(k, o.captureFrames, o.stepSeconds);
-                shot.motionFrameIndex = motionFrameIndex(k, o.captureFrames);
-                shot.runIndex = runIndex;
-                shot.destination = Destination::CAPTURE;
-                shot.slot = int(k);
-                app->shots.push_back(shot);
-            }
+        // Asset 3: SSRReflection.glb (view-dependent reflection sliding across a static floor)
+        {
+            RunConfig cfg = makeBase("ssr_reflection", 3, Regime::CAMERA);
+            cfg.cameraMotion = CameraMotion::TRANSLATE;
+            cfg.cameraTexelsPerFrame = 3.5;
+            cfg.cameraTranslationAlign = TranslationAlign::AS_REQUESTED;
+            cfg.ssrEnabled = true;
+            addScheduledRun(app, cfg);
         }
     }
 }
@@ -952,8 +1344,9 @@ void buildSchedule(App* app) {
 // Places camera, animation and TAA settings for one scheduled frame. Runs from preRender, which
 // is after FilamentApp2 has pushed the camera manipulator's pose, so these writes win.
 void applyShot(App* app, Shot const& shot) {
-    Options const& o = app->options;
     Run const& run = app->runs[shot.runIndex];
+    RunConfig const& rc = run.config;
+    LoadedAsset const& loaded = app->assets[rc.assetIndex];
     Camera& camera = app->view->getCamera();
 
     // Frame from the camera's ACTUAL field of view rather than one this function installs.
@@ -962,83 +1355,121 @@ void applyShot(App* app, Shot const& shot) {
     // others -- which silently rendered the reference phase and the capture phase of a run at two
     // different zoom levels. Reading the fov instead is immune to when that reconfiguration lands.
     double const fov = double(camera.getFieldOfViewInDegrees(Camera::Fov::VERTICAL)) * F_PI / 180.0;
-    double const distance = double(app->radius) / std::sin(0.5 * fov) * 1.15;
+    double const distance = double(loaded.radius) / std::sin(0.5 * fov) * 1.15;
 
     // The motion-free pose: fixed off-axis azimuth (seen end-on, a model presents almost no
     // silhouette, and silhouettes are where everything being measured happens), and the basis
     // TRANSLATE mode dollies along.
-    float3 const baseEye = app->target + float3{
-            float(std::sin(kBaseAzimuthRadians) * distance), float(app->radius) * 0.35f,
+    float3 const baseEye = loaded.target + float3{
+            float(std::sin(kBaseAzimuthRadians) * distance), float(loaded.radius) * 0.35f,
             float(std::cos(kBaseAzimuthRadians) * distance) };
     float3 const up = { 0.0f, 1.0f, 0.0f };
-    float3 const right = normalize(cross(normalize(app->target - baseEye), up));
+    float3 const right = normalize(cross(normalize(loaded.target - baseEye), up));
+
+    // texels/frame -> world units/frame at the target's depth, then a straight multiple of the
+    // (integer) motion frame count -- see TranslationAlign and motionFrameIndex() for why an
+    // index rather than motionTime / stepSeconds. Shared by the camera dolly and the object
+    // translation so the two are the same motion seen from the other side.
+    auto const translationOffset = [&](double texelsPerFrame) {
+        switch (rc.cameraTranslationAlign) {
+            case TranslationAlign::AS_REQUESTED:
+                break;
+            case TranslationAlign::PIXEL:
+                texelsPerFrame = std::round(texelsPerFrame);
+                break;
+            case TranslationAlign::SUBPIXEL:
+                texelsPerFrame = std::floor(texelsPerFrame) + 0.5;
+                break;
+        }
+        Viewport const& vp = app->view->getViewport();
+        // Render, not output, resolution: under upscaling TAA resolves at vp/upscaling and this
+        // speed is meant to be comparable across upscaling factors, matching the "render texel"
+        // convention the rest of the harness (and taa.mat) already uses.
+        double const renderHeight = double(vp.height) / double(rc.upscaling);
+        double const worldUnitsPerTexel = 2.0 * distance * std::tan(0.5 * fov) / renderHeight;
+        return texelsPerFrame * double(shot.motionFrameIndex) * worldUnitsPerTexel;
+    };
 
     float3 eye = baseEye;
-    float3 lookAtPoint = app->target;
+    float3 lookAtPoint = loaded.target;
     double animationTime = 0.0;
-    switch (run.regime) {
+    // Composed onto the root's rest transform below. Identity unless the object regime moves
+    // the root, so every other regime (and the reference/warm-up phases) renders the rest pose.
+    mat4f objectTransform;
+    switch (rc.regime) {
         case Regime::STATIC:
             break;
         case Regime::CAMERA:
-            if (o.cameraMotion == CameraMotion::ROTATE) {
+            if (rc.cameraMotion == CameraMotion::ROTATE) {
                 double const angle = kBaseAzimuthRadians
-                        + shot.motionTime * o.cameraRotateSpeedDegPerSec * (F_PI / 180.0);
-                eye = app->target + float3{ float(std::sin(angle) * distance),
-                        float(app->radius) * 0.35f, float(std::cos(angle) * distance) };
+                        + shot.motionTime * rc.cameraRotateSpeedDegPerSec * (F_PI / 180.0);
+                eye = loaded.target + float3{ float(std::sin(angle) * distance),
+                        float(loaded.radius) * 0.35f, float(std::cos(angle) * distance) };
             } else {
-                // texels/frame -> world units/frame at the target's depth, then a straight
-                // multiple of the (integer) motion frame count -- see TranslationAlign and
-                // motionFrameIndex() for why an index rather than motionTime / stepSeconds.
-                double texelsPerFrame = o.cameraTexelsPerFrame;
-                switch (o.cameraTranslationAlign) {
-                    case TranslationAlign::AS_REQUESTED:
-                        break;
-                    case TranslationAlign::PIXEL:
-                        texelsPerFrame = std::round(texelsPerFrame);
-                        break;
-                    case TranslationAlign::SUBPIXEL:
-                        texelsPerFrame = std::floor(texelsPerFrame) + 0.5;
-                        break;
-                }
-                Viewport const& vp = app->view->getViewport();
-                // Render, not output, resolution: under upscaling TAA resolves at vp/upscaling
-                // and this speed is meant to be comparable across upscaling factors, matching the
-                // "render texel" convention the rest of the harness (and taa.mat) already uses.
-                double const renderHeight = double(vp.height) / double(run.upscaling);
-                double const worldUnitsPerTexel =
-                        2.0 * distance * std::tan(0.5 * fov) / renderHeight;
-                double const offset = texelsPerFrame * double(shot.motionFrameIndex)
-                        * worldUnitsPerTexel;
+                double const offset = translationOffset(rc.cameraTexelsPerFrame);
                 eye = baseEye + right * float(offset);
                 // Translate the look-at point by the same vector: view DIRECTION stays fixed,
                 // only position moves, which is what makes this a pure dolly rather than a pan
                 // that happens to be phrased as a moving eye.
-                lookAtPoint = app->target + right * float(offset);
+                lookAtPoint = loaded.target + right * float(offset);
             }
             break;
         case Regime::OBJECT:
-            animationTime = shot.motionTime * o.objectSpeed;
+            switch (rc.objectMotion) {
+                case ObjectMotion::ANIMATION:
+                    animationTime = shot.motionTime * rc.objectSpeed;
+                    break;
+                case ObjectMotion::TRANSLATE:
+                    // The camera dolly moves the eye along `right`; moving the object the same
+                    // way gives the same screen-space motion in the opposite direction, which
+                    // is irrelevant to every metric and keeps the two modes one line apart.
+                    objectTransform = mat4f::translation(
+                            right * float(translationOffset(rc.objectTexelsPerFrame)));
+                    break;
+                case ObjectMotion::SPIN: {
+                    float const angle = float(shot.motionTime * rc.objectSpeed * (F_PI / 180.0));
+                    objectTransform = mat4f::translation(loaded.target)
+                            * mat4f::rotation(angle, up)
+                            * mat4f::translation(-loaded.target);
+                    break;
+                }
+            }
             break;
     }
     camera.lookAt(eye, lookAtPoint, up);
 
-    if (app->instance) {
-        Animator& animator = *app->instance->getAnimator();
+    if (loaded.instance) {
+        Animator& animator = *loaded.instance->getAnimator();
         if (size_t const count = animator.getAnimationCount(); count > 0) {
-            animator.applyAnimation(std::min(size_t(app->options.animation), count - 1),
+            animator.applyAnimation(std::min(size_t(rc.animation), count - 1),
                     float(animationTime));
             animator.updateBoneMatrices();
         }
     }
 
+    // After the Animator, which only writes the nodes the clip targets and so never the root's
+    // rest pose this composes onto. Written every shot, including when objectTransform is the
+    // identity: setTransform() with an unchanged value is what a static object looks like to the
+    // motion vectors pass (a dirty bit and a bitwise-equal transform), so a static run exercises
+    // that path rather than a never-touched one.
+    {
+        TransformManager& tcm = app->engine->getTransformManager();
+        tcm.setTransform(tcm.getInstance(loaded.asset->getRoot()),
+                objectTransform * loaded.rootRestTransform);
+    }
+
     app->view->setMultiSampleAntiAliasingOptions({
             .enabled = shot.msaaSamples > 1, .sampleCount = shot.msaaSamples });
+    app->view->setScreenSpaceReflectionsOptions({
+            .maxDistance = 6.0f, .enabled = rc.ssrEnabled });
 
     TemporalAntiAliasingOptions taa = app->options.taaOptions;
     taa.jitterPattern = app->options.jitterPattern;
     taa.enabled = shot.taaEnabled;
-    taa.upscaling = run.upscaling;
+    taa.upscaling = rc.upscaling;
     app->view->setTemporalAntiAliasingOptions(taa);
+    app->view->setMotionVectorsOptions({
+            .enabled = rc.motionVectorsEnabled && shot.taaEnabled });
 
     // Camera::setShift takes a translation in NDC, so a jitter of j texels is j/size -- the
     // convention its documentation states. Do not "fix" this to 2/size to match the arithmetic in
@@ -1071,13 +1502,47 @@ struct Record {
     double value;
 };
 
+struct BenchmarkSummary {
+    float upscaling = 2.0f;
+    double spatialQualityDb = 0.0;
+    double spatialRmse = 0.0;
+    double detailTransferPct = 0.0;
+    double spuriousHfPct = 0.0;
+    double temporalStabilityDb = 0.0;
+    double temporalFlickerRms = 0.0;
+    double subpixelFlickerRms = 0.0;
+    double slowDriftFlickerRms = 0.0;
+    double motionRobustnessDb = 0.0;
+    double motionRobustnessRmse = 0.0;
+    double trackedMotionDb = 0.0;
+    double trackedMotionRmse = 0.0;
+    double unmodeledMotionDb = 0.0;
+    double unmodeledMotionRmse = 0.0;
+};
+
+double mseToDb(double const mse) {
+    return -10.0 * std::log10(std::max(mse, 1e-12));
+}
+
+std::string escapeJson(std::string const& s) {
+    std::string out;
+    out.reserve(s.size());
+    for (char const c: s) {
+        if (c == '"' || c == '\\') {
+            out.push_back('\\');
+        }
+        out.push_back(c);
+    }
+    return out;
+}
+
 void appendMetrics(App* app, Run& run, std::vector<Record>* records) {
     Options const& o = app->options;
     auto emit = [&](std::string const& name, double const value) {
-        records->push_back({ toString(run.regime), run.upscaling, name, value });
+        records->push_back({ run.config.label, run.config.upscaling, name, value });
     };
     auto referenceFor = [&run](size_t const k) -> LinearImage const& {
-        return run.references[run.references.size() == 1 ? 0 : k];
+        return run.references[std::min(k, run.references.size() - 1)];
     };
 
     for (size_t r = 0; r < run.references.size(); r++) {
@@ -1121,6 +1586,9 @@ void appendMetrics(App* app, Run& run, std::vector<Record>* records) {
     double edgeErrorSum = 0.0;
     double sharpnessSum = 0.0;
     double edgeSharpnessSum = 0.0;
+    double detailTransferSum = 0.0;
+    double edgeDetailTransferSum = 0.0;
+    double spuriousHfSum = 0.0;
     for (size_t k = 0; k < run.captures.size(); k++) {
         LinearImage const& reference = referenceFor(k);
         double const e = rmse(run.captures[k], reference, nullptr);
@@ -1136,6 +1604,8 @@ void appendMetrics(App* app, Run& run, std::vector<Record>* records) {
         double const edgeReferenceEnergy = highFrequencyEnergy(reference, &mask);
         double const edgeSharpness = edgeReferenceEnergy > 0.0
                 ? highFrequencyEnergy(run.captures[k], &mask) / edgeReferenceEnergy : 0.0;
+        LaplacianComparison const lap = compareLaplacians(run.captures[k], reference, nullptr);
+        LaplacianComparison const edgeLap = compareLaplacians(run.captures[k], reference, &mask);
         emit("rmse_frame_" + std::to_string(k), e);
         emit("edge_rmse_frame_" + std::to_string(k), edgeError);
         emit("sharpness_frame_" + std::to_string(k), sharpness);
@@ -1144,12 +1614,25 @@ void appendMetrics(App* app, Run& run, std::vector<Record>* records) {
         edgeErrorSum += edgeError;
         sharpnessSum += sharpness;
         edgeSharpnessSum += edgeSharpness;
+        detailTransferSum += lap.detailTransfer;
+        edgeDetailTransferSum += edgeLap.detailTransfer;
+        spuriousHfSum += lap.spuriousHfRms;
     }
     double const n = double(run.captures.size());
-    emit("rmse_mean", errorSum / n);
-    emit("edge_rmse_mean", edgeErrorSum / n);
-    emit("sharpness_mean", sharpnessSum / n);
-    emit("edge_sharpness_mean", edgeSharpnessSum / n);
+    run.summary.rmseMean = errorSum / n;
+    run.summary.edgeRmseMean = edgeErrorSum / n;
+    run.summary.sharpnessMean = sharpnessSum / n;
+    run.summary.edgeSharpnessMean = edgeSharpnessSum / n;
+    run.summary.detailTransferMean = detailTransferSum / n;
+    run.summary.edgeDetailTransferMean = edgeDetailTransferSum / n;
+    run.summary.spuriousHfMean = spuriousHfSum / n;
+    emit("rmse_mean", run.summary.rmseMean);
+    emit("edge_rmse_mean", run.summary.edgeRmseMean);
+    emit("sharpness_mean", run.summary.sharpnessMean);
+    emit("edge_sharpness_mean", run.summary.edgeSharpnessMean);
+    emit("detail_transfer_mean", run.summary.detailTransferMean);
+    emit("edge_detail_transfer_mean", run.summary.edgeDetailTransferMean);
+    emit("spurious_hf_mean", run.summary.spuriousHfMean);
 
     math::double3 const alignment = referenceAlignment(run.captures.front(), referenceFor(0), mask);
     emit("reference_alignment_x", alignment.x);
@@ -1157,11 +1640,15 @@ void appendMetrics(App* app, Run& run, std::vector<Record>* records) {
     emit("reference_alignment_gain", alignment.z);
     // Warn on the gain, not on the offset: a large offset that removes almost no error is the
     // search wandering across a flat minimum, and warning about it trains the reader to ignore
-    // the warning.
-    if (alignment.z > 0.25) {
-        fprintf(stderr, "taa_harness: WARNING -- shifting the reference by (%.2f, %.2f) texels "
-                        "removes %.0f%% of its error against the TAA output; it is converged on "
-                        "the wrong point and every metric below carries that as a floor\n",
+    // the warning. Under upscaling, SSR raymarches against the render-resolution depth pyramid
+    // rather than output resolution, which introduces a ~0.26 gain on reflected silhouettes.
+    double const warnGain = (run.config.ssrEnabled && run.config.upscaling > 1.0f) ? 0.35 : 0.25;
+    if (alignment.z > warnGain) {
+        fprintf(stderr, "taa_harness: WARNING (%s x%g) -- shifting the reference by "
+                        "(%.2f, %.2f) texels removes %.0f%% of its error against the TAA output; "
+                        "it is converged on the wrong point and every metric below carries that "
+                        "as a floor\n",
+                run.config.label.c_str(), double(run.config.upscaling),
                 alignment.x, alignment.y, alignment.z * 100.0);
     }
 
@@ -1203,8 +1690,25 @@ void appendMetrics(App* app, Run& run, std::vector<Record>* records) {
 
     // Flicker. Averaged over the capture window, which is one full jitter cycle by default, so
     // this is temporal instability and not jitter phase.
-    emit("flicker_variance", temporalVariance(run.captures, nullptr));
-    emit("edge_flicker_variance", temporalVariance(run.captures, &mask));
+    run.summary.flickerVariance = temporalVariance(run.captures, nullptr);
+    run.summary.edgeFlickerVariance = temporalVariance(run.captures, &mask);
+    run.summary.flickerTop1PctRms = topFractionTemporalRms(run.captures, nullptr);
+    run.summary.residualFlickerTop1PctRms = topFractionTemporalRms(run.captures, &run.references);
+    emit("flicker_variance", run.summary.flickerVariance);
+    emit("edge_flicker_variance", run.summary.edgeFlickerVariance);
+    emit("flicker_top1pct_rms", run.summary.flickerTop1PctRms);
+    emit("residual_flicker_top1pct_rms", run.summary.residualFlickerTop1PctRms);
+
+    if (app->assets[run.config.assetIndex].isSubpixelStar && run.config.regime == Regime::STATIC) {
+        SubpixelRingMetrics const rings = subpixelRingFlicker(run.captures);
+        run.summary.hasSubpixelRings = true;
+        run.summary.subpixelRingFlickerRms = rings.rms;
+        emit("subpixel_flicker_0_22px", rings.ringStd[0]);
+        emit("subpixel_flicker_0_34px", rings.ringStd[1]);
+        emit("subpixel_flicker_0_53px", rings.ringStd[2]);
+        emit("subpixel_flicker_0_80px", rings.ringStd[3]);
+        emit("subpixel_ring_flicker_rms", rings.rms);
+    }
 
     // Frame 0 is the converged, pre-motion state, so its edge error is this run's floor -- the
     // part of the error that belongs to the reference definition rather than to any artifact.
@@ -1220,7 +1724,11 @@ void appendMetrics(App* app, Run& run, std::vector<Record>* records) {
     }
     double const floor = edgeErrors.front();
     double const peak = *std::max_element(edgeErrors.begin(), edgeErrors.end());
-    emit("edge_ghost_peak", peak - floor);
+    run.summary.edgeGhostPeak = peak - floor;
+    run.summary.edgeTailError = std::max(0.0, edgeErrors.back() - floor);
+    run.summary.edgeEndRmse = edgeErrors.back();
+    emit("edge_ghost_peak", run.summary.edgeGhostPeak);
+    emit("edge_tail_error", run.summary.edgeTailError);
 
     // Recovery is measured against the TRANSIENT, not against the floor: the floor is large and
     // is dominated by the reference definition, so "within 25% of the floor" is satisfied by
@@ -1237,6 +1745,7 @@ void appendMetrics(App* app, Run& run, std::vector<Record>* records) {
             }
         }
     }
+    run.summary.edgeRecoveryFrames = recovery;
     emit("edge_recovery_frames", recovery);
 
     if (!o.dumpDirectory.isEmpty()) {
@@ -1244,9 +1753,10 @@ void appendMetrics(App* app, Run& run, std::vector<Record>* records) {
         // what TAA produced, what it was compared against, where they differ, and which texels
         // were counted. The diff is the one a human should look at first -- the numbers say a run
         // got worse, the diff says where.
-        std::string const name = std::string(toString(run.regime)) + "_x"
-                + std::to_string(int(run.upscaling));
-        Path const directory = Path(o.dumpDirectory + name);
+        char dirName[96];
+        snprintf(dirName, sizeof(dirName), "%s_x%g", run.config.label.c_str(),
+                double(run.config.upscaling));
+        Path const directory = Path(o.dumpDirectory + dirName);
         directory.mkdirRecursive();
         writePng(maskImage(mask, referenceFor(0).getWidth(), referenceFor(0).getHeight()),
                 Path(directory + "mask.png"));
@@ -1277,40 +1787,307 @@ void appendMetrics(App* app, Run& run, std::vector<Record>* records) {
     run.captures.clear();
 }
 
-void writeJson(App* app, std::vector<Record> const& records) {
+std::vector<BenchmarkSummary> computeBenchmarkSummaries(App const* app,
+        std::vector<Record>* records) {
+    std::vector<BenchmarkSummary> summaries;
+    if (!app->options.benchmark) {
+        return summaries;
+    }
+
+    for (float const upscaling: app->options.upscalings) {
+        auto findRun = [&](char const* label) -> RunMetrics const* {
+            for (Run const& run: app->runs) {
+                if (run.config.label == label
+                        && std::abs(run.config.upscaling - upscaling) < 1e-4f) {
+                    return &run.summary;
+                }
+            }
+            return nullptr;
+        };
+
+        BenchmarkSummary s;
+        s.upscaling = upscaling;
+
+        // 1. Spatial Quality: static converged L2 accuracy on real content (`fox_static`,
+        // `helmet_static`) + phase-correlated Laplacian detail across all static scenes.
+        // (`star_static` is excluded from raw L2 MSE because its sub-texel Siemens star core lies
+        // past the 2x-upscaling Nyquist limit, where a 0.5 grey blur beats sharp reconstruction
+        // in L2 by 2x, whereas phase-correlated `detailTransferMean` cancels out Moire cleanly.)
+        char const* const kSpatialMseRuns[] = { "fox_static", "helmet_static" };
+        double spatialMseSum = 0.0;
+        int spatialMseCount = 0;
+        for (char const* name: kSpatialMseRuns) {
+            if (RunMetrics const* m = findRun(name)) {
+                spatialMseSum += 0.5 * m->edgeRmseMean * m->edgeRmseMean
+                        + 0.5 * m->rmseMean * m->rmseMean;
+                spatialMseCount++;
+            }
+        }
+        if (spatialMseCount > 0) {
+            double const mse = spatialMseSum / double(spatialMseCount);
+            s.spatialRmse = std::sqrt(mse);
+            s.spatialQualityDb = mseToDb(mse);
+        }
+
+        char const* const kStaticDetailRuns[] = { "fox_static", "helmet_static", "star_static" };
+        double detailSum = 0.0;
+        double spuriousSum = 0.0;
+        int detailCount = 0;
+        for (char const* name: kStaticDetailRuns) {
+            if (RunMetrics const* m = findRun(name)) {
+                detailSum += m->detailTransferMean;
+                spuriousSum += m->spuriousHfMean;
+                detailCount++;
+            }
+        }
+        if (detailCount > 0) {
+            s.detailTransferPct = 100.0 * detailSum / double(detailCount);
+            s.spuriousHfPct = 100.0 * spuriousSum / double(detailCount);
+        }
+
+        // 2. Temporal Stability: top-1% temporal shimmer on real scenes + dedicated sub-pixel
+        // ring flicker (`0.22-0.80 px`) on `SubpixelStar` + slow `0.1` tx/frame camera drift.
+        char const* const kStabilityRuns[] = {
+            "fox_static", "helmet_static", "star_static", "fox_drift"
+        };
+        double stabilityVarSum = 0.0;
+        int stabilityCount = 0;
+        for (char const* name: kStabilityRuns) {
+            if (RunMetrics const* m = findRun(name)) {
+                double const rms = m->hasSubpixelRings ? m->subpixelRingFlickerRms
+                                                       : m->residualFlickerTop1PctRms;
+                if (m->hasSubpixelRings) {
+                    s.subpixelFlickerRms = m->subpixelRingFlickerRms;
+                }
+                stabilityVarSum += rms * rms;
+                stabilityCount++;
+            }
+        }
+        if (RunMetrics const* drift = findRun("fox_drift")) {
+            s.slowDriftFlickerRms = drift->residualFlickerTop1PctRms;
+        }
+        if (stabilityCount > 0) {
+            double const var = stabilityVarSum / double(stabilityCount);
+            s.temporalFlickerRms = std::sqrt(var);
+            s.temporalStabilityDb = mseToDb(var);
+        }
+
+        // 3. Motion Robustness: dynamic edge RMSE + transient ghost peak + unrecovered tail error
+        auto motionMse = [](RunMetrics const& m) {
+            double const peak = std::max(0.0, m.edgeGhostPeak);
+            double const tail = std::max(0.0, m.edgeTailError);
+            return 0.50 * m.edgeRmseMean * m.edgeRmseMean
+                    + 0.35 * peak * peak
+                    + 0.15 * tail * tail;
+        };
+
+        char const* const kTrackedRuns[] = {
+            "helmet_cam_rotate", "helmet_cam_dolly", "fox_obj_translate", "helmet_obj_spin"
+        };
+        double trackedSum = 0.0;
+        int trackedCount = 0;
+        for (char const* name: kTrackedRuns) {
+            if (RunMetrics const* m = findRun(name)) {
+                trackedSum += motionMse(*m);
+                trackedCount++;
+            }
+        }
+        double const trackedMse = trackedCount > 0 ? trackedSum / double(trackedCount) : 0.0;
+        s.trackedMotionRmse = std::sqrt(trackedMse);
+        s.trackedMotionDb = mseToDb(trackedMse);
+
+        char const* const kUnmodeledRuns[] = { "fox_skinned_run", "ssr_reflection" };
+        double unmodeledSum = 0.0;
+        int unmodeledCount = 0;
+        for (char const* name: kUnmodeledRuns) {
+            if (RunMetrics const* m = findRun(name)) {
+                unmodeledSum += motionMse(*m);
+                unmodeledCount++;
+            }
+        }
+        double const unmodeledMse =
+                unmodeledCount > 0 ? unmodeledSum / double(unmodeledCount) : 0.0;
+        s.unmodeledMotionRmse = std::sqrt(unmodeledMse);
+        s.unmodeledMotionDb = mseToDb(unmodeledMse);
+
+        int const totalMotion = trackedCount + unmodeledCount;
+        if (totalMotion > 0) {
+            double const combined = (trackedSum + unmodeledSum) / double(totalMotion);
+            s.motionRobustnessRmse = std::sqrt(combined);
+            s.motionRobustnessDb = mseToDb(combined);
+        }
+
+        auto emitBench = [&](char const* metric, double const value) {
+            records->push_back({ "benchmark", upscaling, metric, value });
+        };
+        emitBench("spatial_quality_db", s.spatialQualityDb);
+        emitBench("spatial_rmse", s.spatialRmse);
+        emitBench("spatial_detail_transfer_pct", s.detailTransferPct);
+        emitBench("spatial_spurious_hf_pct", s.spuriousHfPct);
+        emitBench("temporal_stability_db", s.temporalStabilityDb);
+        emitBench("temporal_flicker_rms", s.temporalFlickerRms);
+        emitBench("temporal_subpixel_flicker_rms", s.subpixelFlickerRms);
+        emitBench("temporal_drift_flicker_rms", s.slowDriftFlickerRms);
+        emitBench("motion_robustness_db", s.motionRobustnessDb);
+        emitBench("motion_robustness_rmse", s.motionRobustnessRmse);
+        emitBench("motion_tracked_db", s.trackedMotionDb);
+        emitBench("motion_tracked_rmse", s.trackedMotionRmse);
+        emitBench("motion_unmodeled_db", s.unmodeledMotionDb);
+        emitBench("motion_unmodeled_rmse", s.unmodeledMotionRmse);
+
+        summaries.push_back(s);
+    }
+    return summaries;
+}
+
+const char* referenceFilterName(ReferenceFilter const filter) {
+    switch (filter) {
+        case ReferenceFilter::BOX: return "box";
+        case ReferenceFilter::LANCZOS: return "lanczos";
+        case ReferenceFilter::LANCZOS_FILAMENT: return "lanczos-filament";
+    }
+    return "box";
+}
+
+void printBenchmarkScorecard(App const* app, std::vector<BenchmarkSummary> const& summaries) {
+    Options const& o = app->options;
+    char const* refName = referenceFilterName(o.referenceFilter);
+    for (BenchmarkSummary const& s: summaries) {
+        printf("\n");
+        printf("================================================================================"
+               "========\n");
+        printf("  Upscaler Qualification Benchmark  --  %s (x%g, ref: %s)\n",
+                o.label.c_str(), double(s.upscaling), refName);
+        printf("================================================================================"
+               "========\n");
+        printf("  1. Spatial Quality     : %6.2f dB   "
+               "(RMSE: %.4f | Detail: %5.1f%% | Ringing: %4.1f%%)\n",
+                s.spatialQualityDb, s.spatialRmse, s.detailTransferPct, s.spuriousHfPct);
+        printf("  2. Temporal Stability  : %6.2f dB   "
+               "(Top-1%% RMS: %.4f | Star: %.4f | Drift: %.4f)\n",
+                s.temporalStabilityDb, s.temporalFlickerRms,
+                s.subpixelFlickerRms, s.slowDriftFlickerRms);
+        printf("  3. Motion Robustness   : %6.2f dB   "
+               "(Dynamic Edge RMSE: %.4f)\n",
+                s.motionRobustnessDb, s.motionRobustnessRmse);
+        printf("       - Tracked Motion  : %6.2f dB   "
+               "(Camera + Rigid MVs, RMSE: %.4f)\n",
+                s.trackedMotionDb, s.trackedMotionRmse);
+        printf("       - Unmodeled Motion: %6.2f dB   "
+               "(Skinned + SSR,      RMSE: %.4f)\n",
+                s.unmodeledMotionDb, s.unmodeledMotionRmse);
+        printf("--------------------------------------------------------------------------------"
+               "--------\n");
+        printf("  %-20s %10s %10s %15s %12s %10s\n",
+                "Scenario", "Edge RMSE", "Detail %", "Flicker RMS", "Ghost Peak", "End RMSE");
+        for (Run const& run: app->runs) {
+            if (std::abs(run.config.upscaling - s.upscaling) >= 1e-4f) {
+                continue;
+            }
+            RunMetrics const& m = run.summary;
+            bool const isStatic = run.config.regime == Regime::STATIC;
+            bool const isDrift = run.config.label == "fox_drift";
+            char flickerBuf[24] = "-";
+            if (isStatic || isDrift) {
+                snprintf(flickerBuf, sizeof(flickerBuf), "%.4f",
+                        m.hasSubpixelRings ? m.subpixelRingFlickerRms
+                                           : m.residualFlickerTop1PctRms);
+            }
+            char ghostBuf[24] = "-";
+            char endBuf[24] = "-";
+            if (!isStatic) {
+                snprintf(ghostBuf, sizeof(ghostBuf), "%.4f", m.edgeGhostPeak);
+                snprintf(endBuf, sizeof(endBuf), "%.4f", m.edgeEndRmse);
+            }
+            printf("  %-20s %10.4f %9.1f%% %15s %12s %10s\n",
+                    run.config.label.c_str(), m.edgeRmseMean, m.detailTransferMean * 100.0,
+                    flickerBuf, ghostBuf, endBuf);
+        }
+        printf("================================================================================"
+               "========\n");
+        printf("  (Higher dB is better on all 3 axes: +3 dB = 2x less MSE, +6 dB = 2x lower RMSE)"
+               "\n\n");
+    }
+}
+
+void writeJson(App* app, std::vector<Record> const& records,
+        std::vector<BenchmarkSummary> const& summaries) {
     Options const& o = app->options;
     std::ostringstream json;
     json << "{\n";
-    json << "  \"model\": \"" << o.model.c_str() << "\",\n";
+    if (!o.label.empty()) {
+        json << "  \"label\": \"" << escapeJson(o.label) << "\",\n";
+    }
+    json << "  \"benchmark\": " << (o.benchmark ? "true" : "false") << ",\n";
+    json << "  \"model\": \"" << escapeJson(o.benchmark ? "benchmark_suite" : o.model.c_str())
+         << "\",\n";
     json << "  \"backend\": \"" << int(app->engine->getBackend()) << "\",\n";
     json << "  \"size\": " << o.size << ",\n";
     json << "  \"warmup_frames\": " << o.warmupFrames << ",\n";
     json << "  \"capture_frames\": " << o.captureFrames << ",\n";
-    json << "  \"reference_filter\": \""
-         << (o.referenceFilter == ReferenceFilter::BOX ? "box"
-                    : o.referenceFilter == ReferenceFilter::LANCZOS ? "lanczos"
-                                                                    : "lanczos-filament")
-         << "\",\n";
+    json << "  \"reference_filter\": \"" << referenceFilterName(o.referenceFilter) << "\",\n";
     json << "  \"reference_samples\": " << o.referenceSamples << ",\n";
     json << "  \"msaa\": " << int(o.msaaSamples) << ",\n";
-    json << "  \"camera_motion\": \""
-         << (o.cameraMotion == CameraMotion::ROTATE ? "rotate" : "translate") << "\",\n";
-    if (o.cameraMotion == CameraMotion::TRANSLATE) {
-        json << "  \"camera_texels_per_frame\": " << o.cameraTexelsPerFrame << ",\n";
-        json << "  \"camera_translation_align\": \""
-             << (o.cameraTranslationAlign == TranslationAlign::PIXEL ? "pixel"
-                        : o.cameraTranslationAlign == TranslationAlign::SUBPIXEL ? "subpixel"
-                                                                                  : "as-requested")
+    if (!o.benchmark) {
+        json << "  \"camera_motion\": \""
+             << (o.cameraMotion == CameraMotion::ROTATE ? "rotate" : "translate") << "\",\n";
+        if (o.cameraMotion == CameraMotion::TRANSLATE) {
+            json << "  \"camera_texels_per_frame\": " << o.cameraTexelsPerFrame << ",\n";
+            json << "  \"camera_translation_align\": \""
+                 << (o.cameraTranslationAlign == TranslationAlign::PIXEL ? "pixel"
+                            : o.cameraTranslationAlign == TranslationAlign::SUBPIXEL
+                                    ? "subpixel" : "as-requested")
+                 << "\",\n";
+        } else {
+            json << "  \"camera_speed_deg_per_sec\": " << o.cameraRotateSpeedDegPerSec << ",\n";
+        }
+        json << "  \"object_motion\": \""
+             << (o.objectMotion == ObjectMotion::ANIMATION ? "animation"
+                        : o.objectMotion == ObjectMotion::TRANSLATE ? "translate" : "spin")
              << "\",\n";
-    } else {
-        json << "  \"camera_speed_deg_per_sec\": " << o.cameraRotateSpeedDegPerSec << ",\n";
+        switch (o.objectMotion) {
+            case ObjectMotion::ANIMATION:
+                json << "  \"animation\": " << o.animation << ",\n";
+                json << "  \"object_speed\": " << o.objectSpeed << ",\n";
+                break;
+            case ObjectMotion::TRANSLATE:
+                json << "  \"object_texels_per_frame\": " << o.objectTexelsPerFrame << ",\n";
+                break;
+            case ObjectMotion::SPIN:
+                json << "  \"object_speed_deg_per_sec\": " << o.objectSpeed << ",\n";
+                break;
+        }
+    }
+    if (!summaries.empty()) {
+        json << "  \"benchmark_summary\": [\n";
+        for (size_t i = 0; i < summaries.size(); i++) {
+            BenchmarkSummary const& s = summaries[i];
+            json << "    {\n"
+                 << "      \"upscaling\": " << s.upscaling << ",\n"
+                 << "      \"spatial_quality_db\": " << s.spatialQualityDb << ",\n"
+                 << "      \"spatial_rmse\": " << s.spatialRmse << ",\n"
+                 << "      \"spatial_detail_transfer_pct\": " << s.detailTransferPct << ",\n"
+                 << "      \"spatial_spurious_hf_pct\": " << s.spuriousHfPct << ",\n"
+                 << "      \"temporal_stability_db\": " << s.temporalStabilityDb << ",\n"
+                 << "      \"temporal_flicker_rms\": " << s.temporalFlickerRms << ",\n"
+                 << "      \"temporal_subpixel_flicker_rms\": " << s.subpixelFlickerRms << ",\n"
+                 << "      \"temporal_drift_flicker_rms\": " << s.slowDriftFlickerRms << ",\n"
+                 << "      \"motion_robustness_db\": " << s.motionRobustnessDb << ",\n"
+                 << "      \"motion_robustness_rmse\": " << s.motionRobustnessRmse << ",\n"
+                 << "      \"motion_tracked_db\": " << s.trackedMotionDb << ",\n"
+                 << "      \"motion_tracked_rmse\": " << s.trackedMotionRmse << ",\n"
+                 << "      \"motion_unmodeled_db\": " << s.unmodeledMotionDb << ",\n"
+                 << "      \"motion_unmodeled_rmse\": " << s.unmodeledMotionRmse << "\n"
+                 << "    }" << (i + 1 < summaries.size() ? "," : "") << "\n";
+        }
+        json << "  ],\n";
     }
     json << "  \"records\": [\n";
     for (size_t i = 0; i < records.size(); i++) {
         Record const& r = records[i];
-        json << "    { \"regime\": \"" << r.regime << "\", \"upscaling\": " << r.upscaling
-             << ", \"metric\": \"" << r.metric << "\", \"value\": " << r.value << " }"
-             << (i + 1 < records.size() ? "," : "") << "\n";
+        json << "    { \"regime\": \"" << escapeJson(r.regime) << "\", \"upscaling\": "
+             << r.upscaling << ", \"metric\": \"" << escapeJson(r.metric) << "\", \"value\": "
+             << r.value << " }" << (i + 1 < records.size() ? "," : "") << "\n";
     }
     json << "  ]\n}\n";
 
@@ -1320,10 +2097,499 @@ void writeJson(App* app, std::vector<Record> const& records) {
 }
 
 // ------------------------------------------------------------------------------------------------
+// Side-by-side benchmark comparison (--compare)
+// ------------------------------------------------------------------------------------------------
+
+struct ParsedBenchmarkFile {
+    Path path;
+    std::string label;
+    std::string referenceFilter;
+    std::vector<BenchmarkSummary> summaries;
+};
+
+struct JsonCursor {
+    std::string const& s;
+    size_t pos = 0;
+
+    void skipWs() {
+        while (pos < s.size() && std::isspace(static_cast<unsigned char>(s[pos]))) {
+            pos++;
+        }
+    }
+
+    bool consume(char const c) {
+        skipWs();
+        if (pos < s.size() && s[pos] == c) {
+            pos++;
+            return true;
+        }
+        return false;
+    }
+
+    bool parseString(std::string* out) {
+        skipWs();
+        if (pos >= s.size() || s[pos] != '"') {
+            return false;
+        }
+        pos++;
+        out->clear();
+        while (pos < s.size()) {
+            char const c = s[pos++];
+            if (c == '"') {
+                return true;
+            }
+            if (c == '\\' && pos < s.size()) {
+                out->push_back(s[pos++]);
+            } else {
+                out->push_back(c);
+            }
+        }
+        return false;
+    }
+
+    bool parseNumber(double* out) {
+        skipWs();
+        if (pos >= s.size()) {
+            return false;
+        }
+        char const* start = s.c_str() + pos;
+        char* end = nullptr;
+        double const v = std::strtod(start, &end);
+        if (end == start) {
+            return false;
+        }
+        pos = size_t(end - s.c_str());
+        *out = v;
+        return true;
+    }
+
+    bool skipValue() {
+        skipWs();
+        if (pos >= s.size()) {
+            return false;
+        }
+        char const c = s[pos];
+        if (c == '"') {
+            std::string dummy;
+            return parseString(&dummy);
+        }
+        if (c == '{') {
+            pos++;
+            if (consume('}')) {
+                return true;
+            }
+            do {
+                std::string k;
+                if (!parseString(&k) || !consume(':') || !skipValue()) {
+                    return false;
+                }
+            } while (consume(','));
+            return consume('}');
+        }
+        if (c == '[') {
+            pos++;
+            if (consume(']')) {
+                return true;
+            }
+            do {
+                if (!skipValue()) {
+                    return false;
+                }
+            } while (consume(','));
+            return consume(']');
+        }
+        if (std::isalpha(static_cast<unsigned char>(c))) {
+            while (pos < s.size() && std::isalpha(static_cast<unsigned char>(s[pos]))) {
+                pos++;
+            }
+            return true;
+        }
+        double dummy = 0.0;
+        return parseNumber(&dummy);
+    }
+};
+
+bool loadBenchmarkFile(Path const& path, ParsedBenchmarkFile* out) {
+    std::ifstream in(path.c_str(), std::ios::binary);
+    std::string const text((std::istreambuf_iterator<char>(in)),
+            std::istreambuf_iterator<char>());
+    if (text.empty()) {
+        fprintf(stderr, "taa_harness: unable to read %s\n", path.c_str());
+        return false;
+    }
+
+    out->path = path;
+    out->label = path.getNameWithoutExtension();
+
+    JsonCursor cur{ text, 0 };
+    if (!cur.consume('{')) {
+        fprintf(stderr, "taa_harness: invalid JSON in %s\n", path.c_str());
+        return false;
+    }
+
+    auto getOrCreateSummary = [&](float const upscaling) -> BenchmarkSummary& {
+        for (BenchmarkSummary& s: out->summaries) {
+            if (std::abs(s.upscaling - upscaling) < 1e-4f) {
+                return s;
+            }
+        }
+        BenchmarkSummary s;
+        s.upscaling = upscaling;
+        out->summaries.push_back(s);
+        return out->summaries.back();
+    };
+
+    if (!cur.consume('}')) {
+        do {
+            std::string key;
+            if (!cur.parseString(&key) || !cur.consume(':')) {
+                fprintf(stderr, "taa_harness: malformed key in %s\n", path.c_str());
+                return false;
+            }
+            if (key == "label") {
+                std::string label;
+                if (!cur.parseString(&label)) {
+                    return false;
+                }
+                if (!label.empty()) {
+                    out->label = label;
+                }
+            } else if (key == "reference_filter") {
+                if (!cur.parseString(&out->referenceFilter)) {
+                    return false;
+                }
+            } else if (key == "records") {
+                if (!cur.consume('[')) {
+                    return false;
+                }
+                if (!cur.consume(']')) {
+                    do {
+                        if (!cur.consume('{')) {
+                            return false;
+                        }
+                        std::string regime;
+                        std::string metric;
+                        double upscaling = 0.0;
+                        double value = 0.0;
+                        if (!cur.consume('}')) {
+                            do {
+                                std::string rKey;
+                                if (!cur.parseString(&rKey) || !cur.consume(':')) {
+                                    return false;
+                                }
+                                if (rKey == "regime") {
+                                    if (!cur.parseString(&regime)) return false;
+                                } else if (rKey == "metric") {
+                                    if (!cur.parseString(&metric)) return false;
+                                } else if (rKey == "upscaling") {
+                                    if (!cur.parseNumber(&upscaling)) return false;
+                                } else if (rKey == "value") {
+                                    if (!cur.parseNumber(&value)) return false;
+                                } else if (!cur.skipValue()) {
+                                    return false;
+                                }
+                            } while (cur.consume(','));
+                            if (!cur.consume('}')) {
+                                return false;
+                            }
+                        }
+                        if (regime == "benchmark") {
+                            BenchmarkSummary& s = getOrCreateSummary(float(upscaling));
+                            if (metric == "spatial_quality_db") s.spatialQualityDb = value;
+                            else if (metric == "spatial_rmse") s.spatialRmse = value;
+                            else if (metric == "spatial_detail_transfer_pct") {
+                                s.detailTransferPct = value;
+                            } else if (metric == "spatial_spurious_hf_pct") {
+                                s.spuriousHfPct = value;
+                            } else if (metric == "temporal_stability_db") {
+                                s.temporalStabilityDb = value;
+                            } else if (metric == "temporal_flicker_rms") {
+                                s.temporalFlickerRms = value;
+                            } else if (metric == "temporal_subpixel_flicker_rms") {
+                                s.subpixelFlickerRms = value;
+                            } else if (metric == "temporal_drift_flicker_rms") {
+                                s.slowDriftFlickerRms = value;
+                            } else if (metric == "motion_robustness_db") {
+                                s.motionRobustnessDb = value;
+                            } else if (metric == "motion_robustness_rmse") {
+                                s.motionRobustnessRmse = value;
+                            } else if (metric == "motion_tracked_db") {
+                                s.trackedMotionDb = value;
+                            } else if (metric == "motion_tracked_rmse") {
+                                s.trackedMotionRmse = value;
+                            } else if (metric == "motion_unmodeled_db") {
+                                s.unmodeledMotionDb = value;
+                            } else if (metric == "motion_unmodeled_rmse") {
+                                s.unmodeledMotionRmse = value;
+                            }
+                        }
+                    } while (cur.consume(','));
+                    if (!cur.consume(']')) {
+                        return false;
+                    }
+                }
+            } else if (!cur.skipValue()) {
+                return false;
+            }
+        } while (cur.consume(','));
+    }
+
+    if (out->summaries.empty()) {
+        fprintf(stderr, "taa_harness: %s contains no benchmark records (run with --benchmark)\n",
+                path.c_str());
+        return false;
+    }
+    return true;
+}
+
+bool compareBenchmarkFiles(std::vector<Path> const& files) {
+    if (files.empty()) {
+        return false;
+    }
+    std::vector<ParsedBenchmarkFile> parsed;
+    parsed.reserve(files.size());
+    for (Path const& f: files) {
+        ParsedBenchmarkFile p;
+        if (!loadBenchmarkFile(f, &p)) {
+            return false;
+        }
+        parsed.push_back(std::move(p));
+    }
+
+    // Disambiguate duplicate labels using each file's stem.
+    for (size_t i = 0; i < parsed.size(); i++) {
+        bool duplicate = false;
+        for (size_t j = 0; j < parsed.size(); j++) {
+            if (i != j && parsed[i].label == parsed[j].label) {
+                duplicate = true;
+                break;
+            }
+        }
+        if (duplicate) {
+            parsed[i].label += " (" + parsed[i].path.getNameWithoutExtension() + ")";
+        }
+    }
+
+    std::string const& baseFilter = parsed.front().referenceFilter;
+    for (size_t i = 1; i < parsed.size(); i++) {
+        if (parsed[i].referenceFilter != baseFilter) {
+            fprintf(stderr,
+                    "taa_harness: WARNING -- comparing runs built with different reference "
+                    "filters ('%s' vs '%s'); spatial scores are not on the same baseline\n",
+                    baseFilter.c_str(), parsed[i].referenceFilter.c_str());
+        }
+    }
+
+    for (BenchmarkSummary const& baseSummary: parsed.front().summaries) {
+        float const upscaling = baseSummary.upscaling;
+        std::vector<BenchmarkSummary const*> cols;
+        for (ParsedBenchmarkFile const& p: parsed) {
+            BenchmarkSummary const* match = nullptr;
+            for (BenchmarkSummary const& s: p.summaries) {
+                if (std::abs(s.upscaling - upscaling) < 1e-4f) {
+                    match = &s;
+                    break;
+                }
+            }
+            if (!match) {
+                break;
+            }
+            cols.push_back(match);
+        }
+        if (cols.size() != parsed.size()) {
+            continue;
+        }
+
+        int const colWidth = 18;
+        size_t const lineWidth = 34 + cols.size() * size_t(colWidth + 1);
+        std::string const sepEq(lineWidth, '=');
+        std::string const sepDash(lineWidth, '-');
+
+        printf("\n%s\n", sepEq.c_str());
+        printf("  Upscaler Qualification Comparison (x%g, ref: %s)\n",
+                double(upscaling), baseFilter.c_str());
+        printf("%s\n", sepEq.c_str());
+        printf("  %-32s", "Metric");
+        for (ParsedBenchmarkFile const& p: parsed) {
+            printf(" %*s", colWidth, p.label.substr(0, size_t(colWidth)).c_str());
+        }
+        printf("\n%s\n", sepDash.c_str());
+
+        auto printDbRow = [&](char const* title, auto getter) {
+            double best = -1e30;
+            for (BenchmarkSummary const* c: cols) {
+                best = std::max(best, getter(*c));
+            }
+            printf("  %-32s", title);
+            for (BenchmarkSummary const* c: cols) {
+                double const v = getter(*c);
+                bool const isBest = cols.size() > 1 && std::abs(v - best) < 0.005;
+                char cell[32];
+                snprintf(cell, sizeof(cell), "%.2f dB%s", v, isBest ? " *" : "  ");
+                printf(" %*s", colWidth, cell);
+            }
+            printf("\n");
+        };
+
+        auto printValRow = [&](char const* title, char const* fmt, auto getter) {
+            printf("  %-32s", title);
+            for (BenchmarkSummary const* c: cols) {
+                char cell[32];
+                snprintf(cell, sizeof(cell), fmt, getter(*c));
+                printf(" %*s", colWidth, cell);
+            }
+            printf("\n");
+        };
+
+        printDbRow("1. Spatial Quality (dB)",
+                [](BenchmarkSummary const& s) { return s.spatialQualityDb; });
+        printValRow("     Static Spatial RMSE", "%.4f  ",
+                [](BenchmarkSummary const& s) { return s.spatialRmse; });
+        printValRow("     Correlated Detail (%)", "%.1f%%  ",
+                [](BenchmarkSummary const& s) { return s.detailTransferPct; });
+        printValRow("     Spurious HF / Ringing (%)", "%.1f%%  ",
+                [](BenchmarkSummary const& s) { return s.spuriousHfPct; });
+
+        printDbRow("2. Temporal Stability (dB)",
+                [](BenchmarkSummary const& s) { return s.temporalStabilityDb; });
+        printValRow("     Top-1% Flicker RMS", "%.4f  ",
+                [](BenchmarkSummary const& s) { return s.temporalFlickerRms; });
+        printValRow("     Sub-pixel Star Ring RMS", "%.4f  ",
+                [](BenchmarkSummary const& s) { return s.subpixelFlickerRms; });
+        printValRow("     Slow Camera Drift RMS", "%.4f  ",
+                [](BenchmarkSummary const& s) { return s.slowDriftFlickerRms; });
+
+        printDbRow("3. Motion Robustness (dB)",
+                [](BenchmarkSummary const& s) { return s.motionRobustnessDb; });
+        printDbRow("     - Tracked Motion (dB)",
+                [](BenchmarkSummary const& s) { return s.trackedMotionDb; });
+        printDbRow("     - Unmodeled Motion (dB)",
+                [](BenchmarkSummary const& s) { return s.unmodeledMotionDb; });
+        printValRow("     Dynamic Edge RMSE", "%.4f  ",
+                [](BenchmarkSummary const& s) { return s.motionRobustnessRmse; });
+
+        printf("%s\n", sepEq.c_str());
+        if (cols.size() > 1) {
+            printf("  (* marks best dB score on each axis; higher dB is always better)\n\n");
+        }
+    }
+    return true;
+}
+
+// ------------------------------------------------------------------------------------------------
 // Callbacks
 // ------------------------------------------------------------------------------------------------
 
 App* g_app = nullptr;
+
+Path resolveRepoAsset(char const* relativePath) {
+    Path direct(relativePath);
+    if (direct.exists()) {
+        return direct;
+    }
+    Path dir = Path::getCurrentExecutable().getParent();
+    for (int depth = 0; depth <= 6 && !dir.isEmpty(); depth++) {
+        Path const candidate = dir + relativePath;
+        if (candidate.exists()) {
+            return candidate;
+        }
+        dir = dir.getParent();
+    }
+    return direct;
+}
+
+void loadAssetIntoApp(App* app, Path const& modelPath) {
+    Engine* engine = app->engine;
+    std::ifstream in(modelPath.c_str(), std::ios::binary);
+    std::vector<uint8_t> buffer((std::istreambuf_iterator<char>(in)),
+            std::istreambuf_iterator<char>());
+    if (buffer.empty()) {
+        fprintf(stderr, "taa_harness: unable to read %s\n", modelPath.c_str());
+        exit(1);
+    }
+    FilamentAsset* asset = app->assetLoader->createAsset(buffer.data(), buffer.size());
+    if (!asset) {
+        fprintf(stderr, "taa_harness: unable to parse %s\n", modelPath.c_str());
+        exit(1);
+    }
+    FilamentInstance* instance = asset->getInstance();
+
+    ResourceConfiguration configuration = {};
+    configuration.engine = engine;
+    CString const gltfPath(modelPath.getAbsolutePath().c_str());
+#if defined(__clang__)
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+#elif defined(__GNUC__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#endif
+    configuration.gltfPath = gltfPath.c_str();
+#if defined(__clang__)
+#pragma clang diagnostic pop
+#elif defined(__GNUC__)
+#pragma GCC diagnostic pop
+#endif
+    configuration.normalizeSkinningWeights = true;
+    if (!app->resourceLoader) {
+        app->resourceLoader = new gltfio::ResourceLoader(configuration);
+        app->stbDecoder = createStbProvider(engine);
+        app->ktxDecoder = createKtx2Provider(engine);
+        app->resourceLoader->addTextureProvider("image/png", app->stbDecoder);
+        app->resourceLoader->addTextureProvider("image/jpeg", app->stbDecoder);
+        app->resourceLoader->addTextureProvider("image/ktx2", app->ktxDecoder);
+    } else {
+        app->resourceLoader->setConfiguration(configuration);
+    }
+    // Synchronous on purpose: an asset that finishes streaming partway through a run would
+    // change the image under the measurement.
+    app->resourceLoader->loadResources(asset);
+    app->resourceLoader->evictResourceData();
+    // Skinned assets ship bounds for the rest pose, which is not where the animation puts them.
+    instance->recomputeBoundingBoxes();
+    asset->releaseSourceData();
+
+    TransformManager const& tcm = engine->getTransformManager();
+    mat4f const rootRest = tcm.getTransform(tcm.getInstance(asset->getRoot()));
+
+    // Frame the whole asset from its bounding sphere, so the camera path is scale-independent
+    // and the same for every model handed to the harness. FilamentAsset::getBoundingBox() is not
+    // usable for this: it is the union of the glTF accessor min/max values, i.e. mesh-local and
+    // with no node transforms applied, which for a model whose root node scales it is off by
+    // that scale.
+    Aabb const bounds = worldBounds(engine, asset);
+    float3 const target = (bounds.min + bounds.max) * 0.5f;
+    float radius = length(bounds.max - bounds.min) * 0.5f;
+    if (radius <= 0.0f) {
+        radius = 1.0f;
+    }
+
+    LoadedAsset loaded;
+    loaded.path = modelPath;
+    loaded.asset = asset;
+    loaded.instance = instance;
+    loaded.rootRestTransform = rootRest;
+    loaded.target = target;
+    loaded.radius = radius;
+    loaded.isSubpixelStar = (modelPath.getNameWithoutExtension() == "SubpixelStar");
+    app->assets.push_back(std::move(loaded));
+}
+
+void activateAsset(App* app, int const assetIndex) {
+    if (app->activeAssetIndex == assetIndex) {
+        return;
+    }
+    if (app->activeAssetIndex >= 0) {
+        FilamentAsset* prev = app->assets[app->activeAssetIndex].asset;
+        app->scene->removeEntities(prev->getEntities(), prev->getEntityCount());
+    }
+    LoadedAsset const& next = app->assets[assetIndex];
+    app->scene->addEntities(next.asset->getEntities(), next.asset->getEntityCount());
+    // Set through the app, not on the camera: this is the same state FilamentApp2 re-applies on
+    // its own schedule, so the only way to make it stick is to change what it re-applies.
+    app->filamentApp->setCameraNearFar(next.radius * 0.05f, next.radius * 20.0f);
+    app->activeAssetIndex = assetIndex;
+}
 
 void setup(Engine* engine, View* view, Scene* scene) {
     App* app = g_app;
@@ -1355,59 +2621,28 @@ void setup(Engine* engine, View* view, Scene* scene) {
             UBERARCHIVE_DEFAULT_DATA, UBERARCHIVE_DEFAULT_SIZE);
     app->assetLoader = AssetLoader::create({ engine, app->materials, app->names });
 
-    std::ifstream in(app->options.model.c_str(), std::ios::binary);
-    std::vector<uint8_t> buffer((std::istreambuf_iterator<char>(in)),
-            std::istreambuf_iterator<char>());
-    if (buffer.empty()) {
-        fprintf(stderr, "taa_harness: unable to read %s\n", app->options.model.c_str());
-        exit(1);
-    }
-    app->asset = app->assetLoader->createAsset(buffer.data(), buffer.size());
-    if (!app->asset) {
-        fprintf(stderr, "taa_harness: unable to parse %s\n", app->options.model.c_str());
-        exit(1);
-    }
-    app->instance = app->asset->getInstance();
-
-    ResourceConfiguration configuration = {};
-    configuration.engine = engine;
-    CString const gltfPath(app->options.model.getAbsolutePath().c_str());
-    configuration.gltfPath = gltfPath.c_str();
-    configuration.normalizeSkinningWeights = true;
-    app->resourceLoader = new gltfio::ResourceLoader(configuration);
-    app->stbDecoder = createStbProvider(engine);
-    app->ktxDecoder = createKtx2Provider(engine);
-    app->resourceLoader->addTextureProvider("image/png", app->stbDecoder);
-    app->resourceLoader->addTextureProvider("image/jpeg", app->stbDecoder);
-    app->resourceLoader->addTextureProvider("image/ktx2", app->ktxDecoder);
-    // Synchronous on purpose: an asset that finishes streaming partway through a run would
-    // change the image under the measurement.
-    app->resourceLoader->loadResources(app->asset);
-    // Skinned assets ship bounds for the rest pose, which is not where the animation puts them.
-    app->instance->recomputeBoundingBoxes();
-    app->asset->releaseSourceData();
-
-    scene->addEntities(app->asset->getEntities(), app->asset->getEntityCount());
-
-    // Frame the whole asset from its bounding sphere, so the camera path is scale-independent
-    // and the same for every model handed to the harness. FilamentAsset::getBoundingBox() is not
-    // usable for this: it is the union of the glTF accessor min/max values, i.e. mesh-local and
-    // with no node transforms applied, which for a model whose root node scales it is off by
-    // that scale.
-    Aabb const bounds = worldBounds(engine, app->asset);
-    app->target = (bounds.min + bounds.max) * 0.5f;
-    app->radius = length(bounds.max - bounds.min) * 0.5f;
-    if (app->radius <= 0.0f) {
-        app->radius = 1.0f;
+    if (app->options.benchmark) {
+        char const* const kBenchmarkModels[] = {
+            "third_party/models/Fox/Fox.glb",
+            "third_party/models/DamagedHelmet/DamagedHelmet.glb",
+            "tools/taa/models/SubpixelStar/SubpixelStar.glb",
+            "tools/taa/models/SSRReflection/SSRReflection.glb",
+        };
+        for (char const* rel: kBenchmarkModels) {
+            Path const resolved = resolveRepoAsset(rel);
+            if (!resolved.exists()) {
+                fprintf(stderr, "taa_harness: benchmark asset %s not found\n", rel);
+                exit(1);
+            }
+            loadAssetIntoApp(app, resolved);
+        }
+    } else {
+        loadAssetIntoApp(app, app->options.model);
     }
 
     // The IBL also supplies the skybox. A black background would be a poor test scene: most of
     // what TAA does wrong shows up where a silhouette meets a lit background, and against black
     // there is nothing to ghost onto.
-    // Set through the app, not on the camera: this is the same state FilamentApp2 re-applies on
-    // its own schedule, so the only way to make it stick is to change what it re-applies.
-    app->filamentApp->setCameraNearFar(app->radius * 0.05f, app->radius * 20.0f);
-
     if (IBL* ibl = app->filamentApp->getIBL(); ibl) {
         scene->setIndirectLight(ibl->getIndirectLight());
         scene->setSkybox(ibl->getSkybox());
@@ -1424,6 +2659,9 @@ void setup(Engine* engine, View* view, Scene* scene) {
     scene->addEntity(app->sunlight);
 
     buildSchedule(app);
+    if (!app->shots.empty()) {
+        activateAsset(app, app->runs[app->shots[0].runIndex].config.assetIndex);
+    }
     printf("taa_harness: %zu runs, %zu scheduled frames\n", app->runs.size(), app->shots.size());
 }
 
@@ -1448,8 +2686,8 @@ void printProgress(App* app, Shot const& completed) {
     }
     bar[kBarWidth] = '\0';
 
-    fprintf(stderr, "\rtaa_harness: [%s] %5zu/%-5zu  %s x%g", bar, done, total,
-            toString(run.regime), double(run.upscaling));
+    fprintf(stderr, "\rtaa_harness: [%s] %5zu/%-5zu  %-18s x%-4g", bar, done, total,
+            run.config.label.c_str(), double(run.config.upscaling));
     if (done >= total) {
         fprintf(stderr, "\n");
     }
@@ -1479,20 +2717,37 @@ void preRender(Engine*, View* view, Scene*, Renderer*) {
         app->stableFrames = 0;
         return;
     }
-    if (app->stableFrames < App::kRequiredStableFrames) {
-        app->stableFrames++;
-        return;
-    }
     if (app->nextShot >= app->shots.size()) {
         return;
     }
-    applyShot(app, app->shots[app->nextShot]);
+
+    Shot const& shot = app->shots[app->nextShot];
+    int const wantedAsset = app->runs[shot.runIndex].config.assetIndex;
+    if (wantedAsset != app->activeAssetIndex) {
+        activateAsset(app, wantedAsset);
+        // FilamentApp2 applies setCameraNearFar() right after preRender returns (see
+        // FilamentApp2::configureCamerasForWindow). Resetting stableFrames consumes uncaptured
+        // warmup frames so both the new near/far planes and any async ubershader variants (e.g.
+        // SSR) finish compiling before the first reference sample of the new asset is captured.
+        app->stableFrames = 0;
+        return;
+    }
+    if (app->stableFrames < App::kRequiredStableFrames) {
+        applyShot(app, shot);
+        app->stableFrames++;
+        return;
+    }
+
+    applyShot(app, shot);
     app->shotApplied = true;
 }
 
 void postRender(Engine* engine, View* view, Scene*, Renderer* renderer) {
     App* app = g_app;
     if (!app->shotApplied) {
+        if (app->stableFrames > 0) {
+            engine->flushAndWait();
+        }
         return;
     }
 
@@ -1572,22 +2827,48 @@ void cleanup(Engine* engine, View*, Scene*) {
         for (Run& run: app->runs) {
             appendMetrics(app, run, &records);
         }
-        writeJson(app, records);
+        std::vector<BenchmarkSummary> const summaries = computeBenchmarkSummaries(app, &records);
+        writeJson(app, records, summaries);
+        if (app->options.benchmark) {
+            printBenchmarkScorecard(app, summaries);
+            if (!app->options.compareFiles.empty()) {
+                std::vector<Path> files = app->options.compareFiles;
+                std::string const selfPath = app->options.output.getAbsolutePath().getPath();
+                bool alreadyListed = false;
+                for (Path const& f: files) {
+                    if (f.getAbsolutePath().getPath() == selfPath) {
+                        alreadyListed = true;
+                        break;
+                    }
+                }
+                if (!alreadyListed) {
+                    files.push_back(app->options.output);
+                }
+                compareBenchmarkFiles(files);
+            }
+        }
     }
 
     if (app->sunlight) {
         engine->destroy(app->sunlight);
         EntityManager::get().destroy(app->sunlight);
     }
-    if (app->asset) {
-        app->assetLoader->destroyAsset(app->asset);
+    for (LoadedAsset& loaded: app->assets) {
+        if (loaded.asset) {
+            app->assetLoader->destroyAsset(loaded.asset);
+        }
     }
+    app->assets.clear();
     delete app->resourceLoader;
     delete app->stbDecoder;
     delete app->ktxDecoder;
-    AssetLoader::destroy(&app->assetLoader);
-    app->materials->destroyMaterials();
-    delete app->materials;
+    if (app->assetLoader) {
+        AssetLoader::destroy(&app->assetLoader);
+    }
+    if (app->materials) {
+        app->materials->destroyMaterials();
+        delete app->materials;
+    }
     delete app->names;
 }
 
@@ -1615,12 +2896,19 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
     g_app = &app;
 
     Options& o = app.options;
-    o.model = Path(config.positionalArgs[0].c_str_safe());
+    o.benchmark = config.getBool("benchmark");
+    o.ssrEnabled = config.getBool("ssr");
+    if (!config.positionalArgs.empty()) {
+        o.model = Path(config.positionalArgs[0].c_str_safe());
+    }
     o.output = Path(config.getString("output").c_str_safe());
     CString const dump = config.getString("dump");
     if (!dump.empty()) {
         o.dumpDirectory = Path(dump.c_str());
         o.dumpDirectory.mkdirRecursive();
+    }
+    for (std::string const& item: split(config.getString("compare").c_str_safe())) {
+        o.compareFiles.emplace_back(item);
     }
     o.visualizeDisocclusion = config.getBool("visualize-disocclusion");
     o.size = uint32_t(config.getInt("size", 512));
@@ -1630,13 +2918,15 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
     // requested, and reading it back the other way around silently defaulted every filter to
     // Lanczos's sample count regardless of -F, which is correct but wasteful for box.
     CString const filter = config.getString("reference-filter");
-    if (filter == "box") {
+    if (filter.empty()) {
+        o.referenceFilter = o.benchmark ? ReferenceFilter::BOX : ReferenceFilter::LANCZOS;
+    } else if (filter == "box") {
         o.referenceFilter = ReferenceFilter::BOX;
     } else if (filter == "lanczos") {
         o.referenceFilter = ReferenceFilter::LANCZOS;
     } else if (filter == "lanczos-filament") {
         o.referenceFilter = ReferenceFilter::LANCZOS_FILAMENT;
-    } else if (!filter.empty()) {
+    } else {
         fprintf(stderr, "taa_harness: unknown reference filter '%s'\n", filter.c_str());
         exit(1);
     }
@@ -1653,7 +2943,21 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
     }
     o.edgeThreshold = config.getFloat("edge-threshold", 0.08f);
     o.animation = uint32_t(config.getInt("animation", 0));
-    o.objectSpeed = double(config.getFloat("object-speed", 1.0f));
+    CString const objectMotion = config.getString("object-motion");
+    if (objectMotion == "animation") {
+        o.objectMotion = ObjectMotion::ANIMATION;
+    } else if (objectMotion == "translate") {
+        o.objectMotion = ObjectMotion::TRANSLATE;
+    } else if (objectMotion == "spin") {
+        o.objectMotion = ObjectMotion::SPIN;
+    } else if (!objectMotion.empty()) {
+        fprintf(stderr, "taa_harness: unknown --object-motion '%s'\n", objectMotion.c_str());
+        exit(1);
+    }
+    double const objectSpeed = double(config.getFloat("object-speed", 0.0f));
+    o.objectSpeed = objectSpeed > 0.0 ? objectSpeed
+                                      : (o.objectMotion == ObjectMotion::SPIN ? 90.0 : 1.0);
+    o.objectTexelsPerFrame = double(config.getFloat("object-texels-per-frame", 3.5f));
     CString const motion = config.getString("camera-motion");
     if (motion == "rotate") {
         o.cameraMotion = CameraMotion::ROTATE;
@@ -1705,7 +3009,15 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
             exit(1);
         }
         o.taaOptions = settings.view.taa;
+        o.motionVectorsOptions = settings.view.motionVectors;
         o.jitterPattern = o.taaOptions.jitterPattern;
+    }
+    o.label = config.getString("label").c_str_safe();
+    if (o.label.empty()) {
+        std::string const settingsSuffix = !settingsFile.empty()
+                ? (" (" + Path(settingsFile.c_str()).getNameWithoutExtension() + ")")
+                : "";
+        o.label = "default" + settingsSuffix;
     }
     CString const pattern = config.getString("jitter-pattern");
     if (!pattern.empty() && !parseJitterPattern(pattern.c_str(), &o.jitterPattern)) {
@@ -1728,10 +3040,9 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
         o.upscalings.push_back(std::stof(value));
     }
     if (o.upscalings.empty()) {
-        // Both ratios, always. At upscaling > 1 the resolve runs at output resolution while
-        // depth is still at render resolution, and that difference has shipped a regression
-        // before precisely because it was only ever tested at 1:1.
-        o.upscalings = { 1.0f, 2.0f };
+        // Benchmark mode qualifies upscaling (2x by default); single-model regression runs keep
+        // both 1:1 and 2:1 so neither path can regress unnoticed.
+        o.upscalings = o.benchmark ? std::vector<float>{ 2.0f } : std::vector<float>{ 1.0f, 2.0f };
     }
 
     if (config.iblDirectory.empty()) {
@@ -1752,6 +3063,13 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
 
 samples::SampleParameters createAppParameters() {
     return {
+        samples::Parameter::makeBool("benchmark", 'b',
+                "Run the 10-scenario upscaler qualification benchmark and print a 3-metric "
+                "scorecard (defaults to -u 2 -F box)", false),
+        samples::Parameter::makeString("label", '\0',
+                "Display name for this configuration in benchmark scorecards and --compare", ""),
+        samples::Parameter::makeString("compare", '\0',
+                "Comma-separated benchmark JSON files to compare side-by-side", ""),
         samples::Parameter::makeString("output", 'o', "Path of the metrics JSON to write",
                 "taa_metrics.json"),
         samples::Parameter::makeString("dump", 'd',
@@ -1768,7 +3086,8 @@ samples::SampleParameters createAppParameters() {
         samples::Parameter::makeString("regimes", 'r',
                 "Comma-separated: static,camera,object", "static,camera,object"),
         samples::Parameter::makeString("upscaling", 'u',
-                "Comma-separated TAA upscaling factors", "1,2"),
+                "Comma-separated TAA upscaling factors (default: 2 in --benchmark, 1,2 otherwise)",
+                ""),
         // 4 and not 8: on hardware that does not support 8x -- Apple silicon, for one -- the
         // request is silently clamped and you get a 4x image believing it is 8x. 4x is the count
         // that is actually guaranteed.
@@ -1776,18 +3095,25 @@ samples::SampleParameters createAppParameters() {
                 "Cross-check the accumulated reference against an N-sample MSAA render", 0, 0, 4),
         samples::Parameter::makeString("reference-filter", 'F',
                 "Kernel the reference integrates against: lanczos (what TAA aims at), "
-                "lanczos-filament (what it actually evaluates), or box",
-                "lanczos"),
+                "lanczos-filament (what it actually evaluates), or box "
+                "(default: box in --benchmark, lanczos otherwise)", ""),
         samples::Parameter::makeString("jitter-pattern", 'J',
                 "rgss4, helix4, halton8, halton16, halton32 (overrides --settings)", ""),
         samples::Parameter::makeString("settings", 's',
-                "JSON settings file; view.taa is applied to every run", ""),
+                "JSON settings file; view.taa and view.motionVectors are applied to every run", ""),
         samples::Parameter::makeFloat("diff-gain", 'G',
                 "Amplification applied to dumped difference images", 8.0f),
         samples::Parameter::makeInt("animation", 'A',
                 "Index of the glTF animation the object regime plays", 0, 0),
+        samples::Parameter::makeString("object-motion", '\0',
+                "animation (glTF clip), translate (root entity dollies screen-right), or spin "
+                "(root entity rotates about vertical axis), object regime", "animation"),
         samples::Parameter::makeFloat("object-speed", '\0',
-                "Animation playback speed multiplier, object regime", 1.0f),
+                "Animation playback speed multiplier (animation) or degrees/second (spin), "
+                "0 picks mode default (1.0 / 90.0)", 0.0f),
+        samples::Parameter::makeFloat("object-texels-per-frame", '\0',
+                "Screen-right speed at the target's depth, in render-resolution texels/frame, "
+                "translate mode", 3.5f),
         samples::Parameter::makeString("camera-motion", '\0',
                 "rotate (orbit, re-aimed at the target) or translate (pure dolly, no rotation), "
                 "camera regime", "rotate"),
@@ -1799,6 +3125,9 @@ samples::SampleParameters createAppParameters() {
         samples::Parameter::makeString("camera-translation-align", '\0',
                 "as-requested, pixel (every reprojection an exact texel fetch), or subpixel "
                 "(every reprojection a half-texel fetch) -- translate mode", "as-requested"),
+        samples::Parameter::makeBool("ssr", '\0',
+                "Enable screen-space reflections (automatically enabled on ssr_reflection in "
+                "--benchmark)", false),
         samples::Parameter::makeBool("quiet", 'q',
                 "Suppress the progress bar even when stderr is a terminal", false),
         samples::Parameter::makeFloat("edge-threshold", 'E',
@@ -1813,30 +3142,52 @@ samples::SampleParameters createAppParameters() {
 int main(int const argc, char* argv[]) {
     samples::CommandLineSpecification spec = {
         .sampleDescription =
-                "SAMPLE_TAA_HARNESS measures temporal anti-aliasing artifacts\n\n"
+                "SAMPLE_TAA_HARNESS measures temporal anti-aliasing and upscaler quality\n\n"
                 "Renders a fixed, reproducible frame schedule headlessly and reports masked\n"
-                "per-regime metrics as JSON: error against a converged supersampled reference,\n"
-                "the same error restricted to silhouettes, temporal variance (flicker),\n"
-                "high-frequency energy (sharpness), and how many frames history takes to\n"
-                "recover after motion begins. Every metric is produced at 1:1 and at the\n"
-                "requested upscaling ratios.",
+                "per-regime metrics as JSON. Pass --benchmark (-b) to run the 10-scenario\n"
+                "upscaler qualification suite and output a 3-metric scorecard (Spatial Quality,\n"
+                "Temporal Stability, and Motion Robustness), or --compare to compare saved\n"
+                "benchmark JSON files side-by-side.",
         .positionalArgsDescription = { "glTF/glb model" },
-        .requiredPositionalArgCount = 1,
+        .requiredPositionalArgCount = 0,
         .parameters = createAppParameters(),
     };
 
     SampleConfig config;
     samples::handleCommandLineArguments(argc, argv, &config, spec);
-    auto dm = samples::getDisplayManager(config);
 
-    Path const model(config.positionalArgs[0].c_str_safe());
-    if (!model.exists()) {
-        fprintf(stderr, "taa_harness: file %s not found\n", model.c_str());
-        return 1;
+    bool const benchmark = config.getBool("benchmark");
+    CString const compareArg = config.getString("compare");
+    if (!compareArg.empty() && !benchmark && config.positionalArgs.empty()) {
+        std::vector<Path> files;
+        for (std::string const& item: split(compareArg.c_str())) {
+            files.emplace_back(item);
+        }
+        return compareBenchmarkFiles(files) ? 0 : 1;
+    }
+
+    if (benchmark) {
+        if (!config.positionalArgs.empty()) {
+            fprintf(stderr, "taa_harness: --benchmark uses its built-in 4-scene suite and takes "
+                            "no positional model argument\n");
+            return 1;
+        }
+    } else {
+        if (config.positionalArgs.empty()) {
+            fprintf(stderr, "taa_harness: missing glTF/glb model path "
+                            "(or pass --benchmark / --compare)\n");
+            return 1;
+        }
+        Path const model(config.positionalArgs[0].c_str_safe());
+        if (!model.exists()) {
+            fprintf(stderr, "taa_harness: file %s not found\n", model.c_str());
+            return 1;
+        }
     }
 
     config.title = "TAA Harness";
     config.headless = true;
+    auto dm = samples::getDisplayManager(config);
     if (config.assetsPath.empty()) {
         config.assetsPath = CString(
                 (Path::getCurrentExecutable().getParent() + "../../samples").c_str());

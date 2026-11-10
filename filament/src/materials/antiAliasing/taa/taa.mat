@@ -74,7 +74,8 @@ material {
             precision: high
         },
         {
-            // [0, 1] ramp from 1 right after camera motion stops down to 0 over motionHoldFrames.
+            // [0, 1] ramp from 1 right after camera (or object, when motion vectors are enabled)
+            // motion stops down to 0 over motionHoldFrames.
             type : float,
             name : motionHoldAmount
         },
@@ -91,6 +92,12 @@ material {
         {
             type : float,
             name : varianceGamma
+        },
+        {
+            type : sampler2d,
+            name : objectMotionVectors,
+            precision: high,
+            filterable: false
         }
     ],
     constants : [
@@ -165,6 +172,11 @@ material {
             // Diagnostic only, not a real rendering mode -- see postProcess() below.
             type : bool,
             name : debugVisualizeDisocclusion,
+            default : false
+        },
+        {
+            type : bool,
+            name : hasMotionVectors,
             default : false
         }
     ],
@@ -430,6 +442,7 @@ void postProcess(inout PostProcessInputs postProcess) {
     // Confidence in [0, 1] that history belongs to a different surface (from depthDisocclusion).
     float disocclusion = 0.0;
 
+    bool historyValid = true;
     if (materialConstants_historyReprojection) {
         // read the depth buffer center sample for reprojection
         highp float depth = textureLod(materialParams_depth, uv, 0.0).r;
@@ -440,11 +453,24 @@ void postProcess(inout PostProcessInputs postProcess) {
         historyUv = (q.xy * invQW) * 0.5 + 0.5;
         historyUv = uvToRenderTargetUV(historyUv);
 
+        bool hasObjectMotion = false;
+        if (materialConstants_hasMotionVectors) {
+            // The object motion vectors have the same layout as the depth buffer. They hold
+            // uvCurr - uvPrev in the previous frame's render-target uv space, i.e. what must be
+            // removed from the reprojected (assumed static) position to account for the
+            // object's own motion. |v| >= 1 means there is no valid previous position.
+            highp vec2 v = textureLod(materialParams_objectMotionVectors, uv, 0.0).rg;
+            historyValid = all(lessThan(abs(v), vec2(1.0)));
+            hasObjectMotion = any(notEqual(v, vec2(0.0)));
+            historyUv -= v;
+        }
+
         highp float reprojectionDeltaLen =
                 length((historyUv - uv) * materialParams.colorResolution.xy);
 
-        // Relax history rejection and feedback toward their configured floors when camera motion
-        // is low, so static pixels can accumulate jittered samples without box-clipping flicker.
+        // Relax history rejection and feedback toward their configured floors when camera (and
+        // object, when motion vectors are enabled) motion is low, so static pixels can accumulate
+        // jittered samples without box-clipping flicker.
         if (materialConstants_motionAdaptiveHistory) {
             float rawMotionAmount = motionAmount(reprojectionDeltaLen);
 
@@ -452,15 +478,19 @@ void postProcess(inout PostProcessInputs postProcess) {
             float farness = 1.0 - smoothstep(0.0, materialParams.skyDepthThreshold, depth);
             rawMotionAmount = max(rawMotionAmount, farness);
 
-            // Keep full strength for motionHoldFrames after camera motion stops so recent
-            // disocclusions finish converging before relaxation resumes.
+            // Keep full strength for motionHoldFrames after camera (or object) motion stops so
+            // recent disocclusions finish converging before relaxation resumes.
             rawMotionAmount = max(rawMotionAmount, materialParams.motionHoldAmount);
 
             historyBoxStrength = mix(materialParams.minBoxStrength, 1.0, rawMotionAmount);
             historyAlphaStrength = mix(materialParams.minAlphaStrength, 1.0, rawMotionAmount);
         }
 
-        if (materialConstants_depthDisocclusion) {
+        // expectedHistoryDepth only accounts for camera motion (objectMotionVectors is 2D), so
+        // an object moving in Z would fail the depth comparison against its own history; skip
+        // it on pixels with object motion. Disoccluded background pixels have v == 0 and still
+        // run this test.
+        if (materialConstants_depthDisocclusion && !hasObjectMotion) {
             // Compare current depth reprojected into history clip space against depthHistory
             // in raw reversed-Z (avoids far-plane linearization blow-up).
             highp float expectedHistoryDepth = q.z * invQW;
@@ -732,6 +762,13 @@ void postProcess(inout PostProcessInputs postProcess) {
         float lumaHistory = luminance(history.rgb);
         float diff = 1.0 - abs(lumaColor - lumaHistory) / (0.001 + max(lumaColor, lumaHistory));
         alpha *= diff * diff;
+    }
+
+    if (!historyValid) {
+        // no valid previous position: don't use the history for this pixel. history and filtered
+        // are both in tonemapped RGB space here, after the rgbBoxMin/Max clamp above, so result
+        // below equals filtered without being narrowed when exactLanczosSupport widens deringMin/Max.
+        history = vec4(filtered, rawColor.a);
     }
 
     // combine history and current frame

@@ -16,53 +16,17 @@
 
 #include <gltfio/MaterialProvider.h>
 
+#include <utils/Log.h>
+
 #include <string>
+
+#include <string.h>
 
 namespace filament::gltfio {
 
+// MaterialKey is always kept properly padded/packed. It is safe to memcmp it directly.
 bool operator==(const MaterialKey& k1, const MaterialKey& k2) {
-    return
-        (k1.doubleSided == k2.doubleSided) &&
-        (k1.unlit == k2.unlit) &&
-        (k1.hasVertexColors == k2.hasVertexColors) &&
-        (k1.hasBaseColorTexture == k2.hasBaseColorTexture) &&
-        (k1.hasNormalTexture == k2.hasNormalTexture) &&
-        (k1.hasOcclusionTexture == k2.hasOcclusionTexture) &&
-        (k1.hasEmissiveTexture == k2.hasEmissiveTexture) &&
-        (k1.useSpecularGlossiness == k2.useSpecularGlossiness) &&
-        (k1.alphaMode == k2.alphaMode) &&
-        (k1.hasMetallicRoughnessTexture == k2.hasMetallicRoughnessTexture) &&
-        (k1.metallicRoughnessUV == k2.metallicRoughnessUV) &&
-        (k1.baseColorUV == k2.baseColorUV) &&
-        (k1.hasClearCoatTexture == k2.hasClearCoatTexture) &&
-        (k1.clearCoatUV == k2.clearCoatUV) &&
-        (k1.hasClearCoatRoughnessTexture == k2.hasClearCoatRoughnessTexture) &&
-        (k1.clearCoatRoughnessUV == k2.clearCoatRoughnessUV) &&
-        (k1.hasClearCoatNormalTexture == k2.hasClearCoatNormalTexture) &&
-        (k1.clearCoatNormalUV == k2.clearCoatNormalUV) &&
-        (k1.hasClearCoat == k2.hasClearCoat) &&
-        (k1.hasTransmission == k2.hasTransmission) &&
-        (k1.hasTextureTransforms == k2.hasTextureTransforms) &&
-        (k1.emissiveUV == k2.emissiveUV) &&
-        (k1.aoUV == k2.aoUV) &&
-        (k1.normalUV == k2.normalUV) &&
-        (k1.hasTransmissionTexture == k2.hasTransmissionTexture) &&
-        (k1.transmissionUV == k2.transmissionUV) &&
-        (k1.hasSheenColorTexture == k2.hasSheenColorTexture) &&
-        (k1.sheenColorUV == k2.sheenColorUV) &&
-        (k1.hasSheenRoughnessTexture == k2.hasSheenRoughnessTexture) &&
-        (k1.sheenRoughnessUV == k2.sheenRoughnessUV) &&
-        (k1.hasVolumeThicknessTexture == k2.hasVolumeThicknessTexture) &&
-        (k1.volumeThicknessUV == k2.volumeThicknessUV) &&
-        (k1.hasSheen == k2.hasSheen) &&
-        (k1.hasIOR == k2.hasIOR) &&
-        (k1.hasVolume == k2.hasVolume) &&
-        (k1.hasSpecular == k2.hasSpecular) &&
-        (k1.hasSpecularTexture == k2.hasSpecularTexture) &&
-        (k1.hasSpecularColorTexture == k2.hasSpecularColorTexture) &&
-        (k1.specularTextureUV == k2.specularTextureUV) &&
-        (k1.specularColorTextureUV == k2.specularColorTextureUV)
-        ;
+    return memcmp(&k1, &k2, sizeof(MaterialKey)) == 0;
 }
 
 // Filament supports up to 2 UV sets. glTF has arbitrary texcoord set indices, but it allows
@@ -73,60 +37,113 @@ void constrainMaterial(MaterialKey* key, UvMap* uvmap) {
     const int MAX_INDEX = 2;
     UvMap retval {};
     int index = 1;
-    auto updateUv = [&retval, &index](uint8_t uv) -> bool {
+
+    auto constrainTexture = [&retval, &index](
+            uint8_t uv, bool hasTexture, const char* name) -> bool {
         if (uv >= UvMapSize) {
+            if (hasTexture) {
+                utils::slog.e << "Texture coordinate index " << int(uv) << " for " << name
+                        << " exceeds maximum supported index (" << (UvMapSize - 1) << ")."
+                        << utils::io::endl;
+            }
             return false;
         }
-        if (retval[uv] == UNUSED) {
+        if (hasTexture && retval[uv] == UNUSED) {
             if (index > MAX_INDEX) {
                 return false;
             }
             retval[uv] = (UvSet) index++;
         }
-        return true;
+        return hasTexture;
     };
-    if (key->hasBaseColorTexture) {
-        key->hasBaseColorTexture = updateUv(key->baseColorUV);
-    }
-    if (key->hasMetallicRoughnessTexture) {
-        key->hasMetallicRoughnessTexture = updateUv(key->metallicRoughnessUV);
-    }
-    if (key->hasNormalTexture) {
-        key->hasNormalTexture = updateUv(key->normalUV);
-    }
-    if (key->hasOcclusionTexture) {
-        key->hasOcclusionTexture = updateUv(key->aoUV);
-    }
-    if (key->hasEmissiveTexture) {
-        key->hasEmissiveTexture = updateUv(key->emissiveUV);
-    }
-    if (key->hasTransmissionTexture) {
-        key->hasTransmissionTexture = updateUv(key->transmissionUV);
-    }
-    if (key->hasClearCoatTexture) {
-        key->hasClearCoatTexture = updateUv(key->clearCoatUV);
-    }
-    if (key->hasClearCoatRoughnessTexture) {
-        key->hasClearCoatRoughnessTexture = updateUv(key->clearCoatRoughnessUV);
-    }
-    if (key->hasClearCoatNormalTexture) {
-        key->hasClearCoatNormalTexture = updateUv(key->clearCoatNormalUV);
-    }
-    if (key->hasSheenColorTexture) {
-        key->hasSheenColorTexture = updateUv(key->sheenColorUV);
-    }
-    if (key->hasSheenRoughnessTexture) {
-        key->hasSheenRoughnessTexture = updateUv(key->sheenRoughnessUV);
-    }
-    if (key->hasVolumeThicknessTexture) {
-        key->hasVolumeThicknessTexture = updateUv(key->volumeThicknessUV);
-    }
-    if (key->hasSpecularTexture) {
-        key->hasSpecularTexture = updateUv(key->specularTextureUV);
-    }
-    if (key->hasSpecularColorTexture) {
-        key->hasSpecularColorTexture = updateUv(key->specularColorTextureUV);
-    }
+
+    auto clampUv = [](uint8_t uv) -> uint8_t {
+        return uv < UvMapSize ? uv : 0;
+    };
+
+    key->hasBaseColorTexture = constrainTexture(
+            key->baseColorUV, key->hasBaseColorTexture, "baseColorTexture");
+    key->baseColorUV = clampUv(key->baseColorUV);
+
+    key->hasMetallicRoughnessTexture = constrainTexture(key->metallicRoughnessUV,
+            key->hasMetallicRoughnessTexture,
+            key->useSpecularGlossiness ? "specularGlossinessTexture" : "metallicRoughnessTexture");
+    key->metallicRoughnessUV = clampUv(key->metallicRoughnessUV);
+
+    key->hasNormalTexture = constrainTexture(
+            key->normalUV, key->hasNormalTexture, "normalTexture");
+    key->normalUV = clampUv(key->normalUV);
+
+    key->hasOcclusionTexture = constrainTexture(
+            key->aoUV, key->hasOcclusionTexture, "occlusionTexture");
+    key->aoUV = clampUv(key->aoUV);
+
+    key->hasEmissiveTexture = constrainTexture(
+            key->emissiveUV, key->hasEmissiveTexture, "emissiveTexture");
+    key->emissiveUV = clampUv(key->emissiveUV);
+
+    key->hasTransmissionTexture = constrainTexture(
+            key->transmissionUV, key->hasTransmissionTexture, "transmissionTexture");
+    key->transmissionUV = clampUv(key->transmissionUV);
+
+    key->hasClearCoatTexture = constrainTexture(
+            key->clearCoatUV, key->hasClearCoatTexture, "clearCoatTexture");
+    key->clearCoatUV = clampUv(key->clearCoatUV);
+
+    key->hasClearCoatRoughnessTexture = constrainTexture(key->clearCoatRoughnessUV,
+            key->hasClearCoatRoughnessTexture, "clearCoatRoughnessTexture");
+    key->clearCoatRoughnessUV = clampUv(key->clearCoatRoughnessUV);
+
+    key->hasClearCoatNormalTexture = constrainTexture(
+            key->clearCoatNormalUV, key->hasClearCoatNormalTexture, "clearCoatNormalTexture");
+    key->clearCoatNormalUV = clampUv(key->clearCoatNormalUV);
+
+    key->hasSheenColorTexture = constrainTexture(
+            key->sheenColorUV, key->hasSheenColorTexture, "sheenColorTexture");
+    key->sheenColorUV = clampUv(key->sheenColorUV);
+
+    key->hasSheenRoughnessTexture = constrainTexture(
+            key->sheenRoughnessUV, key->hasSheenRoughnessTexture, "sheenRoughnessTexture");
+    key->sheenRoughnessUV = clampUv(key->sheenRoughnessUV);
+
+    key->hasVolumeThicknessTexture = constrainTexture(
+            key->volumeThicknessUV, key->hasVolumeThicknessTexture, "volumeThicknessTexture");
+    key->volumeThicknessUV = clampUv(key->volumeThicknessUV);
+
+    key->hasSpecularTexture = constrainTexture(
+            key->specularTextureUV, key->hasSpecularTexture, "specularTexture");
+    key->specularTextureUV = clampUv(key->specularTextureUV);
+
+    key->hasSpecularColorTexture = constrainTexture(
+            key->specularColorTextureUV, key->hasSpecularColorTexture, "specularColorTexture");
+    key->specularColorTextureUV = clampUv(key->specularColorTextureUV);
+
+    key->hasRetroreflectionTexture = constrainTexture(
+            key->retroreflectionUV, key->hasRetroreflectionTexture, "retroreflectionTexture");
+    key->retroreflectionUV = clampUv(key->retroreflectionUV);
+
+    key->hasIridescenceTexture = constrainTexture(
+            key->iridescenceUV, key->hasIridescenceTexture, "iridescenceTexture");
+    key->iridescenceUV = clampUv(key->iridescenceUV);
+
+    key->hasIridescenceThicknessTexture = constrainTexture(
+            key->iridescenceThicknessUV, key->hasIridescenceThicknessTexture,
+            "iridescenceThicknessTexture");
+    key->iridescenceThicknessUV = clampUv(key->iridescenceThicknessUV);
+
+    key->hasAnisotropyTexture = constrainTexture(
+            key->anisotropyUV, key->hasAnisotropyTexture, "anisotropyTexture");
+    key->anisotropyUV = clampUv(key->anisotropyUV);
+
+    key->hasDiffuseTransmissionTexture = constrainTexture(
+            key->diffuseTransmissionUV, key->hasDiffuseTransmissionTexture,
+            "diffuseTransmissionTexture");
+    key->diffuseTransmissionUV = clampUv(key->diffuseTransmissionUV);
+
+    key->hasDiffuseTransmissionColorTexture = constrainTexture(
+            key->diffuseTransmissionColorUV, key->hasDiffuseTransmissionColorTexture,
+            "diffuseTransmissionColorTexture");
+    key->diffuseTransmissionColorUV = clampUv(key->diffuseTransmissionColorUV);
 
     // NOTE: KHR_materials_clearcoat does not provide separate UVs, we'll assume UV0
     *uvmap = retval;
@@ -161,6 +178,12 @@ void processShaderString(std::string* shader, const UvMap& uvmap, const Material
     const auto& volumeThicknessUV = getUvString(config.volumeThicknessUV);
     const auto& specularUV = getUvString(config.specularTextureUV);
     const auto& specularColorUV = getUvString(config.specularColorTextureUV);
+    const auto& retroreflectionUV = getUvString(config.retroreflectionUV);
+    const auto& iridescenceUV = getUvString(config.iridescenceUV);
+    const auto& iridescenceThicknessUV = getUvString(config.iridescenceThicknessUV);
+    const auto& anisotropyUV = getUvString(config.anisotropyUV);
+    const auto& diffuseTransmissionUV = getUvString(config.diffuseTransmissionUV);
+    const auto& diffuseTransmissionColorUV = getUvString(config.diffuseTransmissionColorUV);
 
     replaceAll("${normal}", normalUV);
     replaceAll("${color}", baseColorUV);
@@ -176,6 +199,12 @@ void processShaderString(std::string* shader, const UvMap& uvmap, const Material
     replaceAll("${volumeThickness}", volumeThicknessUV);
     replaceAll("${specular}", specularUV);
     replaceAll("${specularColor}", specularColorUV);
+    replaceAll("${retroreflection}", retroreflectionUV);
+    replaceAll("${iridescence}", iridescenceUV);
+    replaceAll("${iridescenceThickness}", iridescenceThicknessUV);
+    replaceAll("${anisotropy}", anisotropyUV);
+    replaceAll("${diffuseTransmission}", diffuseTransmissionUV);
+    replaceAll("${diffuseTransmissionColor}", diffuseTransmissionColorUV);
 }
 
 } // namespace filament::gltfio

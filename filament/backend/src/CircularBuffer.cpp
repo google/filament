@@ -16,10 +16,8 @@
 
 #include "private/backend/CircularBuffer.h"
 
-#include <utils/Logger.h>
 #include <utils/Panic.h>
 #include <utils/architecture.h>
-#include <utils/ashmem.h>
 #include <utils/compiler.h>
 #include <utils/debug.h>
 #include <utils/ostream.h>
@@ -30,6 +28,14 @@
 #    define HAS_MMAP 1
 #else
 #    define HAS_MMAP 0
+#endif
+
+#ifdef __ANDROID__
+#    include <sys/prctl.h>
+#    ifndef PR_SET_VMA
+#        define PR_SET_VMA 0x53564d41
+#        define PR_SET_VMA_ANON_NAME 0
+#    endif
 #endif
 
 #include <stddef.h>
@@ -60,102 +66,55 @@ CircularBuffer::~CircularBuffer() noexcept {
     dealloc();
 }
 
-// If the system support mmap(), use it for creating a "hard circular buffer" where two virtual
-// address ranges are mapped to the same physical pages.
-//
-// This code also has a soft circular buffer mode in case we're not able to allow sufficient
-// continuous address spaces for both ranges.
-//
-// If the system does not support mmap, emulate soft circular buffer with two buffers next
-// to each others and a special case in circularize()
-
+// Allocate two linear banks of demand-paged virtual address space, each followed by a guard page
+// when supported, without touching pages upfront. Physical pages are faulted in lazily by the OS
+// only up to the high-water mark written in each bank.
 UTILS_NOINLINE
 void* CircularBuffer::alloc(size_t size) {
 #if HAS_MMAP
-    void* data = nullptr;
-    void* vaddr = MAP_FAILED;
-    void* vaddr_shadow = MAP_FAILED;
-    void* vaddr_guard = MAP_FAILED;
     size_t const BLOCK_SIZE = getBlockSize();
-    int const fd = ashmem_create_region("filament::CircularBuffer", size + BLOCK_SIZE);
-    if (fd >= 0) {
-        // reserve/find enough address space
-        void* reserve_vaddr = mmap(nullptr, size * 2 + BLOCK_SIZE,
-                PROT_NONE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
-        if (reserve_vaddr != MAP_FAILED) {
-            munmap(reserve_vaddr, size * 2 + BLOCK_SIZE);
-            // map the circular buffer once...
-            vaddr = mmap(reserve_vaddr, size, PROT_READ | PROT_WRITE, MAP_PRIVATE, fd, 0);
-            if (vaddr != MAP_FAILED) {
-                // populate the address space with pages (because this is a circular buffer,
-                // all the pages will be allocated eventually, might as well do it now)
-                memset(vaddr, 0, size);
-                // and map the circular buffer again, behind the previous copy...
-                vaddr_shadow = mmap((char*)vaddr + size, size,
-                        PROT_READ | PROT_WRITE, MAP_PRIVATE, fd, 0);
-                if (vaddr_shadow != MAP_FAILED && (vaddr_shadow == (char*)vaddr + size)) {
-                    // finally map the guard page, to make sure we never corrupt memory
-                    vaddr_guard = mmap((char*)vaddr_shadow + size, BLOCK_SIZE, PROT_NONE,
-                            MAP_PRIVATE, fd, (off_t)size);
-                    if (vaddr_guard != MAP_FAILED && (vaddr_guard == (char*)vaddr_shadow + size)) {
-                        // woo-hoo success!
-                        mAshmemFd = fd;
-                        data = vaddr;
-                    }
-                }
-            }
-        }
-    }
+    size_t const alignedSize = (size + (BLOCK_SIZE - 1u)) & ~(BLOCK_SIZE - 1u);
+    mBankStride = alignedSize + BLOCK_SIZE;
+    void* const data = mmap(nullptr, mBankStride * 2,
+            PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
 
-    if (UTILS_UNLIKELY(mAshmemFd < 0)) {
-        // ashmem failed
-        if (vaddr_guard != MAP_FAILED) {
-            munmap(vaddr_guard, BLOCK_SIZE);
-        }
+    FILAMENT_CHECK_POSTCONDITION(data != MAP_FAILED) <<
+            "couldn't allocate " << (mBankStride * 2 / 1024) <<
+            " KiB of virtual address space for the command buffer";
 
-        if (vaddr_shadow != MAP_FAILED) {
-            munmap(vaddr_shadow, size);
-        }
+#ifdef __ANDROID__
+    prctl(PR_SET_VMA, PR_SET_VMA_ANON_NAME, data, mBankStride * 2, "filament::CircularBuffer");
+#endif
 
-        if (vaddr != MAP_FAILED) {
-            munmap(vaddr, size);
-        }
-
-        if (fd >= 0) {
-            close(fd);
-        }
-
-        data = mmap(nullptr, size * 2 + BLOCK_SIZE,
-                PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
-
-        FILAMENT_CHECK_POSTCONDITION(data != MAP_FAILED) <<
-                "couldn't allocate " << (size * 2 / 1024) <<
-                " KiB of virtual address space for the command buffer";
-
-        LOG(WARNING) << "Using 'soft' CircularBuffer (" << (size * 2 / 1024) << " KiB)";
-
-        // guard page at the end
-        void* guard = (void*)(uintptr_t(data) + size * 2);
-        mprotect(guard, BLOCK_SIZE, PROT_NONE);
-    }
+    // guard page at the end of each bank
+    void* const guard0 = reinterpret_cast<void*>(uintptr_t(data) + alignedSize);
+    void* const guard1 = reinterpret_cast<void*>(uintptr_t(data) + mBankStride + alignedSize);
+    mprotect(guard0, BLOCK_SIZE, PROT_NONE);
+    mprotect(guard1, BLOCK_SIZE, PROT_NONE);
     return data;
 #elif defined(WIN32)
     size_t const BLOCK_SIZE = getBlockSize();
+    size_t const alignedSize = (size + (BLOCK_SIZE - 1u)) & ~(BLOCK_SIZE - 1u);
+    mBankStride = alignedSize + BLOCK_SIZE;
     // On Windows, use VirtualAlloc instead of malloc to allocate virtual memory.
     // This allows us to set page protection by VirtualProtect.
-    void* data = VirtualAlloc(nullptr, size * 2 + BLOCK_SIZE, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
+    void* const data = VirtualAlloc(nullptr, mBankStride * 2,
+            MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
     FILAMENT_CHECK_POSTCONDITION(data != nullptr)
-            << "couldn't allocate " << (size * 2 / 1024)
+            << "couldn't allocate " << (mBankStride * 2 / 1024)
             << " KiB of virtual address space for the command buffer";
 
-    // guard page at the end
-    void* guard = (void*)(uintptr_t(data) + size * 2);
+    // guard page at the end of each bank
+    void* const guard0 = reinterpret_cast<void*>(uintptr_t(data) + alignedSize);
+    void* const guard1 = reinterpret_cast<void*>(uintptr_t(data) + mBankStride + alignedSize);
     DWORD oldProtect = 0;
-    BOOL ok = VirtualProtect(guard, BLOCK_SIZE, PAGE_NOACCESS, &oldProtect);
-    FILAMENT_CHECK_POSTCONDITION(ok) << "VirtualProtect failed to set guard page";
+    BOOL const ok0 = VirtualProtect(guard0, BLOCK_SIZE, PAGE_NOACCESS, &oldProtect);
+    BOOL const ok1 = VirtualProtect(guard1, BLOCK_SIZE, PAGE_NOACCESS, &oldProtect);
+    FILAMENT_CHECK_POSTCONDITION(ok0 && ok1) << "VirtualProtect failed to set guard page";
     return data;
 #else
-    return ::malloc(2 * size);
+    mBankStride = size;
+    return ::malloc(mBankStride * 2);
 #endif
 }
 
@@ -163,12 +122,7 @@ UTILS_NOINLINE
 void CircularBuffer::dealloc() noexcept {
 #if HAS_MMAP
     if (mData) {
-        size_t const BLOCK_SIZE = getBlockSize();
-        munmap(mData, mSize * 2 + BLOCK_SIZE);
-        if (mAshmemFd >= 0) {
-            close(mAshmemFd);
-            mAshmemFd = -1;
-        }
+        munmap(mData, mBankStride * 2);
     }
 #elif defined(WIN32)
     if (mData) {
@@ -183,34 +137,9 @@ void CircularBuffer::dealloc() noexcept {
 
 CircularBuffer::Range CircularBuffer::getBuffer() noexcept {
     Range const range{ .tail = mTail, .head = mHead };
-
-    char* const pData = static_cast<char*>(mData);
-    char const* const pEnd = pData + mSize;
-    char const* const pHead = static_cast<char const*>(mHead);
-    if (UTILS_UNLIKELY(pHead >= pEnd)) {
-        size_t const overflow = pHead - pEnd;
-        if (UTILS_LIKELY(mAshmemFd > 0)) {
-            assert_invariant(overflow <= mSize);
-            mHead = static_cast<void*>(pData + overflow);
-            // Data         Tail  End   Head              [virtual]
-            //  v             v    v     v
-            //  +-------------:----+-----:--------------+
-            //  |             :    |     :              |
-            //  +-----:------------+--------------------+
-            //       Head          |<------ copy ------>| [physical]
-        } else {
-            // Data         Tail  End   Head
-            //  v             v    v     v
-            //  +-------------:----+-----:--------------+
-            //  |             :    |     :              |
-            //  +-----|------------+-----|--------------+
-            //        |<---------------->|
-            //           sliding window
-            mHead = mData;
-        }
-    }
+    assert_invariant(static_cast<char const*>(mHead) <=
+            static_cast<char const*>(mData) + getBank(mTail) * mBankStride + mSize);
     mTail = mHead;
-
     return range;
 }
 

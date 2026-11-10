@@ -19,15 +19,25 @@
 
 #include "shaders/ShaderGenerator.h"
 
+#include <private/filament/EngineEnums.h>
+#include <private/filament/Variant.h>
+
 #include <filamat/Enums.h>
 #include <filamat/MaterialBuilder.h>
+
+#include <filaflat/ChunkContainer.h>
+#include <filaflat/DictionaryReader.h>
+#include <filaflat/MaterialChunk.h>
 
 #include <utils/JobSystem.h>
 #include <utils/Panic.h>
 
 #include <gtest/gtest.h>
+#include <spirv/unified1/spirv.hpp>
 
 #include <memory>
+#include <string>
+#include <vector>
 
 using namespace utils;
 using namespace ASTHelpers;
@@ -813,6 +823,44 @@ TEST_F(MaterialCompiler, StaticCodeAnalyzerIridescence) {
     EXPECT_TRUE(PropertyListsMatch(expected, properties));
 }
 
+TEST_F(MaterialCompiler, StaticCodeAnalyzerRetroreflection) {
+    const std::string fragmentCode(R"(
+        void material(inout MaterialInputs material) {
+            prepareMaterial(material);
+            material.retroreflection = 1.0;
+        }
+    )");
+
+    const std::string shaderCode = shaderWithAllProperties(ShaderStage::FRAGMENT, fragmentCode);
+
+    constexpr GLSLTools glslTools;
+    MaterialBuilder::PropertyList properties{ false };
+    glslTools.findProperties(ShaderStage::FRAGMENT, shaderCode, properties);
+    MaterialBuilder::PropertyList expected{ false };
+    expected[static_cast<size_t>(MaterialBuilder::Property::RETROREFLECTION)] = true;
+    EXPECT_TRUE(PropertyListsMatch(expected, properties));
+}
+
+TEST_F(MaterialCompiler, StaticCodeAnalyzerDiffuseTransmission) {
+    const std::string fragmentCode(R"(
+        void material(inout MaterialInputs material) {
+            prepareMaterial(material);
+            material.diffuseTransmission = 0.8;
+            material.diffuseTransmissionColor = vec3(1.0, 0.5, 0.2);
+        }
+    )");
+
+    const std::string shaderCode = shaderWithAllProperties(ShaderStage::FRAGMENT, fragmentCode);
+
+    constexpr GLSLTools glslTools;
+    MaterialBuilder::PropertyList properties{ false };
+    glslTools.findProperties(ShaderStage::FRAGMENT, shaderCode, properties);
+    MaterialBuilder::PropertyList expected{ false };
+    expected[static_cast<size_t>(MaterialBuilder::Property::DIFFUSE_TRANSMISSION)] = true;
+    expected[static_cast<size_t>(MaterialBuilder::Property::DIFFUSE_TRANSMISSION_COLOR)] = true;
+    EXPECT_TRUE(PropertyListsMatch(expected, properties));
+}
+
 TEST_F(MaterialCompiler, StaticCodeAnalyzerNormal) {
     const std::string fragmentCode(R"(
         void material(inout MaterialInputs material) {
@@ -885,6 +933,142 @@ TEST_F(MaterialCompiler, StaticCodeAnalyzerOutputFactor) {
     expected[static_cast<size_t>(MaterialBuilder::Property::POST_LIGHTING_COLOR)] = true;
     expected[static_cast<size_t>(MaterialBuilder::Property::POST_LIGHTING_MIX_FACTOR)] = true;
     EXPECT_TRUE(PropertyListsMatch(expected, properties));
+}
+
+TEST_F(MaterialCompiler, StaticCodeAnalyzerVertexCustomDepthDetection) {
+    const std::string fragmentCode(R"(
+        void material(inout MaterialInputs material) {
+            prepareMaterial(material);
+        }
+    )");
+
+    auto analyzeVertex = [&](const std::string& vertexCode,
+            MaterialBuilder::VertexDomain domain = MaterialBuilder::VertexDomain::OBJECT) {
+        MaterialBuilder builder;
+        builder.material(fragmentCode.c_str());
+        builder.materialVertex(vertexCode.c_str());
+        builder.platform(MaterialBuilder::Platform::MOBILE);
+        builder.optimization(MaterialBuilder::Optimization::NONE);
+        builder.shading(MaterialBuilder::Shading::LIT);
+        builder.vertexDomain(domain);
+        builder.require(filament::VertexAttribute::UV0);
+        builder.require(filament::VertexAttribute::COLOR);
+        builder.setApiLevel(filament::UNSTABLE_MATERIAL_API_LEVEL);
+
+        MaterialBuilder::PropertyList allProperties;
+        std::fill_n(allProperties, MaterialBuilder::MATERIAL_PROPERTIES_COUNT, true);
+
+        const std::string shaderCode = builder.peek(ShaderStage::VERTEX,
+                {
+                    .shaderModel = ShaderModel::MOBILE,
+                    .targetApi = MaterialBuilder::TargetApi::OPENGL,
+                    .targetLanguage = MaterialBuilder::TargetLanguage::GLSL,
+                    .featureLevel = FeatureLevel::FEATURE_LEVEL_1,
+                },
+                allProperties);
+        auto const result = GLSLTools::analyzeVertexShader(shaderCode, ShaderModel::MOBILE,
+                MaterialBuilder::MaterialDomain::SURFACE, MaterialBuilder::TargetApi::OPENGL,
+                MaterialBuilder::TargetLanguage::GLSL);
+        EXPECT_TRUE(result.has_value());
+        return result.has_value() && result->userMaterialVertexHasCustomDepth;
+    };
+
+    // Empty vertex shader does not modify position.
+    EXPECT_FALSE(analyzeVertex(R"(
+        void materialVertex(inout MaterialVertexInputs material) {
+        }
+    )"));
+
+    // Modifying UVs, color, worldNormal, or reading worldPosition does not modify vertex position.
+    EXPECT_FALSE(analyzeVertex(R"(
+        float readPos(in vec4 p) {
+            return p.x + p.y;
+        }
+        void materialVertex(inout MaterialVertexInputs material) {
+            material.uv0 = vec2(readPos(material.worldPosition));
+            material.color = vec4(1.0);
+            material.worldNormal = normalize(material.worldNormal);
+        }
+    )"));
+
+    // Direct or compound write to worldPosition modifies vertex position.
+    EXPECT_TRUE(analyzeVertex(R"(
+        void materialVertex(inout MaterialVertexInputs material) {
+            material.worldPosition.xyz += vec3(0.0, 1.0, 0.0);
+        }
+    )"));
+
+    // Passing worldPosition as an inout parameter to a helper function modifies vertex position,
+    // including when the call appears on the RHS of an assignment/initialization.
+    EXPECT_TRUE(analyzeVertex(R"(
+        void displace(inout vec3 pos) {
+            pos.y += 1.0;
+        }
+        void materialVertex(inout MaterialVertexInputs material) {
+            displace(material.worldPosition.xyz);
+        }
+    )"));
+
+    EXPECT_TRUE(analyzeVertex(R"(
+        float applyWind(inout vec4 pos) {
+            pos.x += sin(getUserTime().x) * 0.1;
+            return pos.x;
+        }
+        void materialVertex(inout MaterialVertexInputs material) {
+            float sway = applyWind(material.worldPosition);
+            material.uv0.x = sway;
+        }
+    )"));
+
+    // Passing the MaterialVertexInputs struct to an inout helper that writes worldPosition.
+    EXPECT_TRUE(analyzeVertex(R"(
+        void helper(inout MaterialVertexInputs m) {
+            m.worldPosition = vec4(1.0);
+        }
+        void materialVertex(inout MaterialVertexInputs material) {
+            helper(material);
+        }
+    )"));
+
+    // Passing the MaterialVertexInputs struct to an inout helper that only writes uv0.
+    EXPECT_FALSE(analyzeVertex(R"(
+        void helper(inout MaterialVertexInputs m) {
+            m.uv0 = vec2(0.5);
+        }
+        void materialVertex(inout MaterialVertexInputs material) {
+            helper(material);
+        }
+    )"));
+
+    // Direct writes to clipSpaceTransform or clipSpacePosition modify vertex position.
+    EXPECT_TRUE(analyzeVertex(R"(
+        void materialVertex(inout MaterialVertexInputs material) {
+            material.clipSpaceTransform = mat4(1.0);
+        }
+    )", MaterialBuilder::VertexDomain::DEVICE));
+
+    EXPECT_TRUE(analyzeVertex(R"(
+        void materialVertex(inout MaterialVertexInputs material) {
+            material.clipSpacePosition = vec4(0.0, 0.0, 0.0, 1.0);
+        }
+    )", MaterialBuilder::VertexDomain::DEVICE));
+
+    // Direct write to gl_Position or gl_PointSize modifies vertex position.
+    EXPECT_TRUE(analyzeVertex(R"(
+        void materialVertex(inout MaterialVertexInputs material) {
+            gl_Position = vec4(0.0, 0.0, 0.0, 1.0);
+        }
+    )"));
+
+    EXPECT_TRUE(analyzeVertex(R"(
+        float setPointSize() {
+            gl_PointSize = 4.0;
+            return 1.0;
+        }
+        void materialVertex(inout MaterialVertexInputs material) {
+            material.uv0.x = setPointSize();
+        }
+    )"));
 }
 
 TEST_F(MaterialCompiler, EmptyName) {
@@ -1336,6 +1520,300 @@ TEST_F(MaterialCompiler, WgslConversionSandboxLitTransparent) {
     EXPECT_TRUE(result.isValid());
 }
 #endif
+
+namespace {
+
+struct SpirvAnalysis {
+    bool hasSpecId5 = false;
+    uint32_t specId5VarId = 0;
+    bool hasOpSpecConstantFalseFor5 = false;
+    bool hasImageGather = false;
+    bool hasImageSampleExplicitLod = false;
+    bool hasImageSampleExplicitLodConstOffset = false;
+    bool hasImageFetch = false;
+    bool hasSwitch = false;
+};
+
+static bool extractFragmentShader(Package const& package,
+        filamat::ChunkType materialTag,
+        filamat::ChunkType dictTag,
+        filaflat::ShaderContent& shaderContent) {
+    filaflat::ChunkContainer container(package.getData(), package.getSize());
+    if (!container.parse()) {
+        return false;
+    }
+    filaflat::BlobDictionary dictionary;
+    filaflat::DictionaryReader::unflatten(container, dictTag, dictionary);
+    filaflat::MaterialChunk materialChunk(container);
+    if (!materialChunk.initialize(materialTag)) {
+        return false;
+    }
+
+    filament::Variant foundVariant;
+    bool found = false;
+    materialChunk.visitShaders([&](ShaderModel model, filament::Variant variant, ShaderStage stage) {
+        if (!found && model == ShaderModel::MOBILE && stage == ShaderStage::FRAGMENT) {
+            foundVariant = variant;
+            found = true;
+        }
+    });
+    if (!found) {
+        return false;
+    }
+    return materialChunk.getShader(shaderContent, dictionary,
+            ShaderModel::MOBILE, foundVariant, ShaderStage::FRAGMENT);
+}
+
+static SpirvAnalysis analyzeSpirv(filaflat::ShaderContent const& content) {
+    SpirvAnalysis analysis;
+    constexpr size_t HEADER_SIZE = 5;
+    uint32_t const* words = reinterpret_cast<uint32_t const*>(content.data());
+    size_t const wordCount = content.size() / sizeof(uint32_t);
+    if (wordCount < HEADER_SIZE) {
+        return analysis;
+    }
+
+    std::vector<uint32_t> specConstantFalseIds;
+    for (size_t i = HEADER_SIZE; i < wordCount;) {
+        uint32_t const firstWord = words[i];
+        uint32_t const instLen = firstWord >> 16;
+        uint32_t const op = firstWord & 0xFFFF;
+        if (instLen == 0 || i + instLen > wordCount) {
+            break;
+        }
+        if (op == spv::Op::OpDecorate && instLen >= 4) {
+            uint32_t const targetId = words[i + 1];
+            uint32_t const decoration = words[i + 2];
+            uint32_t const specId = words[i + 3];
+            if (decoration == spv::Decoration::DecorationSpecId &&
+                    specId == +filament::ReservedSpecializationConstants::CONFIG_POWER_VR_SHADER_WORKAROUNDS) {
+                analysis.hasSpecId5 = true;
+                analysis.specId5VarId = targetId;
+            }
+        } else if (op == spv::Op::OpSpecConstantFalse && instLen >= 3) {
+            specConstantFalseIds.push_back(words[i + 2]);
+        } else if (op == spv::Op::OpImageGather) {
+            analysis.hasImageGather = true;
+        } else if (op == spv::Op::OpImageSampleExplicitLod) {
+            analysis.hasImageSampleExplicitLod = true;
+            // Operands are: result type, result id, sampled image, coordinate, image operands.
+            if (instLen >= 6 && (words[i + 5] & spv::ImageOperandsConstOffsetMask)) {
+                analysis.hasImageSampleExplicitLodConstOffset = true;
+            }
+        } else if (op == spv::Op::OpImageFetch) {
+            analysis.hasImageFetch = true;
+        } else if (op == spv::Op::OpSwitch) {
+            analysis.hasSwitch = true;
+        }
+        i += instLen;
+    }
+    for (uint32_t id : specConstantFalseIds) {
+        if (analysis.hasSpecId5 && id == analysis.specId5VarId) {
+            analysis.hasOpSpecConstantFalseFor5 = true;
+        }
+    }
+    return analysis;
+}
+
+static MaterialBuilder createTextureGatherPostProcessBuilder() {
+    static const std::string postProcessCode = R"(
+        void postProcess(inout PostProcessInputs postProcess) {
+            highp vec2 uv = vec2(0.5);
+            vec4 a = filament_textureGatherLodOffset(materialParams_color, uv, 0);
+            vec4 b = filament_textureGatherFetch(materialParams_color, uv, 1);
+            vec4 c, d;
+            filament_textureGatherFetchRG(materialParams_color, uv, c, d);
+            postProcess.color = a + b + c + d;
+        }
+    )";
+    MaterialBuilder builder;
+    builder.materialDomain(MaterialBuilder::MaterialDomain::POST_PROCESS);
+    builder.material(postProcessCode.c_str());
+    builder.parameter("color", MaterialBuilder::SamplerType::SAMPLER_2D);
+    builder.platform(MaterialBuilder::Platform::MOBILE);
+    return builder;
+}
+
+static MaterialBuilder createTextureGatherArrayPostProcessBuilder() {
+    static const std::string postProcessCode = R"(
+        void postProcess(inout PostProcessInputs postProcess) {
+            highp vec3 uv = vec3(0.5, 0.5, 1.0);
+            vec4 r, g, b;
+            filament_textureGatherFetchRGB(materialParams_color, uv, r, g, b);
+            postProcess.color = r + g + b;
+        }
+    )";
+    MaterialBuilder builder;
+    builder.materialDomain(MaterialBuilder::MaterialDomain::POST_PROCESS);
+    builder.material(postProcessCode.c_str());
+    builder.parameter("color", MaterialBuilder::SamplerType::SAMPLER_2D_ARRAY);
+    builder.platform(MaterialBuilder::Platform::MOBILE);
+    return builder;
+}
+
+static MaterialBuilder createTextureGatherLitSurfaceBuilder() {
+    static const std::string litCode = R"(
+        void material(inout MaterialInputs material) {
+            prepareMaterial(material);
+            material.baseColor = vec4(1.0);
+        }
+    )";
+    MaterialBuilder builder;
+    builder.material(litCode.c_str());
+    builder.shading(MaterialBuilder::Shading::LIT);
+    builder.platform(MaterialBuilder::Platform::MOBILE);
+    return builder;
+}
+
+} // namespace
+
+TEST_F(MaterialCompiler, TextureGatherWorkaroundMultiTarget) {
+    // 1. Post-process material across targets
+    {
+        // Vulkan
+        MaterialBuilder builderVk = createTextureGatherPostProcessBuilder();
+        builderVk.targetApi(MaterialBuilder::TargetApi::VULKAN);
+        Package const pkgVk = builderVk.build(*jobSystem);
+        ASSERT_TRUE(pkgVk.isValid());
+
+        filaflat::ShaderContent spirvContent;
+        ASSERT_TRUE(extractFragmentShader(pkgVk, filamat::ChunkType::MaterialSpirv,
+                filamat::ChunkType::DictionarySpirv, spirvContent));
+        SpirvAnalysis const analysis = analyzeSpirv(spirvContent);
+        EXPECT_TRUE(analysis.hasSpecId5);
+        EXPECT_TRUE(analysis.hasOpSpecConstantFalseFor5);
+        EXPECT_TRUE(analysis.hasImageGather);
+        EXPECT_TRUE(analysis.hasImageSampleExplicitLodConstOffset);
+        EXPECT_TRUE(analysis.hasImageFetch);
+        EXPECT_FALSE(analysis.hasSwitch);
+
+        // OpenGL Feature Level 1 (Mobile)
+        MaterialBuilder builderGlFl1 = createTextureGatherPostProcessBuilder();
+        builderGlFl1.targetApi(MaterialBuilder::TargetApi::OPENGL);
+        builderGlFl1.featureLevel(FeatureLevel::FEATURE_LEVEL_1);
+        Package const pkgGlFl1 = builderGlFl1.build(*jobSystem);
+        ASSERT_TRUE(pkgGlFl1.isValid());
+
+        filaflat::ShaderContent glslContentFl1;
+        ASSERT_TRUE(extractFragmentShader(pkgGlFl1, filamat::ChunkType::MaterialGlsl,
+                filamat::ChunkType::DictionaryText, glslContentFl1));
+        std::string const glslFl1(reinterpret_cast<char const*>(glslContentFl1.data()),
+                glslContentFl1.size());
+        EXPECT_NE(glslFl1.find("textureLodOffset"), std::string::npos);
+        EXPECT_NE(glslFl1.find("texelFetch("), std::string::npos);
+        EXPECT_EQ(glslFl1.find("textureGather"), std::string::npos);
+
+        // OpenGL Feature Level 2 (Mobile)
+        MaterialBuilder builderGlFl2 = createTextureGatherPostProcessBuilder();
+        builderGlFl2.targetApi(MaterialBuilder::TargetApi::OPENGL);
+        builderGlFl2.featureLevel(FeatureLevel::FEATURE_LEVEL_2);
+        Package const pkgGlFl2 = builderGlFl2.build(*jobSystem);
+        ASSERT_TRUE(pkgGlFl2.isValid());
+
+        filaflat::ShaderContent glslContentFl2;
+        ASSERT_TRUE(extractFragmentShader(pkgGlFl2, filamat::ChunkType::MaterialGlsl,
+                filamat::ChunkType::DictionaryText, glslContentFl2));
+        std::string const glslFl2(reinterpret_cast<char const*>(glslContentFl2.data()),
+                glslContentFl2.size());
+        EXPECT_NE(glslFl2.find("textureGather"), std::string::npos);
+        EXPECT_EQ(glslFl2.find("textureLodOffset"), std::string::npos);
+        EXPECT_EQ(glslFl2.find("SPIRV_CROSS_CONSTANT_ID_5"), std::string::npos);
+
+        // Metal
+        MaterialBuilder builderMetal = createTextureGatherPostProcessBuilder();
+        builderMetal.targetApi(MaterialBuilder::TargetApi::METAL);
+        Package const pkgMetal = builderMetal.build(*jobSystem);
+        EXPECT_TRUE(pkgMetal.isValid());
+
+#if FILAMENT_SUPPORTS_WEBGPU
+        // WebGPU
+        MaterialBuilder builderWebGpu = createTextureGatherPostProcessBuilder();
+        builderWebGpu.targetApi(MaterialBuilder::TargetApi::WEBGPU);
+        Package const pkgWebGpu = builderWebGpu.build(*jobSystem);
+        EXPECT_TRUE(pkgWebGpu.isValid());
+#endif
+    }
+
+    // 2. Sampler array post-process material (exercises filament_textureGatherFetchRGB)
+    {
+        // Vulkan
+        MaterialBuilder builderVk = createTextureGatherArrayPostProcessBuilder();
+        builderVk.targetApi(MaterialBuilder::TargetApi::VULKAN);
+        Package const pkgVk = builderVk.build(*jobSystem);
+        ASSERT_TRUE(pkgVk.isValid());
+
+        filaflat::ShaderContent spirvContent;
+        ASSERT_TRUE(extractFragmentShader(pkgVk, filamat::ChunkType::MaterialSpirv,
+                filamat::ChunkType::DictionarySpirv, spirvContent));
+        SpirvAnalysis const analysis = analyzeSpirv(spirvContent);
+        EXPECT_TRUE(analysis.hasSpecId5);
+        EXPECT_TRUE(analysis.hasOpSpecConstantFalseFor5);
+        EXPECT_TRUE(analysis.hasImageGather);
+        EXPECT_TRUE(analysis.hasImageFetch);
+        EXPECT_FALSE(analysis.hasImageSampleExplicitLod);
+
+        // OpenGL Feature Level 1 (Mobile)
+        MaterialBuilder builderGlFl1 = createTextureGatherArrayPostProcessBuilder();
+        builderGlFl1.targetApi(MaterialBuilder::TargetApi::OPENGL);
+        builderGlFl1.featureLevel(FeatureLevel::FEATURE_LEVEL_1);
+        Package const pkgGlFl1 = builderGlFl1.build(*jobSystem);
+        ASSERT_TRUE(pkgGlFl1.isValid());
+
+        filaflat::ShaderContent glslContentFl1;
+        ASSERT_TRUE(extractFragmentShader(pkgGlFl1, filamat::ChunkType::MaterialGlsl,
+                filamat::ChunkType::DictionaryText, glslContentFl1));
+        std::string const glslFl1(reinterpret_cast<char const*>(glslContentFl1.data()),
+                glslContentFl1.size());
+        EXPECT_NE(glslFl1.find("texelFetch("), std::string::npos);
+        EXPECT_EQ(glslFl1.find("textureGather"), std::string::npos);
+    }
+
+    // 3. Lit surface material across targets (exercises surface_ambient_occlusion.fs)
+    {
+        // Vulkan
+        MaterialBuilder builderVk = createTextureGatherLitSurfaceBuilder();
+        builderVk.targetApi(MaterialBuilder::TargetApi::VULKAN);
+        Package const pkgVk = builderVk.build(*jobSystem);
+        ASSERT_TRUE(pkgVk.isValid());
+
+        filaflat::ShaderContent spirvContent;
+        ASSERT_TRUE(extractFragmentShader(pkgVk, filamat::ChunkType::MaterialSpirv,
+                filamat::ChunkType::DictionarySpirv, spirvContent));
+        SpirvAnalysis const analysis = analyzeSpirv(spirvContent);
+        EXPECT_TRUE(analysis.hasSpecId5);
+        EXPECT_TRUE(analysis.hasOpSpecConstantFalseFor5);
+        EXPECT_TRUE(analysis.hasImageGather);
+        EXPECT_FALSE(analysis.hasSwitch);
+
+        // OpenGL Feature Level 1 (Mobile)
+        MaterialBuilder builderGlFl1 = createTextureGatherLitSurfaceBuilder();
+        builderGlFl1.targetApi(MaterialBuilder::TargetApi::OPENGL);
+        builderGlFl1.featureLevel(FeatureLevel::FEATURE_LEVEL_1);
+        Package const pkgGlFl1 = builderGlFl1.build(*jobSystem);
+        EXPECT_TRUE(pkgGlFl1.isValid());
+
+        // OpenGL Feature Level 2 (Mobile)
+        MaterialBuilder builderGlFl2 = createTextureGatherLitSurfaceBuilder();
+        builderGlFl2.targetApi(MaterialBuilder::TargetApi::OPENGL);
+        builderGlFl2.featureLevel(FeatureLevel::FEATURE_LEVEL_2);
+        Package const pkgGlFl2 = builderGlFl2.build(*jobSystem);
+        EXPECT_TRUE(pkgGlFl2.isValid());
+
+        // Metal
+        MaterialBuilder builderMetal = createTextureGatherLitSurfaceBuilder();
+        builderMetal.targetApi(MaterialBuilder::TargetApi::METAL);
+        Package const pkgMetal = builderMetal.build(*jobSystem);
+        EXPECT_TRUE(pkgMetal.isValid());
+
+#if FILAMENT_SUPPORTS_WEBGPU
+        // WebGPU
+        MaterialBuilder builderWebGpu = createTextureGatherLitSurfaceBuilder();
+        builderWebGpu.targetApi(MaterialBuilder::TargetApi::WEBGPU);
+        Package const pkgWebGpu = builderWebGpu.build(*jobSystem);
+        EXPECT_TRUE(pkgWebGpu.isValid());
+#endif
+    }
+}
 
 int main(int argc, char** argv) {
     ::testing::InitGoogleTest(&argc, argv);

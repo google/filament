@@ -108,6 +108,20 @@ constexpr uint8_t SAMPLER = static_cast<uint8_t>(backend::DescriptorType::SAMPLE
 constexpr uint8_t DYNAMIC = static_cast<uint8_t>(backend::DescriptorFlags::DYNAMIC_OFFSET);
 } // namespace
 
+TEST(MaterialParser, RejectDuplicateBindingDescriptorBindings) {
+    std::vector<uint8_t> buffer = {
+        2,                                  // descriptorCount
+        'u', '_', 't', '0', '\0',           // name
+        SAMPLER, 1,                         // type, binding
+        'u', '_', 't', '1', '\0',           // name
+        SAMPLER, 1,                         // same binding again
+    };
+
+    filaflat::Unflattener unflattener(buffer.data(), buffer.data() + buffer.size());
+    MaterialParser::DescriptorBindingsContainer container;
+    EXPECT_FALSE(ChunkDescriptorBindingsInfo::unflatten(unflattener, &container));
+}
+
 TEST(MaterialParser, RejectDuplicateBindingDescriptorSetLayout) {
     std::vector<uint8_t> buffer = {
         2,                          // descriptorCount

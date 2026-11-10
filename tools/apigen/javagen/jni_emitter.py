@@ -94,6 +94,7 @@ from .config import (
 from .specializations import (
     ENGINE_INTERCEPTED_METHODS,
     get_engine_jni_methods,
+    get_material_builder_jni,
     get_material_get_parameters_jni,
     get_tone_mapper_jni,
     get_view_pick_jni,
@@ -147,7 +148,7 @@ def _format_layered_includes(headers: Set[str]) -> List[str]:
             layers[0].append((hdr.lower(), f'#include "{hdr}"'))
         elif hdr.startswith("private/filament/"):
             layers[1].append((hdr.lower(), f"#include <{hdr}>"))
-        elif hdr.startswith("filament/"):
+        elif hdr.startswith("filament/") or hdr.startswith("filamat/"):
             layers[2].append((hdr.lower(), f"#include <{hdr}>"))
         elif hdr.startswith("private/backend/"):
             layers[3].append((hdr.lower(), f"#include <{hdr}>"))
@@ -995,20 +996,30 @@ class JniEmitter:
                 "common/CallbackUtils.h",
             ])
 
+        if self.name == "MaterialBuilder":
+            included_headers.add("utils/JobSystem.h")
+
         # Step 3: Format Includes and Namespaces
         has_math = any(h.startswith("math/") for h in included_headers)
+        has_filamat = any(h.startswith("filamat/") for h in included_headers)
         out.extend(_format_layered_includes(included_headers))
         out.append("")
         out.append("using namespace filament;")
         out.append("using namespace filament::android;")
         if has_math:
             out.append("using namespace filament::math;")
+        if has_filamat:
+            out.append("using namespace filamat;")
         out.append("using namespace utils;")
         out.append("")
 
         # Step 4: Handle Special Custom Functions (e.g. ToneMapper destructor, View.pick)
         if self.name == "ToneMapper":
             out.extend(get_tone_mapper_jni(self.jni_package))
+
+        if self.name == "MaterialBuilder":
+            out.append(get_material_builder_jni(self.jni_package))
+            out.append("")
 
         if self.name == "View":
             jni_func_name = f"Java_{self.jni_package}_{self.name}_nPick"
@@ -1633,6 +1644,7 @@ class JniEmitter:
 
         math_ret_info = None
         is_value_obj_ret = False
+        is_struct_slice_ret = False
         is_slice_ret = False
         is_container_ret = False
         is_struct_ret = False
@@ -1650,14 +1662,27 @@ class JniEmitter:
             ret_info, _ = self.resolve_type_info(cpp_ret)
             math_ret_info = ret_info if "assert" in ret_info else None
             is_value_obj_ret = ret_info.get("is_value_object", False)
-            is_slice_ret = ret_info.get("is_slice", False) and not ret_info.get("is_struct_slice", False)
-            is_container_ret = ret_info.get("is_container", False) and not math_ret_info and not is_slice_ret
+            is_struct_slice_ret = ret_info.get("is_struct_slice", False)
+            is_slice_ret = ret_info.get("is_slice", False) and not is_struct_slice_ret
+            is_container_ret = ret_info.get("is_container", False) and not math_ret_info and not is_slice_ret and not is_struct_slice_ret
             is_struct_ret = ret_info.get("is_struct", False) and not self.is_aggregate
-            if self.archetype == "bitfield" and (
+            is_self_chain = (
+                not is_static
+                and isinstance(cpp_ret, dict)
+                and cpp_ret.get("is_reference", False)
+                and not cpp_ret.get("is_pointer", False)
+                and ret_info.get("java") == self.name
+                and self.archetype == "handle"
+            )
+            if is_self_chain:
+                jni_ret = "void"
+            elif self.archetype == "bitfield" and (
                 self.get_java_type(cpp_ret) == "void"
                 or ret_info.get("cpp_type") in (self.name, f"{self.name} &", f"const {self.name} &")
             ):
                 jni_ret = self.value_type_info.get("jni_type", "jint")
+            elif is_struct_slice_ret:
+                jni_ret = "jobjectArray"
             elif is_slice_ret:
                 scalar = ret_info.get("scalar", "int")
                 jni_ret = ret_info.get("jni", f"j{scalar}Array")
@@ -1737,6 +1762,8 @@ class JniEmitter:
                         if (is_quat and size == 4)
                         else comp_args
                     )
+                    if type_cstr.startswith("uint"):
+                        ctor_args = [f"(uint32_t){c}" for c in ctor_args]
                     cpp_call_args.append(f"{type_cstr}{{{', '.join(ctor_args)}}}")
 
                 else:
@@ -2086,6 +2113,82 @@ class JniEmitter:
             out.append("    env->ReleaseFloatArrayElements(out_, out, 0);")
             for line in body_post:
                 out.append(f"    {line}")
+        elif is_struct_slice_ret:
+            struct_cls = ret_info.get("struct_cls") or ret_info.get("inner_info", {}).get("struct_cls") or {}
+            struct_name = struct_cls.get("name", ret_info.get("java_elem_type", "Object"))
+            jni_state_name = f"Jni{struct_name}State"
+
+            is_nested_in_self = (
+                any(c.name == struct_name for c in self.nested_struct_contexts)
+                or struct_name in self.nested_structs_map.get(self.name, [])
+                or any(child.get("name") == struct_name for child in self.nested_structs_map.get(self.name, []))
+            )
+            if is_nested_in_self:
+                class_path = f"{self.package.replace('.', '/')}/{self.name}${struct_name}"
+            else:
+                class_path = f"{self.package.replace('.', '/')}/{struct_name}"
+
+            accessors = self.get_struct_leaf_accessors(struct_cls)
+            out.append(f"    static const struct {jni_state_name} {{")
+            out.append("        jclass clazz;")
+            out.append("        jmethodID ctor;")
+            for field_id_name, _, _, _, _, _, _ in accessors:
+                out.append(f"        jfieldID {field_id_name};")
+            out.append(f"        explicit {jni_state_name}(JNIEnv* env) noexcept {{")
+            out.append(f'            jclass localClass = env->FindClass("{class_path}");')
+            out.append("            clazz = static_cast<jclass>(env->NewGlobalRef(localClass));")
+            out.append('            ctor = env->GetMethodID(localClass, "<init>", "()V");')
+            for field_id_name, java_field_name, sig, _, _, _, _ in accessors:
+                out.append(f'            {field_id_name} = env->GetFieldID(localClass, "{java_field_name}", "{sig}");')
+            out.append("            env->DeleteLocalRef(localClass);")
+            out.append("        }")
+            out.append("    } jniState(env);")
+            out.append("")
+
+            call_expr = f"{call_target}({', '.join(cpp_call_args)})"
+
+            def emit_struct_slice_body(ind: str) -> None:
+                out.append(f"{ind}auto const slice = {call_expr};")
+                out.append(f"{ind}jsize const count = static_cast<jsize>(slice.size());")
+                out.append(f"{ind}jobjectArray result = env->NewObjectArray(count, jniState.clazz, nullptr);")
+                out.append(f"{ind}if (!result) {{")
+                out.append(f"{ind}    return (jobjectArray) nullptr;")
+                out.append(f"{ind}}}")
+                out.append(f"{ind}for (jsize i = 0; i < count; ++i) {{")
+                out.append(f"{ind}    jobject obj = env->NewObject(jniState.clazz, jniState.ctor);")
+                out.append(f"{ind}    if (!obj) {{")
+                out.append(f"{ind}        continue;")
+                out.append(f"{ind}    }}")
+                out.append(f"{ind}    auto const& info = slice[i];")
+                for field_id_name, _, sig, setter, cast, cast_end, cpp_access in accessors:
+                    if sig == "Ljava/lang/String;":
+                        str_expr = (
+                            f"{cast}info.{cpp_access}{cast_end}"
+                            if cast
+                            else f"info.{cpp_access} ? env->NewStringUTF(info.{cpp_access}) : nullptr"
+                        )
+                        out.append(f"{ind}    jstring j_{field_id_name} = {str_expr};")
+                        out.append(f"{ind}    env->{setter}(obj, jniState.{field_id_name}, j_{field_id_name});")
+                        out.append(f"{ind}    if (j_{field_id_name}) {{")
+                        out.append(f"{ind}        env->DeleteLocalRef(j_{field_id_name});")
+                        out.append(f"{ind}    }}")
+                    else:
+                        out.append(
+                            f"{ind}    env->{setter}(obj, jniState.{field_id_name}, {cast}info.{cpp_access}{cast_end});"
+                        )
+                out.append(f"{ind}    env->SetObjectArrayElement(result, i, obj);")
+                out.append(f"{ind}    env->DeleteLocalRef(obj);")
+                out.append(f"{ind}}}")
+                for line in body_post:
+                    out.append(f"{ind}{line}")
+                out.append(f"{ind}return result;")
+
+            if is_noexcept:
+                emit_struct_slice_body("    ")
+            else:
+                out.append(f"    return wrapJni<{jni_ret}>(env, [&]() {{")
+                emit_struct_slice_body("        ")
+                out.append("    });")
         elif is_slice_ret:
             scalar = ret_info.get("scalar", "int")
             jtype_cap = scalar[0].upper() + scalar[1:]
@@ -2286,8 +2389,20 @@ class JniEmitter:
                 out.append("    auto const res = wrapJni(env, [=]() {")
                 out.append(f"        return {call_expr};")
                 out.append("    });")
-            for field_id_name, _, _, setter, cast, cast_end, cpp_access in accessors:
-                out.append(f"    env->{setter}(out_, jniState.{field_id_name}, {cast}res.{cpp_access}{cast_end});")
+            for field_id_name, _, sig, setter, cast, cast_end, cpp_access in accessors:
+                if sig == "Ljava/lang/String;":
+                    str_expr = (
+                        f"{cast}res.{cpp_access}{cast_end}"
+                        if cast
+                        else f"res.{cpp_access} ? env->NewStringUTF(res.{cpp_access}) : nullptr"
+                    )
+                    out.append(f"    jstring j_{field_id_name} = {str_expr};")
+                    out.append(f"    env->{setter}(out_, jniState.{field_id_name}, j_{field_id_name});")
+                    out.append(f"    if (j_{field_id_name}) {{")
+                    out.append(f"        env->DeleteLocalRef(j_{field_id_name});")
+                    out.append(f"    }}")
+                else:
+                    out.append(f"    env->{setter}(out_, jniState.{field_id_name}, {cast}res.{cpp_access}{cast_end});")
             for line in body_post:
                 out.append(f"    {line}")
         elif self.archetype == "bitfield" and (

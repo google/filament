@@ -91,6 +91,7 @@ using TemporalAntiAliasingOptions = filament::View::TemporalAntiAliasingOptions;
 using VignetteOptions = filament::View::VignetteOptions;
 using VsmShadowOptions = filament::View::VsmShadowOptions;
 using GuardBandOptions = filament::View::GuardBandOptions;
+using MotionVectorsOptions = filament::View::MotionVectorsOptions;
 using StereoscopicOptions = filament::View::StereoscopicOptions;
 using LightManager = filament::LightManager;
 using CameraProjection = filament::Camera::Projection;
@@ -221,6 +222,7 @@ struct ViewSettings {
     VignetteOptions vignette;
     VsmShadowOptions vsmShadowOptions;
     GuardBandOptions guardBand;
+    MotionVectorsOptions motionVectors;
     StereoscopicOptions stereoscopicOptions;
 
     // Custom View Options

@@ -27,6 +27,7 @@ set(DIST_HDRS
         ${PUBLIC_HDR_DIR}/${TARGET}/ImmutableCString.h
         ${PUBLIC_HDR_DIR}/${TARGET}/Entity.h
         ${PUBLIC_HDR_DIR}/${TARGET}/EntityInstance.h
+        ${PUBLIC_HDR_DIR}/${TARGET}/EntityInstanceMap.h
         ${PUBLIC_HDR_DIR}/${TARGET}/EntityManager.h
         ${PUBLIC_HDR_DIR}/${TARGET}/FixedCapacityVector.h
         ${PUBLIC_HDR_DIR}/${TARGET}/Hash.h
@@ -49,6 +50,7 @@ set(DIST_HDRS
         ${PUBLIC_HDR_DIR}/${TARGET}/RefCountedMap.h
         ${PUBLIC_HDR_DIR}/${TARGET}/SingleInstanceComponentManager.h
         ${PUBLIC_HDR_DIR}/${TARGET}/Slice.h
+        ${PUBLIC_HDR_DIR}/${TARGET}/SparsePagedArray.h
         ${PUBLIC_HDR_DIR}/${TARGET}/StaticString.h
         ${PUBLIC_HDR_DIR}/${TARGET}/Status.h
         ${PUBLIC_HDR_DIR}/${TARGET}/StructureOfArrays.h
