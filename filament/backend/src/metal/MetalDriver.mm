@@ -255,6 +255,15 @@ MetalDriver::MetalDriver(PlatformMetal* platform,
             ThreadWorker::Config threadWorkerConfig{
                 "JobQueueThreadWorker", utils::JobSystem::Priority::NORMAL, []() {}, // onBegin
                 []() {},                                                             // onEnd
+                // This thread has no autorelease pool of its own, so anything a job autoreleases
+                // would live until the thread exits. Resetting the job inside the pool releases
+                // its captures there too.
+                [](JobQueue::Job& job) {                                             // wrapJob
+                    @autoreleasepool {
+                        job();
+                        job = nullptr;
+                    }
+                },
             };
             mJobWorker = ThreadWorker::create(mJobQueue, std::move(threadWorkerConfig));
         } else {

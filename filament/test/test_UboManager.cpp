@@ -543,11 +543,29 @@ TEST_F(UboManagerTest, UpdateSlot) {
 
     // Copy uniform data into mi1's allocated slot while the buffer is mapped.
     char data[64] = {};
-    BufferDescriptor desc(data, sizeof(data));
+    bool mappedCallbackCalled = false;
+    BufferDescriptor desc(data, sizeof(data),
+            [](void*, size_t, void* user) { *static_cast<bool*>(user) = true; },
+            &mappedCallbackCalled);
+    size_t const usedBeforeUpdate = mCommandBufferQueue.getCircularBuffer().getUsed();
     mUboManager.updateSlot(mDriverApi, mi1->getAllocationId(), std::move(desc));
+    // updateSlot must record a copyToMemoryMappedBuffer command and move ownership of desc into it.
+    EXPECT_GT(mCommandBufferQueue.getCircularBuffer().getUsed(), usedBeforeUpdate);
+    EXPECT_FALSE(mappedCallbackCalled);
 
-    // Unmap the buffer and fence the frame.
+    // Unmap the buffer and verify that updateSlot becomes a no-op when unmapped.
     mUboManager.finishBeginFrame(mDriverApi);
+    EXPECT_EQ(mUboManager.getMemoryMappedBufferHandle().getId(), HandleBase::nullid);
+
+    bool unmappedCallbackCalled = false;
+    BufferDescriptor unmappedDesc(data, sizeof(data),
+            [](void*, size_t, void* user) { *static_cast<bool*>(user) = true; },
+            &unmappedCallbackCalled);
+    size_t const usedAfterUnmap = mCommandBufferQueue.getCircularBuffer().getUsed();
+    mUboManager.updateSlot(mDriverApi, mi1->getAllocationId(), std::move(unmappedDesc));
+    EXPECT_EQ(mCommandBufferQueue.getCircularBuffer().getUsed(), usedAfterUnmap);
+    EXPECT_TRUE(unmappedCallbackCalled);
+
     mUboManager.endFrame(mDriverApi);
 }
 

@@ -501,7 +501,7 @@ void FView::prepareShadowing(FEngine& engine, DriverApi& driver,
         if (shadowMapCount + shadowMapCountNeeded <= maxShadowMapCount) {
             shadowMapCount += shadowMapCountNeeded;
             const auto& shadowOptions = lcm.getShadowOptions(li);
-            builder.shadowMap(entity, l, spotLight, &shadowOptions);
+            builder.shadowMap(le, l, spotLight, &shadowOptions);
         }
 
         if (shadowMapCount >= maxShadowMapCount) {
@@ -780,16 +780,16 @@ void FView::prepare(FEngine& engine, DriverApi& driver, LinearAllocatorArena& ar
         // note: this job updates LightData (non const)
         // allocate a scratch buffer for distances outside the job below, so we don't need
         // to use a locked allocator; the downside is that we need to account for the worst case.
-        size_t const positionalLightCount = lightCount - FScene::DIRECTIONAL_LIGHTS_COUNT;
-        size_t const positionalLightCountRoundedUp = (positionalLightCount + 3u) & ~3u;
-        float* const distances = arena.alloc<float>(positionalLightCountRoundedUp, CACHELINE_SIZE);
-        mDistancesBuffer = { distances, positionalLightCountRoundedUp };
+        // computeLightCameraDistances() covers the directional light slot and rounds up to 4
+        size_t const distanceCount = (lightCount + 3u) & ~3u;
+        float* const distances = arena.alloc<float>(distanceCount, CACHELINE_SIZE);
+        mDistancesBuffer = { distances, distanceCount };
 
         prepareVisibleLightsJob = js.runAndRetain(js.createJob(nullptr,
-                [&engine, distances, positionalLightCount, &viewMatrix = cameraInfo.view, &cullingFrustum,
+                [&engine, distances, distanceCount, &viewMatrix = cameraInfo.view, &cullingFrustum,
                  &lightData = cache.lightData](JobSystem&, JobSystem::Job*) {
                     prepareVisibleLights(engine.getLightManager(),
-                            { distances, distances + positionalLightCount },
+                            { distances, distanceCount },
                             viewMatrix, cullingFrustum, lightData);
                 }));
     }
@@ -1493,7 +1493,8 @@ void FView::prepareVisibleLights(FLightManager const& lcm,
     // number of point/spotlights
     size_t const positionalLightCount = visibleLightCount - FScene::DIRECTIONAL_LIGHTS_COUNT;
     if (positionalLightCount) {
-        assert_invariant(positionalLightCount <= scratch.size());
+        // computeLightCameraDistances() writes the directional light slot and rounds up to 4
+        assert_invariant(((visibleLightCount + 3u) & ~3u) <= scratch.size());
         // pre-compute the lights' distance to the camera, for sorting below
         // - we don't skip the directional light, because we don't care, it's ignored during sorting
         float* const UTILS_RESTRICT distances = scratch.data();

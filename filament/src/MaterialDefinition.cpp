@@ -18,6 +18,7 @@
 
 #include "Froxelizer.h"
 #include "LocalProgramCache.h"
+#include "MaterialCache.h"
 #include "MaterialParser.h"
 
 #include "details/Engine.h"
@@ -327,7 +328,8 @@ void MaterialDefinition::terminate(FEngine& engine) {
 
 MaterialDefinition::MaterialDefinition(FEngine& engine,
         std::unique_ptr<MaterialParser> materialParser)
-        : mMaterialParser(std::move(materialParser)) {
+        : uniqueId(engine.getMaterialCache().allocateDefinitionId()),
+          mMaterialParser(std::move(materialParser)) {
 
     processMain();
     processBlendingMode();
@@ -944,7 +946,7 @@ void MaterialDefinition::acquirePrograms(FEngine& engine,
     bool const isStereoSupported = engine.getDriverApi().isStereoSupported();
 
     ProgramSpecialization specialization = {
-        .materialCrc32 = getMaterialParser().getCrc32(),
+        .definitionId = uniqueId,
         .specializationConstants = specializationConstants,
     };
 
@@ -1026,7 +1028,7 @@ void MaterialDefinition::releasePrograms(FEngine& engine,
     bool const isStereoSupported = engine.getDriverApi().isStereoSupported();
 
     ProgramSpecialization specialization = {
-        .materialCrc32 = getMaterialParser().getCrc32(),
+        .definitionId = uniqueId,
         .specializationConstants = specializationConstants,
     };
 
@@ -1050,10 +1052,8 @@ void MaterialDefinition::releasePrograms(FEngine& engine,
         }
     }
 
-    // Only destroy the "shared variants" if this is the default material (i.e. the programs in
-    // question that are shared) or if this material has custom depth shaders.
-    const bool destroySharedVariants = isDefaultMaterial || hasCustomDepthShader;
-
+    // Only destroy depth programs owned by this material; shared depth
+    // variants borrow their HwProgram from the default material.
     for (auto variant: getDepthVariants()) {
         DynamicSpecConstKey const specKey{ 0 };
         if (UTILS_LIKELY(isValidProgram(variant, specKey, shaderModel, isStereoSupported))) {
@@ -1064,7 +1064,7 @@ void MaterialDefinition::releasePrograms(FEngine& engine,
                 specialization.variant = variant;
                 specialization.specKey = specKey;
                 materialCache.releaseProgram(engine, specialization);
-            } else if (destroySharedVariants && program) {
+            } else if (!isSharedVariant(variant, isDefaultMaterial) && program) {
                 engine.getDriverApi().destroyProgram(program);
             }
             program.clear();

@@ -25,6 +25,12 @@ It is possible, and even encouraged, to use a single index buffer for several Re
 | [Builder](-builder/index.md) | [main]<br>open class [Builder](-builder/index.md) |
 | [IndexType](-index-type/index.md) | [main]<br>enum [IndexType](-index-type/index.md)<br>Type of the index buffer |
 
+## Properties
+
+| Name | Summary |
+|---|---|
+| [MAX_INDEX_COUNT](-m-a-x_-i-n-d-e-x_-c-o-u-n-t.md) | [main]<br>val [MAX_INDEX_COUNT](-m-a-x_-i-n-d-e-x_-c-o-u-n-t.md): [Int](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin-stdlib/kotlin/-int/index.html) = 67108863<br>Maximum number of indices accepted by an index buffer. |
+
 ## Functions
 
 | Name | Summary |

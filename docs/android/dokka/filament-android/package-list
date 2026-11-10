@@ -759,6 +759,7 @@ $dokka.location:com.google.android.filament/IndexBuffer.IndexType/toFilamentNati
 $dokka.location:com.google.android.filament/IndexBuffer.IndexType/valueOf/#java.lang.String/PointingToDeclaration/filament-android/com.google.android.filament/-index-buffer/-index-type/value-of.md
 $dokka.location:com.google.android.filament/IndexBuffer.IndexType/values/#/PointingToDeclaration/filament-android/com.google.android.filament/-index-buffer/-index-type/values.md
 $dokka.location:com.google.android.filament/IndexBuffer///PointingToDeclaration/filament-android/com.google.android.filament/-index-buffer/index.md
+$dokka.location:com.google.android.filament/IndexBuffer/MAX_INDEX_COUNT/#/PointingToDeclaration/filament-android/com.google.android.filament/-index-buffer/-m-a-x_-i-n-d-e-x_-c-o-u-n-t.md
 $dokka.location:com.google.android.filament/IndexBuffer/getIndexCount/#/PointingToDeclaration/filament-android/com.google.android.filament/-index-buffer/get-index-count.md
 $dokka.location:com.google.android.filament/IndexBuffer/getNativeObject/#/PointingToDeclaration/filament-android/com.google.android.filament/-index-buffer/get-native-object.md
 $dokka.location:com.google.android.filament/IndexBuffer/isCreationComplete/#/PointingToDeclaration/filament-android/com.google.android.filament/-index-buffer/is-creation-complete.md

@@ -111,6 +111,7 @@ private:
     mutable utils::Condition mCondition;
     mutable std::vector<Range> mCommandBuffersToExecute UTILS_GUARDED_BY(mLock);
     size_t mFreeSpace UTILS_GUARDED_BY(mLock) = 0;
+    size_t mBankUsed[2] UTILS_GUARDED_BY(mLock) = { 0, 0 };
     size_t mHighWatermark UTILS_GUARDED_BY(mLock) = 0;
     uint32_t mExitRequested UTILS_GUARDED_BY(mLock) = 0;
     bool mPaused UTILS_GUARDED_BY(mLock) = false;

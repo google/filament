@@ -104,6 +104,45 @@ std::vector<uint8_t> makeDeeplyNestedNodesGlb(size_t depth);
 // out-of-bounds index (>= vertexCount), reproducing issue #10201.
 std::vector<uint8_t> makeMeshoptSparseAccessorOobGlb();
 
+// The translation that makeTranslationAnimationGlb() stores for its second keyframe.
+constexpr filament::math::float3 kTranslationAnimationEnd = { 1.0f, 2.0f, 3.0f };
+
+// The float that makeTranslationAnimationGlb() writes into the gap between strided timestamps. It
+// is deliberately larger than any real timestamp so that a reader which ignores the stride produces
+// a visibly wrong duration.
+constexpr float kTranslationAnimationStridePadding = 7.0f;
+
+// Options for makeTranslationAnimationGlb(). The defaults produce a valid asset.
+struct TranslationAnimationOptions {
+    // The byteLength of the output (translation) bufferView and the byteOffset of the output
+    // accessor within it. Making these reach past the end of the buffer produces an asset that
+    // cgltf_validate() rejects, so that loadResources() fails.
+    uint32_t outputViewByteLength = 24;
+    uint32_t outputAccessorByteOffset = 0;
+
+    // When non-zero, the timeline bufferView declares this byteStride (which must be a multiple of
+    // 4 that is at least 8) and the bytes between consecutive timestamps are filled with
+    // kTranslationAnimationStridePadding.
+    uint32_t timelineByteStride = 0;
+
+    // The value of the second (last) timestamp. The first timestamp is always 0. Non-finite values
+    // are stored verbatim, since the timestamps live in the binary chunk rather than in JSON.
+    float lastTimestamp = 1.0f;
+
+    // When set, the timeline is stored in a second buffer that has no URI and is not the GLB BIN
+    // chunk. cgltf_load_buffers() leaves such a buffer with null data but still reports success,
+    // so loadResources() succeeds while the timeline bytes are unreadable. This mirrors the
+    // EXT_meshopt_compression fallback buffer case and the non-filesystem builds, where a missing
+    // external resource is tolerated.
+    bool timelineInUnloadedBuffer = false;
+};
+
+// Builds a GLB with a single node named "animated" and no meshes. The node is animated by one
+// LINEAR translation channel with keyframes at t = 0 (origin) and t = `lastTimestamp`
+// (kTranslationAnimationEnd). See TranslationAnimationOptions for the ways in which the asset can
+// be made invalid or unreadable.
+std::vector<uint8_t> makeTranslationAnimationGlb(TranslationAnimationOptions const& options = {});
+
 } // namespace test
 
 #endif // TNT_GLTFIO_TEST_GLBBUILDERS_H

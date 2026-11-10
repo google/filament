@@ -29,9 +29,12 @@
 #include "details/Material.h"
 #include "details/MaterialInstance.h"
 #include "details/Renderer.h"
+#include "details/Scene.h"
+#include "details/SkinningBuffer.h"
 #include "details/View.h"
 
 #include <private/filament/BufferInterfaceBlock.h>
+#include <private/filament/UibStructs.h>
 
 #include <filament/Box.h>
 #include <filament/BufferObject.h>
@@ -59,6 +62,7 @@
 
 #include <utils/Entity.h>
 #include <utils/EntityManager.h>
+#include <utils/memalign.h>
 #include <utils/NameComponentManager.h>
 #include <utils/PagedArenaBitset.h>
 #include <utils/Slice.h>
@@ -79,6 +83,7 @@
 #include <chrono>
 #include <cmath>
 #include <cstddef>
+#include <cstdint>
 #include <functional>
 #include <initializer_list>
 #include <iostream>
@@ -86,8 +91,12 @@
 #include <random>
 #include <thread>
 #include <type_traits>
+#include <unordered_set>
 #include <utility>
 #include <vector>
+
+#include <stdint.h>
+#include <string.h>
 
 using namespace filament;
 using namespace filament::math;
@@ -211,18 +220,106 @@ TEST(FilamentTest, SkinningMath) {
 
 
     std::default_random_engine generator(82828); // NOLINT
-    std::uniform_real_distribution<float> const distribution(-4, 4);
-    std::uniform_real_distribution dangle(-f::TAU, f::TAU);
-    auto rand_gen = std::bind(distribution, generator);
+    std::uniform_real_distribution<float> distribution(-4.0f, 4.0f);
+    std::uniform_real_distribution<float> scale_dist(0.5f, 4.0f);
+    std::uniform_real_distribution<float> dangle(-f::TAU, f::TAU);
+    auto rand_gen = [&]() { return distribution(generator); };
+    auto rand_scale = [&]() {
+        float const s = scale_dist(generator);
+        return rand_gen() < 0.0f ? -s : s;
+    };
 
     for (size_t i = 0; i < 100; ++i) {
+        float3 axis{ rand_gen(), rand_gen(), rand_gen() };
+        if (length(axis) < 1e-3f) {
+            axis = float3{ 0.0f, 1.0f, 0.0f };
+        }
         m =
-                mat4f::translation(float3{rand_gen(), rand_gen(), rand_gen()}) *
-                mat4f::rotation(dangle(generator), normalize(float3{rand_gen(), rand_gen(), rand_gen()})) *
-                mat4f::scaling(float3{rand_gen(), rand_gen(), rand_gen()});
+                mat4f::translation(float3{ rand_gen(), rand_gen(), rand_gen() }) *
+                mat4f::rotation(dangle(generator), normalize(axis)) *
+                mat4f::scaling(float3{ rand_scale(), rand_scale(), rand_scale() });
         check(m, v);
     }
 }
+
+namespace filament {
+
+TEST(FilamentTest, Bones) {
+    EXPECT_EQ(FSkinningBuffer::getPhysicalBoneCount(0), 0u);
+    EXPECT_EQ(FSkinningBuffer::getPhysicalBoneCount(1), size_t(CONFIG_MAX_BONE_COUNT));
+    EXPECT_EQ(FSkinningBuffer::getPhysicalBoneCount(CONFIG_MAX_BONE_COUNT),
+            size_t(CONFIG_MAX_BONE_COUNT));
+    EXPECT_EQ(FSkinningBuffer::getPhysicalBoneCount(CONFIG_MAX_BONE_COUNT + 1),
+            size_t(2 * CONFIG_MAX_BONE_COUNT));
+
+    auto mulBoneVertex = [](PerRenderableBoneUib::BoneData const& bone, float3 v) -> float3 {
+        mat4f const t(
+                bone.transform[0],
+                bone.transform[1],
+                bone.transform[2],
+                float4{ 0.0f, 0.0f, 0.0f, 1.0f });
+        mat4f const m = transpose(t);
+        return v.x * m[0].xyz + (v.y * m[1].xyz + (v.z * m[2].xyz + m[3].xyz));
+    };
+
+    auto mulBoneNormal = [](PerRenderableBoneUib::BoneData const& bone, float3 n) -> float3 {
+        float const a = bone.transform[0][0];
+        float const b = bone.transform[0][1];
+        float const c = bone.transform[0][2];
+        float const d = bone.transform[1][0];
+        float const e = bone.transform[1][1];
+        float const f = bone.transform[1][2];
+        float const g = bone.transform[2][0];
+        float const h = bone.transform[2][1];
+        float const i = bone.transform[2][2];
+
+        mat3f cof;
+        cof[0] = bone.cof0;
+        cof[1] = float3{ bone.cof1x, a * i - c * g, c * d - a * f };
+        cof[2] = float3{ d * h - e * g, b * g - a * h, a * e - b * d };
+        return normalize(cof * n);
+    };
+
+    std::default_random_engine generator(82828); // NOLINT
+    std::uniform_real_distribution<float> distribution(-4.0f, 4.0f);
+    std::uniform_real_distribution<float> scale_dist(0.5f, 4.0f);
+    std::uniform_real_distribution<float> dangle(-f::TAU, f::TAU);
+    auto rand_gen = [&]() { return distribution(generator); };
+    auto rand_scale = [&]() {
+        float const s = scale_dist(generator);
+        return rand_gen() < 0.0f ? -s : s;
+    };
+
+    constexpr float3 v = { 1.0f, 2.0f, 3.0f };
+    float3 const n = normalize(float3{ 1.0f, -2.0f, 0.5f });
+
+    for (size_t i = 0; i < 100; ++i) {
+        float3 axis{ rand_gen(), rand_gen(), rand_gen() };
+        if (length(axis) < 1e-3f) {
+            axis = float3{ 0.0f, 1.0f, 0.0f };
+        }
+        mat4f const m =
+                mat4f::translation(float3{ rand_gen(), rand_gen(), rand_gen() }) *
+                mat4f::rotation(dangle(generator), normalize(axis)) *
+                mat4f::scaling(float3{ rand_scale(), rand_scale(), rand_scale() });
+
+        PerRenderableBoneUib::BoneData const bone = FSkinningBuffer::makeBone(m);
+
+        float3 const expectedPos = (m * float4{ v, 1.0f }).xyz;
+        float3 const actualPos = mulBoneVertex(bone, v);
+        EXPECT_NEAR(expectedPos.x, actualPos.x, 1e-5f);
+        EXPECT_NEAR(expectedPos.y, actualPos.y, 1e-5f);
+        EXPECT_NEAR(expectedPos.z, actualPos.z, 1e-5f);
+
+        float3 const expectedNormal = normalize(cof(m.upperLeft()) * n);
+        float3 const actualNormal = mulBoneNormal(bone, n);
+        EXPECT_NEAR(expectedNormal.x, actualNormal.x, 1e-5f);
+        EXPECT_NEAR(expectedNormal.y, actualNormal.y, 1e-5f);
+        EXPECT_NEAR(expectedNormal.z, actualNormal.z, 1e-5f);
+    }
+}
+
+} // namespace filament
 
 TEST(FilamentTest, TransformManagerSimple) {
     EntityManager& em = EntityManager::get();
@@ -315,7 +412,9 @@ TEST(FilamentTest, TransformManager) {
         c++;
     }
 
-    EXPECT_EQ(tcm.getChildrenEnd(parent)++, tcm.getChildrenEnd(parent));
+    auto endIt = tcm.getChildrenEnd(parent);
+    EXPECT_EQ(endIt++, tcm.getChildrenEnd(parent));
+    EXPECT_EQ(endIt, tcm.getChildrenEnd(parent));
     EXPECT_EQ(tcm.getChildrenBegin(parent), tcm.getChildrenEnd(parent));
     EXPECT_EQ(c, tcm.getChildCount(newParent));
 
@@ -1644,6 +1743,9 @@ TEST(FilamentTest, UniformBuffer) {
         EXPECT_EQ(-5.0f, data->u[1].v);
         EXPECT_EQ(-7.0f, data->u[2].v);
         EXPECT_EQ(23.0f, data->f8);
+        EXPECT_EQ((float3{ 10, 20, 30 }), data->m0[0].xyz);
+        EXPECT_EQ((float3{ 40, 50, 60 }), data->m0[1].xyz);
+        EXPECT_EQ((float3{ 70, 80, 90 }), data->m0[2].xyz);
         EXPECT_EQ((mat4f{100, 200, 300, 0, 400, 500, 600, 0, 700, 800, 900, 0, 0, 0, 0, 1}), data->m1);
     };
 
@@ -1709,20 +1811,24 @@ TEST(FilamentTest, UniformBuffer) {
     buffer.setUniform(offsetof(ubo, m1), mat4f{100,200,300,0, 400,500,600,0, 700,800,900,0, 0,0,0,1 });
 
     CHECK(data);
+    EXPECT_EQ((mat3f{ 10, 20, 30, 40, 50, 60, 70, 80, 90 }),
+            buffer.getUniform<mat3f>(offsetof(ubo, m0)));
 
-    ubo copy(*data);
-    CHECK(data);
-    CHECK(&copy);
+    UniformBuffer copy(sizeof(ubo));
+    copy.setUniforms(buffer);
+    CHECK(static_cast<ubo const*>(buffer.getBuffer()));
+    CHECK(static_cast<ubo const*>(copy.getBuffer()));
 
-    ubo move(copy);
-    CHECK(&move);
+    UniformBuffer moved(std::move(copy));
+    CHECK(static_cast<ubo const*>(moved.getBuffer()));
 
-    copy = *data;
-    CHECK(data);
-    CHECK(&copy);
+    UniformBuffer copyAssigned(sizeof(ubo));
+    copyAssigned.setUniforms(buffer);
+    CHECK(static_cast<ubo const*>(copyAssigned.getBuffer()));
 
-    move = copy;
-    CHECK(&move);
+    UniformBuffer moveAssigned(16);
+    moveAssigned = std::move(copyAssigned);
+    CHECK(static_cast<ubo const*>(moveAssigned.getBuffer()));
 }
 
 TEST(FilamentTest, UniformBufferSize1) {
@@ -1735,17 +1841,29 @@ TEST(FilamentTest, UniformBufferSize1) {
             { "f1b", 0, BufferInterfaceBlock::Type::FLOAT },  // offset = 36
     });
     BufferInterfaceBlock uib(b.build());
+    EXPECT_EQ(48u, uib.getSize());
     UniformBuffer buffer(uib.getSize());
+    buffer.clean();
+    EXPECT_FALSE(buffer.isDirty());
 
-    float4 f4(1.0f);
+    float4 f4(1.0f, 2.0f, 3.0f, 4.0f);
     ssize_t f4_offset = uib.getFieldOffset("f4a", 0);
+    EXPECT_EQ(0, f4_offset);
     buffer.setUniformArray(f4_offset, &f4, 1);
 
-    float f1(1.0f);
+    float f1(5.0f);
     ssize_t f1_offset = uib.getFieldOffset("f1b", 0);
+    EXPECT_EQ(36, f1_offset);
     buffer.setUniformArray(f1_offset, &f1, 1);
 
+    EXPECT_TRUE(buffer.isDirty());
+    EXPECT_EQ(f4, buffer.getUniform<float4>(f4_offset));
+    EXPECT_EQ(f1, buffer.getUniform<float>(f1_offset));
+
+    buffer.clean();
+    EXPECT_FALSE(buffer.isDirty());
     buffer.invalidate();
+    EXPECT_TRUE(buffer.isDirty());
 }
 
 TEST(FilamentTest, UniformBufferSize2) {
@@ -1755,20 +1873,32 @@ TEST(FilamentTest, UniformBufferSize2) {
             { "f4a", 0, BufferInterfaceBlock::Type::FLOAT4 }, // offset = 0
             { "f4b", 0, BufferInterfaceBlock::Type::FLOAT4 }, // offset = 16
             { "f1a", 0, BufferInterfaceBlock::Type::FLOAT },  // offset = 32
-            { "f2a", 0, BufferInterfaceBlock::Type::FLOAT2 }, // offset = 36
+            { "f2a", 0, BufferInterfaceBlock::Type::FLOAT2 }, // offset = 40 (8-byte aligned)
     });
     BufferInterfaceBlock uib(b.build());
+    EXPECT_EQ(48u, uib.getSize());
     UniformBuffer buffer(uib.getSize());
+    buffer.clean();
+    EXPECT_FALSE(buffer.isDirty());
 
-    float4 f4(1.0f);
+    float4 f4(1.0f, 2.0f, 3.0f, 4.0f);
     ssize_t f4_offset = uib.getFieldOffset("f4a", 0);
+    EXPECT_EQ(0, f4_offset);
     buffer.setUniformArray(f4_offset, &f4, 1);
 
-    float2 f2(1.0f);
+    float2 f2(5.0f, 6.0f);
     ssize_t f2_offset = uib.getFieldOffset("f2a", 0);
+    EXPECT_EQ(40, f2_offset);
     buffer.setUniformArray(f2_offset, &f2, 1);
 
+    EXPECT_TRUE(buffer.isDirty());
+    EXPECT_EQ(f4, buffer.getUniform<float4>(f4_offset));
+    EXPECT_EQ(f2, buffer.getUniform<float2>(f2_offset));
+
+    buffer.clean();
+    EXPECT_FALSE(buffer.isDirty());
     buffer.invalidate();
+    EXPECT_TRUE(buffer.isDirty());
 }
 
 TEST(FilamentTest, BufferInterfaceBlockRejectsOffsetWrap) {
@@ -1901,8 +2031,6 @@ TEST(FilamentTest, BoxCulling) {
     EXPECT_TRUE( frustum.intersects(box.translateTo({  10,  10, -10 })) );
     EXPECT_TRUE( frustum.intersects(box.translateTo({  10, -10, -10 })) );
     EXPECT_TRUE( frustum.intersects(box.translateTo({ -10,  10, -10 })) );
-    EXPECT_TRUE( frustum.intersects(box.translateTo({ -10,  10, -10 })) );
-    EXPECT_TRUE( frustum.intersects(box.translateTo({  10, -10, -10 })) );
 
     // box outside frustum planes
     EXPECT_FALSE( frustum.intersects(box.translateTo({ 0,     0,    0})) );
@@ -1944,8 +2072,6 @@ TEST(FilamentTest, SphereCulling) {
     EXPECT_TRUE( frustum.intersects(sphere + float4{ 10, 10, -10, 0 }) );
     EXPECT_TRUE( frustum.intersects(sphere + float4{ 10, -10, -10, 0 }) );
     EXPECT_TRUE( frustum.intersects(sphere + float4{ -10, 10, -10, 0 }) );
-    EXPECT_TRUE( frustum.intersects(sphere + float4{ -10, 10, -10, 0 }) );
-    EXPECT_TRUE( frustum.intersects(sphere + float4{ 10, -10, -10, 0 }) );
 
     // sphere outside frustum planes
     EXPECT_FALSE( frustum.intersects(sphere + float4{ 0, 0, 0, 0}) );
@@ -1955,8 +2081,8 @@ TEST(FilamentTest, SphereCulling) {
     // slightly inside the frustum
     EXPECT_TRUE( frustum.intersects(sphere + float4{ -100, 0, -100, 0}) );
 
-    // A sphere that entirely contain the frustum
-    EXPECT_TRUE(frustum.intersects({ 0, 200 }));
+    // A sphere that entirely contains the frustum
+    EXPECT_TRUE(frustum.intersects(float4{ 0, 0, 0, 200 }));
 }
 
 TEST(FilamentTest, ColorConversion) {
@@ -1977,6 +2103,12 @@ TEST(FilamentTest, ColorConversion) {
 
     EXPECT_LT((sRGBColor{0.5f, 0.0f, 0.0f}.x), Color::toSRGB<ACCURATE>({0.5f, 0.0f, 0.0f}).x);
 
+    // sRGB(0.5): 1.055 * 0.5^(1/2.4) - 0.055 = 0.735356983
+    EXPECT_NEAR(0.735357f, Color::toSRGB<ACCURATE>({0.5f, 0.0f, 0.0f}).x, 1e-5f);
+    EXPECT_NEAR(0.735357f, Color::toSRGB<FAST>({0.5f, 0.0f, 0.0f}).x, 1e-2f);
+    // Linear regime (x <= 0.0031308): 12.92 * 0.001 = 0.01292
+    EXPECT_NEAR(0.01292f, Color::toSRGB<ACCURATE>({0.001f, 0.0f, 0.0f}).x, 1e-6f);
+
     EXPECT_PRED1(isGray, Color::toSRGB<FAST>(LinearColor{0.5f}));
     EXPECT_PRED1(isGray, Color::toSRGB<ACCURATE>(LinearColor{0.5f}));
 
@@ -1995,6 +2127,19 @@ TEST(FilamentTest, ColorConversion) {
     EXPECT_GT((LinearColor{0.5f, 0.0f, 0.0f}.x), Color::toLinear<FAST>({0.5f, 0.0f, 0.0f}).x);
 
     EXPECT_GT((LinearColor{0.5f, 0.0f, 0.0f}.x), Color::toLinear<ACCURATE>({0.5f, 0.0f, 0.0f}).x);
+
+    // Linear(0.5): ((0.5 + 0.055) / 1.055)^2.4 = 0.21404114
+    EXPECT_NEAR(0.2140411f, Color::toLinear<ACCURATE>({0.5f, 0.0f, 0.0f}).x, 1e-5f);
+    EXPECT_NEAR(0.2140411f, Color::toLinear<FAST>({0.5f, 0.0f, 0.0f}).x, 1e-2f);
+    // Linear regime (x <= 0.04045): 0.01292 / 12.92 = 0.001
+    EXPECT_NEAR(0.001f, Color::toLinear<ACCURATE>({0.01292f, 0.0f, 0.0f}).x, 1e-6f);
+
+    // Round-trip accuracy
+    LinearColor const orig{ 0.1f, 0.5f, 0.8f };
+    LinearColor const roundTrip = Color::toLinear<ACCURATE>(Color::toSRGB<ACCURATE>(orig));
+    EXPECT_NEAR(orig.r, roundTrip.r, 1e-6f);
+    EXPECT_NEAR(orig.g, roundTrip.g, 1e-6f);
+    EXPECT_NEAR(orig.b, roundTrip.b, 1e-6f);
 
     EXPECT_PRED1(isGray, Color::toLinear<FAST>(sRGBColor{0.5f}));
     EXPECT_PRED1(isGray, Color::toLinear<ACCURATE>(sRGBColor{0.5f}));
@@ -2240,7 +2385,7 @@ TEST(FilamentTest, ColorGradingNeonValidation) {
 
     struct LutData {
         std::vector<uint32_t> pixels;
-        uint32_t width, height, depth;
+        uint32_t width = 0, height = 0, depth = 0;
     };
 
     auto exporter = [](void const* data, size_t const size, backend::PixelDataFormat format,
@@ -2266,6 +2411,8 @@ TEST(FilamentTest, ColorGradingNeonValidation) {
             .build(*engine);
 
     // 3. Verify Metadata and Pixels
+    ASSERT_GT(neonLut.width, 0u);
+    ASSERT_FALSE(neonLut.pixels.empty());
     ASSERT_EQ(neonLut.width, scalarLut.width);
     ASSERT_EQ(neonLut.pixels.size(), scalarLut.pixels.size());
 
@@ -2294,7 +2441,7 @@ TEST(FilamentTest, ColorGradingMediumNeonValidation) {
 
     struct LutData {
         std::vector<uint32_t> pixels;
-        uint32_t width, height, depth;
+        uint32_t width = 0, height = 0, depth = 0;
     };
 
     auto exporter = [](void const* data, size_t const size, backend::PixelDataFormat format,
@@ -2338,6 +2485,8 @@ TEST(FilamentTest, ColorGradingMediumNeonValidation) {
             .build(*engine);
 
     // 3. Verify Metadata and Pixels
+    ASSERT_GT(neonLut.width, 0u);
+    ASSERT_FALSE(neonLut.pixels.empty());
     ASSERT_EQ(neonLut.width, scalarLut.width);
     ASSERT_EQ(neonLut.pixels.size(), scalarLut.pixels.size());
 
@@ -2367,7 +2516,7 @@ TEST(FilamentTest, ColorGradingNeonLinearValidation) {
 
     struct LutData {
         std::vector<uint32_t> pixels;
-        uint32_t width, height, depth;
+        uint32_t width = 0, height = 0, depth = 0;
     };
 
     auto exporter = [](void const* data, size_t const size, backend::PixelDataFormat format,
@@ -2395,6 +2544,8 @@ TEST(FilamentTest, ColorGradingNeonLinearValidation) {
             .build(*engine);
 
     // 3. Verify Metadata and Pixels
+    ASSERT_GT(neonLut.width, 0u);
+    ASSERT_FALSE(neonLut.pixels.empty());
     ASSERT_EQ(neonLut.width, scalarLut.width);
     ASSERT_EQ(neonLut.pixels.size(), scalarLut.pixels.size());
 
@@ -2422,7 +2573,7 @@ TEST(FilamentTest, ColorGradingMediumNeonLinearValidation) {
 
     struct LutData {
         std::vector<uint32_t> pixels;
-        uint32_t width, height, depth;
+        uint32_t width = 0, height = 0, depth = 0;
     };
 
     auto exporter = [](void const* data, size_t const size, backend::PixelDataFormat format,
@@ -2468,6 +2619,8 @@ TEST(FilamentTest, ColorGradingMediumNeonLinearValidation) {
             .build(*engine);
 
     // 3. Verify Metadata and Pixels
+    ASSERT_GT(neonLut.width, 0u);
+    ASSERT_FALSE(neonLut.pixels.empty());
     ASSERT_EQ(neonLut.width, scalarLut.width);
     ASSERT_EQ(neonLut.pixels.size(), scalarLut.pixels.size());
 
@@ -2495,7 +2648,7 @@ TEST(FilamentTest, ColorGradingAdvancedNeonValidation) {
 
     struct LutData {
         std::vector<uint32_t> pixels;
-        uint32_t width, height, depth;
+        uint32_t width = 0, height = 0, depth = 0;
     };
 
     auto exporter = [](void const* data, size_t const size, backend::PixelDataFormat format,
@@ -2531,6 +2684,8 @@ TEST(FilamentTest, ColorGradingAdvancedNeonValidation) {
             .build(*engine);
 
     // 3. Verify Metadata and Pixels
+    ASSERT_GT(neonLut.width, 0u);
+    ASSERT_FALSE(neonLut.pixels.empty());
     ASSERT_EQ(neonLut.width, scalarLut.width);
     ASSERT_EQ(neonLut.pixels.size(), scalarLut.pixels.size());
 
@@ -2557,12 +2712,12 @@ TEST(FilamentTest, ColorGradingHalfNeonValidation) {
 
     struct LutDataHalf {
         std::vector<half> pixels;
-        uint32_t width, height, depth;
+        uint32_t width = 0, height = 0, depth = 0;
     };
 
     struct LutDataInt {
         std::vector<uint32_t> pixels;
-        uint32_t width, height, depth;
+        uint32_t width = 0, height = 0, depth = 0;
     };
 
     auto exporterHalf = [](void const* data, size_t const size, backend::PixelDataFormat format,
@@ -2620,6 +2775,8 @@ TEST(FilamentTest, ColorGradingHalfNeonValidation) {
             .exportLut(exporterInt, &scalarIntLut)
             .build(*engine);
 
+    ASSERT_GT(neonHalfLut.width, 0u);
+    ASSERT_FALSE(neonHalfLut.pixels.empty());
     ASSERT_EQ(neonHalfLut.width, scalarHalfLut.width);
     ASSERT_EQ(neonHalfLut.pixels.size(), scalarHalfLut.pixels.size());
     ASSERT_EQ(neonHalfLut.pixels.size() / 4, neonIntLut.pixels.size());
@@ -2710,11 +2867,6 @@ TEST(FilamentTest, ColorGradingHalfNeonValidation) {
 }
 
 TEST(FilamentTest, ToneMapperNeonValidation) {
-    Engine* engine = Engine::Builder()
-            .backend(Engine::Backend::NOOP)
-            .feature("engine.color_grading.use_optimized_default_builder", true)
-            .build();
-
     std::vector<ToneMapper*> toneMappers;
     toneMappers.push_back(new LinearToneMapper());
     toneMappers.push_back(new ACESToneMapper());
@@ -2823,8 +2975,6 @@ TEST(FilamentTest, ToneMapperNeonValidation) {
         delete tm;
     }
     std::cout << "====================================================================\n\n";
-
-    Engine::destroy((Engine**)&engine);
 }
 #endif
 
@@ -3401,6 +3551,27 @@ TEST(FilamentTest, MultipleDirectionalLights) {
     Engine::destroy((Engine**)&engine);
 }
 
+TEST(FilamentTest, SceneCacheUboRowsAreZeroed) {
+    FScene::SceneCacheData cache;
+    size_t const capacity = 16;
+    size_t const bufferSize = FScene::RenderableSoa::getNeededSize(capacity);
+
+    // Leave a dirty block of the same size on the heap, so the allocation below likely reuses it.
+    void* const dirty = utils::aligned_alloc(bufferSize,
+            std::max(alignof(std::max_align_t), alignof(PerRenderableData)));
+    ASSERT_NE(dirty, nullptr);
+    memset(dirty, 0xAB, bufferSize);
+    utils::aligned_free(dirty);
+
+    cache.resize(1, 1);
+    ASSERT_EQ(capacity, cache.renderableData.capacity());
+
+    auto const* const p = reinterpret_cast<uint8_t const*>(
+            cache.renderableData.data<FScene::UBO>());
+    size_t const size = capacity * sizeof(PerRenderableData);
+    EXPECT_TRUE(std::all_of(p, p + size, [](uint8_t const b) { return b == 0; }));
+}
+
 namespace {
 
 class SceneCacheTest : public testing::Test {
@@ -3557,7 +3728,7 @@ protected:
     }
 
     static bool hasDirectionalLight(View* view, Entity e) {
-        return downcast(view)->getSceneCache()->directionalLights[e.getId()];
+        return downcast(view)->getSceneCache()->directionalLights[EntityManager::getIndex(e)];
     }
 
     void cleanupTrackedResources() {
@@ -3694,33 +3865,33 @@ TEST_F(SceneCacheTest, RemoveAndDestroyOnDifferentPagesKeepsOtherEntities) {
     std::vector<Entity> pool(3 * PAGE);
     em.create(pool.size(), pool.data());
     mEntities.insert(mEntities.end(), pool.begin(), pool.end());
-    std::vector<uint32_t> ids;
-    ids.reserve(pool.size());
+    std::vector<uint32_t> indices;
+    indices.reserve(pool.size());
     for (Entity const e : pool) {
-        ids.push_back(e.getId());
+        indices.push_back(EntityManager::getIndex(e));
     }
-    std::sort(ids.begin(), ids.end());
-    std::vector<uint32_t> lows; // ids whose counterpart one page up also exists
-    for (uint32_t const id : ids) {
-        if (std::binary_search(ids.begin(), ids.end(), id + PAGE)) {
-            if (!lows.empty() && lows.front() / PAGE != id / PAGE) {
+    std::sort(indices.begin(), indices.end());
+    std::vector<uint32_t> lows; // indices whose counterpart one page up also exists
+    for (uint32_t const idx : indices) {
+        if (std::binary_search(indices.begin(), indices.end(), idx + PAGE)) {
+            if (!lows.empty() && lows.front() / PAGE != idx / PAGE) {
                 if (lows.size() >= 4) {
                     break;
                 }
                 lows.clear();
             }
-            lows.push_back(id);
+            lows.push_back(idx);
         }
     }
     ASSERT_GE(lows.size(), 4u);
 
     // X and D are on page p; E = X + PAGE, Y = D + PAGE, U1 and U2 are on page p + 1.
-    Entity const X = Entity::import(int32_t(lows[0]));
-    Entity const D = Entity::import(int32_t(lows[1]));
-    Entity const E = Entity::import(int32_t(lows[0] + PAGE));
-    Entity const Y = Entity::import(int32_t(lows[1] + PAGE));
-    Entity const U1 = Entity::import(int32_t(lows[2] + PAGE));
-    Entity const U2 = Entity::import(int32_t(lows[3] + PAGE));
+    Entity const X = em.getEntity(lows[0]);
+    Entity const D = em.getEntity(lows[1]);
+    Entity const E = em.getEntity(lows[0] + PAGE);
+    Entity const Y = em.getEntity(lows[1] + PAGE);
+    Entity const U1 = em.getEntity(lows[2] + PAGE);
+    Entity const U2 = em.getEntity(lows[3] + PAGE);
 
     for (Entity const e : { X, E, D, Y }) {
         engine->getTransformManager().create(e);
@@ -3958,6 +4129,23 @@ TEST_F(SceneCacheTest, LightDataCapacityForSimdOverRead) {
         prepare(scene, view, T);
         EXPECT_GT(cache.lightData.capacity(), roundup4(p)) << "p = " << p;
         EXPECT_GE(cache.lightData.capacity(), roundup4(p + 1)) << "p = " << p;
+    }
+}
+
+// Guards the scratch size invariant asserted in FView::prepareVisibleLights() (debug builds).
+// The buffer must hold the directional light slot too, rounded up to 4.
+TEST_F(SceneCacheTest, LightDistancesFitScratchBuffer) {
+    Scene* scene = createScene();
+    View* view = createView();
+    view->setScene(scene);
+    createCamera(view);
+
+    for (size_t p = 1; p <= 8; ++p) {
+        scene->addEntity(createPointLight());
+        ASSERT_TRUE(renderFrame(view)) << "p = " << p;
+        // all lights must be visible, so p = 4 and p = 8 hit the worst case
+        EXPECT_EQ(p + FScene::DIRECTIONAL_LIGHTS_COUNT,
+                downcast(view)->getSceneCache()->lightData.size()) << "p = " << p;
     }
 }
 
@@ -4282,25 +4470,25 @@ TEST_F(SceneCacheTest, ContactShadowsFollowSceneLightsAndShadowOptions) {
     // 1. Enabling contact shadows on a positional light notifies, and is picked up.
     options.screenSpaceContactShadows = true;
     lcm.setShadowOptions(li, options);
-    EXPECT_TRUE(cache.dirtyEntities[p.getId()]);
+    EXPECT_TRUE(cache.dirtyEntities[EntityManager::getIndex(p)]);
     prepare(scene, view, T);
     EXPECT_TRUE(cache.lightsHaveContactShadows);
 
     // 2. Setting the same options again is a no-op: nothing is dirtied.
     lcm.setShadowOptions(li, options);
-    EXPECT_FALSE(cache.dirtyEntities[p.getId()]);
+    EXPECT_FALSE(cache.dirtyEntities[EntityManager::getIndex(p)]);
     EXPECT_FALSE(cache.hasDirtyEntities());
 
     // 3. Any other field notifies (operator== covers every field), and the comparison is made
     //    after clamping: 4096 clamps to 2048, so going from 2048 to 4096 is a no-op.
     options.mapSize = 2048;
     lcm.setShadowOptions(li, options);
-    EXPECT_TRUE(cache.dirtyEntities[p.getId()]);
+    EXPECT_TRUE(cache.dirtyEntities[EntityManager::getIndex(p)]);
     prepare(scene, view, T);
     EXPECT_TRUE(cache.lightsHaveContactShadows);
     options.mapSize = 4096;
     lcm.setShadowOptions(li, options);
-    EXPECT_FALSE(cache.dirtyEntities[p.getId()]);
+    EXPECT_FALSE(cache.dirtyEntities[EntityManager::getIndex(p)]);
 
     // 4. The dominant directional light counts too.
     options.screenSpaceContactShadows = false;
@@ -4459,6 +4647,200 @@ TEST_F(SceneCacheTest, UnrelatedEntitiesDoNotDirtySceneCache) {
     downcast(tcm).ensureWorldTransformsUpToDate();
     EXPECT_TRUE(cache.hasDirtyEntities());
     EXPECT_TRUE(downcast(scene)->processDeferredUpdates(T.upperLeft(), false, cache));
+}
+
+TEST_F(SceneCacheTest, SceneHoldsEbrWatermarkAndMultiViewEvictionSurvivesIndexRecycling) {
+    Scene* scene = createScene();
+    View* viewX = createView();
+    View* viewY = createView();
+    viewX->setScene(scene);
+    viewY->setScene(scene);
+    EntityManager& em = engine->getEntityManager();
+
+    // Flush any pending epochs from earlier tests and drain pre-existing free-list entries until
+    // EntityManager bump-allocates a fresh generation-0 index (meaning mFreeList.size() < 1024).
+    downcast(engine)->gc();
+    downcast(engine)->gc();
+    while (true) {
+        Entity const drain = createEntity();
+        if (drain.getId() == EntityManager::getIndex(drain)) {
+            break;
+        }
+    }
+
+    Entity const r1 = createRenderable();
+    Entity const p1 = createPointLight();
+    Entity const d1 = createDirectionalLight();
+    scene->addEntity(r1);
+    scene->addEntity(p1);
+    scene->addEntity(d1);
+
+    prepare(scene, viewX, T);
+    prepare(scene, viewY, T);
+    ASSERT_TRUE(hasRenderableRow(viewX, r1));
+    ASSERT_TRUE(hasRenderableRow(viewY, r1));
+    ASSERT_TRUE(hasLightRow(viewX, p1));
+    ASSERT_TRUE(hasLightRow(viewY, p1));
+    ASSERT_TRUE(hasDirectionalLight(viewX, d1));
+    ASSERT_TRUE(hasDirectionalLight(viewY, d1));
+
+    // Create > 2 * MIN_FREE_INDICES (2048) extra entities with higher indices than r1 so that once
+    // reclaimed, r1 sits near the front of mFreeList while mFreeList.size() stays well above 1024.
+    constexpr size_t kExtraCount = 2200;
+    std::vector<Entity> extras(kExtraCount);
+    em.create(kExtraCount, extras.data());
+    mEntities.insert(mEntities.end(), extras.begin(), extras.end());
+
+    std::unordered_set<uint32_t> destroyedIndices;
+    destroyedIndices.insert(EntityManager::getIndex(r1));
+    destroyedIndices.insert(EntityManager::getIndex(p1));
+    destroyedIndices.insert(EntityManager::getIndex(d1));
+    for (Entity const e : extras) {
+        destroyedIndices.insert(EntityManager::getIndex(e));
+    }
+
+    // Destroy component data, then destroy the entities in EntityManager.
+    engine->destroy(r1);
+    engine->destroy(p1);
+    engine->destroy(d1);
+    em.destroy(r1);
+    em.destroy(p1);
+    em.destroy(d1);
+    em.destroy(extras.size(), extras.data());
+
+    // Seal the epoch and attempt reclamation directly on EntityManager WITHOUT running FScene::gc()
+    // or prepare(): Scene's component manager must hold the EBR watermark so none of the 2203
+    // destroyed indices can be recycled (even across 1050 > MIN_FREE_INDICES allocations).
+    em.advanceEpoch();
+    em.reclaimSafeEpochs();
+    for (size_t i = 0; i < 1050; ++i) {
+        Entity const probe = createEntity();
+        EXPECT_EQ(0u, destroyedIndices.count(EntityManager::getIndex(probe)));
+    }
+
+    // Now run FEngine::gc() WITHOUT calling prepare() on viewY. FScene::gc() evicts r1/p1/d1 from
+    // Scene AND immediately evicts them from all attached View caches (including inactive viewY),
+    // then advances its EBR watermark so EntityManager can recycle their 17-bit indices.
+    downcast(engine)->gc();
+    EXPECT_FALSE(scene->hasEntity(r1));
+    EXPECT_FALSE(hasRenderableRow(viewY, r1));
+    EXPECT_FALSE(hasLightRow(viewY, p1));
+    EXPECT_FALSE(hasDirectionalLight(viewY, d1));
+
+    // Allocate until we obtain a recycled entity reusing r1's 17-bit index (guaranteed within 1025
+    // allocations since r1 has the smallest index among the 2203 newly reclaimed indices).
+    Entity r1Recycled;
+    for (size_t i = 0; i < 1100; ++i) {
+        Entity const candidate = createEntity();
+        if (EntityManager::getIndex(candidate) == EntityManager::getIndex(r1)) {
+            r1Recycled = candidate;
+            break;
+        }
+    }
+    ASSERT_FALSE(r1Recycled.isNull());
+    EXPECT_NE(r1Recycled, r1);
+
+    // Attach a new renderable to r1Recycled, add to Scene, and finally prepare inactive viewY.
+    engine->getTransformManager().create(r1Recycled);
+    RenderableManager::Builder(1)
+            .boundingBox({{ -1, -1, -1 }, { 1, 1, 1 }})
+            .build(*engine, r1Recycled);
+    scene->addEntity(r1Recycled);
+
+    prepare(scene, viewY, T);
+    EXPECT_FALSE(hasRenderableRow(viewY, r1));
+    EXPECT_TRUE(hasRenderableRow(viewY, r1Recycled));
+}
+
+TEST_F(SceneCacheTest, SoaCacheEntityInstanceMapInvariants) {
+    EntityManager& em = engine->getEntityManager();
+    FScene::SceneCacheData::RenderableCache cache;
+
+    // 1. Empty cache and null entity return 0xFFFFFFFFu.
+    EXPECT_EQ(0u, cache.size());
+    EXPECT_EQ(0xFFFFFFFFu, cache.getIndex(Entity{}));
+
+    // 2. Multi-page acquire (> 2 * 1024 entries per page) with 0-based row indices. The Extra
+    //    (PrevTransform) only exists when motion vectors are compiled in.
+    constexpr size_t kCount = 2500;
+    std::vector<Entity> entities(kCount);
+    em.create(kCount, entities.data());
+    mEntities.insert(mEntities.end(), entities.begin(), entities.end());
+
+    // Unallocated page query before insertion returns 0xFFFFFFFFu.
+    for (size_t i = 0; i < kCount; ++i) {
+        EXPECT_EQ(0xFFFFFFFFu, cache.getIndex(entities[i]));
+    }
+
+    for (size_t i = 0; i < kCount; ++i) {
+        double3 const t{ double(i), double(i * 2), double(i * 3) };
+        auto const [idx, inserted] = cache.acquire(entities[i], t);
+        ASSERT_TRUE(inserted);
+        ASSERT_EQ(uint32_t(i), idx);
+        // A new row has its EntityColumn populated by acquire() itself.
+        EXPECT_EQ(entities[i], cache.getSoA().elementAt<FScene::RENDERABLE_ENTITY>(idx));
+        cache.getSoA().elementAt<FScene::USER_DATA>(idx) = float(i + 100);
+#if defined(FILAMENT_SUPPORTS_MOTION_VECTORS)
+        cache.extraAt(idx) = PrevTransform{
+            mat4f::translation(float3{ float(i), 0.0f, 0.0f }),
+            float3{ float(i), 1.0f, 2.0f }
+        };
+#endif
+    }
+    EXPECT_EQ(kCount, cache.size());
+
+    // 3. Re-acquiring existing entities returns { idx, false } and updates translation in-place.
+    for (size_t i = 0; i < kCount; ++i) {
+        EXPECT_EQ(uint32_t(i), cache.getIndex(entities[i]));
+        double3 const updatedT{ double(i + 10), double(i + 20), double(i + 30) };
+        auto const [idx, inserted] = cache.acquire(entities[i], updatedT);
+        EXPECT_FALSE(inserted);
+        EXPECT_EQ(uint32_t(i), idx);
+        EXPECT_EQ(updatedT, cache.getTranslations()[idx]);
+        EXPECT_EQ(float(i + 100), cache.getSoA().elementAt<FScene::USER_DATA>(idx));
+#if defined(FILAMENT_SUPPORTS_MOTION_VECTORS)
+        EXPECT_EQ(float(i), cache.extraAt(idx).lo.x);
+#endif
+    }
+
+    // 4. Forged/stale generation sharing the same 17-bit index must miss getIndex() and remove().
+    Entity const target = entities[0];
+    uint32_t const forgedId = target.getId() ^ (1u << FILAMENT_GENERATION_SHIFT);
+    Entity const forged = Entity::import(static_cast<int32_t>(forgedId));
+    ASSERT_EQ(EntityManager::getIndex(target), EntityManager::getIndex(forged));
+    ASSERT_NE(target, forged);
+    EXPECT_EQ(0xFFFFFFFFu, cache.getIndex(forged));
+    cache.remove(forged);
+    EXPECT_EQ(kCount, cache.size());
+    EXPECT_EQ(0u, cache.getIndex(target));
+
+    // 5. Swap-and-pop removal from front (row 0) migrates the last row into row 0.
+    Entity const lastEntity = entities[kCount - 1];
+    cache.remove(target);
+    EXPECT_EQ(kCount - 1, cache.size());
+    EXPECT_EQ(0xFFFFFFFFu, cache.getIndex(target));
+    EXPECT_EQ(0u, cache.getIndex(lastEntity));
+    EXPECT_EQ(lastEntity, cache.getSoA().elementAt<FScene::RENDERABLE_ENTITY>(0));
+    EXPECT_EQ(float(kCount - 1 + 100), cache.getSoA().elementAt<FScene::USER_DATA>(0));
+    EXPECT_EQ((double3{ double(kCount - 1 + 10), double(kCount - 1 + 20), double(kCount - 1 + 30) }),
+            cache.getTranslations()[0]);
+#if defined(FILAMENT_SUPPORTS_MOTION_VECTORS)
+    EXPECT_EQ(float(kCount - 1), cache.extraAt(0).lo.x);
+#endif
+
+    // 6. Removing the current last row pops without swapping.
+    Entity const newLast = cache.getSoA().elementAt<FScene::RENDERABLE_ENTITY>(cache.size() - 1);
+    cache.remove(newLast);
+    EXPECT_EQ(kCount - 2, cache.size());
+    EXPECT_EQ(0xFFFFFFFFu, cache.getIndex(newLast));
+    EXPECT_EQ(0u, cache.getIndex(lastEntity));
+
+    // 7. clear() resets all rows and map entries.
+    cache.clear();
+    EXPECT_EQ(0u, cache.size());
+    for (Entity const e : entities) {
+        EXPECT_EQ(0xFFFFFFFFu, cache.getIndex(e));
+    }
 }
 
 int main(int argc, char** argv) {

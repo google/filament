@@ -154,6 +154,14 @@ struct MaterialDefinition {
         return hasSurfaceVariants() && Variant::isDepthMomentsVariant(variant);
     }
 
+    bool isSharedVariant(Variant const variant, bool const isDefaultMaterial) const noexcept {
+        // The default material explicitly filters VSM variants to reduce binary size, so it cannot
+        // provide the MNT | DEP variant as a shared program.
+        return !isDefaultMaterial && !hasCustomDepthShader &&
+               isValidDepthVariant(variant) &&
+               !isDepthMomentsVariant(variant);
+    }
+
     bool isMotionVectorsVariant(Variant const variant) const noexcept {
         return hasSurfaceVariants() && Variant::isMotionVectorsVariant(variant);
     }
@@ -256,6 +264,10 @@ struct MaterialDefinition {
     utils::CString name;
     uint64_t cacheId = 0;
     utils::CString source;
+
+    // Keys the program cache. Ids are never reused, so a stale program entry can't match a new
+    // definition. Reloading the same content after its definition is freed gets a new id.
+    uint64_t const uniqueId;
 
 private:
     friend class MaterialCache;

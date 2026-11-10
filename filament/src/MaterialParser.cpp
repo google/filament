@@ -220,14 +220,6 @@ std::optional<uint32_t> MaterialParser::getPrecomputedCrc32() const noexcept {
     return std::nullopt;
 }
 
-uint32_t MaterialParser::getCrc32() const noexcept {
-    std::optional<uint32_t> crc32 = getPrecomputedCrc32();
-    if (crc32) {
-        return *crc32;
-    }
-    return computeCrc32();
-}
-
 ShaderLanguage MaterialParser::getShaderLanguage() const noexcept {
     return mImpl.mChosenLanguage;
 }

@@ -1,5 +1,5 @@
 diff --git a/third_party/cgltf/cgltf.h b/third_party/cgltf/cgltf.h
-index 78ea905f0..91ef6ca13 100644
+index 78ea905f0..14e516e7f 100644
 --- a/third_party/cgltf/cgltf.h
 +++ b/third_party/cgltf/cgltf.h
 @@ -536,6 +536,12 @@ typedef struct cgltf_dispersion
@@ -190,3 +190,12 @@ index 78ea905f0..91ef6ca13 100644
  				else
  				{
  					i = cgltf_parse_json_unprocessed_extension(options, tokens, i, json_chunk, &(out_material->extensions[out_material->extensions_count++]));
+@@ -6724,6 +6801,8 @@ static int cgltf_fixup_pointers(cgltf_data* data)
+ 		CGLTF_PTRFIXUP(data->materials[i].diffuse_transmission.diffuse_transmission_color_texture.texture, data->textures, data->textures_count);
+ 
+ 		CGLTF_PTRFIXUP(data->materials[i].anisotropy.anisotropy_texture.texture, data->textures, data->textures_count);
++
++		CGLTF_PTRFIXUP(data->materials[i].retroreflection.retroreflection_texture.texture, data->textures, data->textures_count);
+ 	}
+ 
+ 	for (cgltf_size i = 0; i < data->buffer_views_count; ++i)

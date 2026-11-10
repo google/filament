@@ -70,6 +70,12 @@ int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, uint8_t* val) {
     return i + 1;
 }
 
+int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, int8_t* val) {
+    CHECK_TOKTYPE(tokens[i], JSMN_PRIMITIVE);
+    *val = strtol(jsonChunk + tokens[i].start, nullptr, 10);
+    return i + 1;
+}
+
 int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, uint16_t* val) {
     CHECK_TOKTYPE(tokens[i], JSMN_PRIMITIVE);
     *val = strtol(jsonChunk + tokens[i].start, nullptr, 10);
