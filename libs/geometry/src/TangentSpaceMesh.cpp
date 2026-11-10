@@ -393,7 +393,7 @@ void tangentsProvidedMethod(TangentSpaceMeshInput const* input, TangentSpaceMesh
 
     for (size_t qindex = 0; qindex < vertexCount; ++qindex) {
         float3 const& n = *pointerAdd(normal, qindex, nstride);
-        float4 const& t4 = *pointerAdd(tanvec, qindex, nstride);
+        float4 const& t4 = *pointerAdd(tanvec, qindex, tstride);
         float3 tv = t4.xyz;
         float3 b = t4.w > 0 ? cross(tv, n) : cross(n, tv);
 
