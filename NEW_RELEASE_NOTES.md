@@ -16,3 +16,4 @@ appropriate header in [RELEASE_NOTES.md](./RELEASE_NOTES.md).
 - variant: completely remove FOG variant bit
 - engine: fix `RenderTarget` validation rejecting layers of 2D-array textures at mip levels above 0
   (the layer count was halved per level as for 3D textures)
+- gltfio: lit materials without clear coat use ubershaders built without the clear coat lobe
