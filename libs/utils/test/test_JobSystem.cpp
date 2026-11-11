@@ -1343,10 +1343,8 @@ TEST(JobSystem, JobPoolExhaustionNullJobRun) {
         heldJobs.push_back(job);
     }
 
-    // The pool storage comes from malloc() and may not be cache-line aligned like Job, so the
-    // pool can hold one job fewer (e.g. with glibc).
-    EXPECT_GE(heldJobs.size(), JobSystem::MAX_JOB_COUNT - 1);
-    EXPECT_LE(heldJobs.size(), JobSystem::MAX_JOB_COUNT);
+    // Pool must be exhausted
+    EXPECT_EQ(heldJobs.size(), JobSystem::MAX_JOB_COUNT);
 
     // Any further job creation returns nullptr
     JobSystem::Job* nullJob1 = js.createJob(nullptr, [](JobSystem&, JobSystem::Job*) {});
@@ -1382,6 +1380,32 @@ TEST(JobSystem, JobPoolExhaustionNullJobRun) {
     ASSERT_NE(nextJob, nullptr);
     js.runAndWait(nextJob);
     EXPECT_TRUE(executed.load());
+
+    js.emancipate();
+}
+
+TEST(JobSystem, JobPoolFullOfChildren) {
+    JobSystem js(JobSystem::SINGLE_THREADED);
+    js.adopt();
+
+    // The parent's running count reaches MAX_JOB_COUNT (itself plus every other job).
+    size_t executed = 0;
+    JobSystem::Job* parent = js.createJob();
+    std::vector<JobSystem::Job*> children;
+    children.reserve(JobSystem::MAX_JOB_COUNT);
+    JobSystem::Job* child = nullptr;
+    while ((child = js.createJob(parent, [&executed](JobSystem&, JobSystem::Job*) {
+        executed++;
+    })) != nullptr) {
+        children.push_back(child);
+    }
+    ASSERT_EQ(children.size(), JobSystem::MAX_JOB_COUNT - 1);
+
+    for (auto* c : children) {
+        js.run(c);
+    }
+    js.runAndWait(parent);
+    EXPECT_EQ(executed, children.size());
 
     js.emancipate();
 }
