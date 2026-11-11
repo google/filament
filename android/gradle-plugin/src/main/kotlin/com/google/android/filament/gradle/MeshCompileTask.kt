@@ -16,6 +16,8 @@
 
 package com.google.android.filament.gradle
 
+import java.io.File
+import javax.inject.Inject
 import org.gradle.api.DefaultTask
 import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.file.DirectoryProperty
@@ -31,72 +33,73 @@ import org.gradle.api.tasks.PathSensitivity
 import org.gradle.api.tasks.TaskAction
 import org.gradle.process.ExecOperations
 import org.gradle.work.ChangeType
+import org.gradle.work.DisableCachingByDefault
 import org.gradle.work.Incremental
 import org.gradle.work.InputChanges
-import javax.inject.Inject
 
-abstract class MeshCompileTask extends DefaultTask {
+@DisableCachingByDefault
+abstract class MeshCompileTask : DefaultTask() {
 
-    @Incremental
-    @InputFile
-    @PathSensitive(PathSensitivity.RELATIVE)
-    abstract RegularFileProperty getInputFile()
+    @get:Incremental
+    @get:InputFile
+    @get:PathSensitive(PathSensitivity.RELATIVE)
+    abstract val inputFile: RegularFileProperty
 
-    @OutputDirectory
-    abstract DirectoryProperty getOutputDir()
+    @get:OutputDirectory
+    abstract val outputDir: DirectoryProperty
 
-    @InputFiles
-    @PathSensitive(PathSensitivity.NONE)
-    abstract ConfigurableFileCollection getFilameshTool()
+    @get:InputFiles
+    @get:PathSensitive(PathSensitivity.NONE)
+    abstract val filameshTool: ConfigurableFileCollection
 
-    @Inject
-    abstract ExecOperations getExecOperations()
+    @get:Inject
+    abstract val execOperations: ExecOperations
 
-    @Inject
-    abstract FileSystemOperations getFileSystemOperations()
+    @get:Inject
+    abstract val fileSystemOperations: FileSystemOperations
 
-    @Inject
-    abstract ObjectFactory getObjectFactory()
+    @get:Inject
+    abstract val objectFactory: ObjectFactory
 
     @TaskAction
-    void compile(InputChanges inputs) {
-        if (filameshTool.empty) {
-            throw new IllegalStateException(
+    fun compile(inputs: InputChanges) {
+        if (filameshTool.isEmpty) {
+            throw IllegalStateException(
                 "filamesh executable not configured. Please configure the 'filamesh' block in the " +
-                "'filament' extension or set the 'com.google.android.filament.tools-dir' " +
-                "property."
+                    "'filament' extension or set the 'com.google.android.filament.tools-dir' " +
+                    "property."
             )
         }
 
-        File filamesh = filameshTool.singleFile
+        val filamesh = filameshTool.singleFile
         if (!filamesh.exists()) {
-            throw new IllegalStateException("filamesh executable does not exist: ${filamesh.absolutePath}")
+            throw IllegalStateException("filamesh executable does not exist: ${filamesh.absolutePath}")
         }
 
         if (!filamesh.canExecute()) {
             filamesh.setExecutable(true)
         }
 
-        if (!inputs.incremental) {
-            getFileSystemOperations().delete {
-                delete(getObjectFactory().fileTree().from(getOutputDir()).matching {
-                    include '*.filamesh'
+        if (!inputs.isIncremental) {
+            fileSystemOperations.delete { spec ->
+                spec.delete(objectFactory.fileTree().from(outputDir).matching { pattern ->
+                    pattern.include("*.filamesh")
                 })
             }
         }
 
-        inputs.getFileChanges(inputFile).each { change ->
-            if (change.fileType == FileType.DIRECTORY) return
+        inputs.getFileChanges(inputFile).forEach { change ->
+            if (change.fileType == FileType.DIRECTORY) return@forEach
 
-            File file = change.file
-            File outputFile = computeOutputFile(file)
+            val file = change.file
+            val outputFile = computeOutputFile(file)
 
             if (change.changeType == ChangeType.REMOVED) {
                 outputFile.delete()
             } else {
-                println "Compiling mesh: ${file.name}"
+                println("Compiling mesh: ${file.name}")
 
-                getExecOperations().exec { spec ->
+                execOperations.exec { spec ->
                     spec.executable(filamesh)
                     spec.args(file.absolutePath, outputFile.absolutePath)
                 }
@@ -104,12 +107,12 @@ abstract class MeshCompileTask extends DefaultTask {
         }
     }
 
-    File computeOutputFile(File inputFile) {
-        String baseName = inputFile.name
-        int dotIndex = baseName.lastIndexOf('.')
+    fun computeOutputFile(inputFile: File): File {
+        var baseName = inputFile.name
+        val dotIndex = baseName.lastIndexOf('.')
         if (dotIndex > 0) {
             baseName = baseName.substring(0, dotIndex)
         }
-        return getOutputDir().file("${baseName}.filamesh").get().asFile
+        return outputDir.file("$baseName.filamesh").get().asFile
     }
 }
