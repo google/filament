@@ -911,11 +911,25 @@ PixelBufferShape PixelBufferShape::compute(const PixelBufferDescriptor& data,
 
     result.totalBytes = result.bytesPerSlice * depth;
 
+    // The last row's trailing padding is never read, and the frontend does not require it.
+    const size_t rowBytes = width * result.bytesPerPixel;
+    uint32_t lastRowPadding = 0;
+    if (data.type != PixelDataType::COMPRESSED && rowBytes < result.bytesPerRow) {
+        lastRowPadding = result.bytesPerRow - rowBytes;
+    }
+    result.sourceBytes =
+            result.totalBytes > lastRowPadding ? result.totalBytes - lastRowPadding : 0;
+
     return result;
 }
 
 void MetalTexture::loadImage(id<MTLCommandBuffer> cmdBuffer, uint32_t level, MTLRegion region,
         PixelBufferDescriptor& p) noexcept {
+    // The frontend skips its size checks for empty regions, and there is nothing to copy.
+    if (region.size.width == 0 || region.size.height == 0 || region.size.depth == 0) {
+        return;
+    }
+
     PixelBufferDescriptor* data = &p;
     PixelBufferDescriptor reshapedData;
     if(reshape(p, reshapedData)) {
@@ -965,8 +979,9 @@ void MetalTexture::loadSlice(id<MTLCommandBuffer> cmdBuffer, uint32_t level, MTL
         uint32_t byteOffset, uint32_t slice, PixelBufferDescriptor const& data) noexcept {
     const PixelBufferShape shape = PixelBufferShape::compute(data, format, region.size, byteOffset);
 
-    FILAMENT_CHECK_PRECONDITION(data.size >= shape.totalBytes)
-            << "Expected buffer size of at least " << shape.totalBytes
+    const size_t requiredSize = size_t(shape.sourceOffset) + shape.sourceBytes;
+    FILAMENT_CHECK_PRECONDITION(data.size >= requiredSize)
+            << "Expected buffer size of at least " << requiredSize
             << " but received PixelBufferDescriptor with size " << data.size << ".";
 
     // Earlier versions of iOS don't have the maxBufferLength query, but 256 MB is a safe bet.
@@ -1003,7 +1018,7 @@ void MetalTexture::loadWithCopyBuffer(id<MTLCommandBuffer> blitCommandBuffer, ui
     auto entry = context.bufferPool->acquireBuffer(stagingBufferSize);
     memcpy(entry->buffer.get().contents,
             static_cast<uint8_t*>(data.buffer) + shape.sourceOffset,
-            stagingBufferSize);
+            shape.sourceBytes);
     id<MTLBlitCommandEncoder> blitCommandEncoder = [blitCommandBuffer blitCommandEncoder];
     blitCommandEncoder.label = @"Texture upload buffer blit";
     [blitCommandEncoder copyFromBuffer:entry->buffer.get()
