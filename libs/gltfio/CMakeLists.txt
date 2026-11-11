@@ -86,10 +86,25 @@ elseif (FILAMENT_SAMPLES_STEREO_TYPE STREQUAL "multiview")
     set (MATC_FLAGS ${MATC_FLAGS} -PstereoscopicType=multiview)
 endif ()
 
+# NO_CLEAR_COAT builds the same source without the clear coat lobe, and marks the clear coat
+# features unsupported so only materials that don't use clear coat can pick it.
 function(build_ubershader NAME SRC SHADINGMODEL BLENDING)
+    cmake_parse_arguments(ARG "NO_CLEAR_COAT" "" "" ${ARGN})
     set(DEST "${RESOURCE_DIR}/${NAME}")
     configure_file(materials/${SRC}.mat.in "${DEST}.mat" COPYONLY)
-    configure_file(materials/${SRC}.spec.in "${DEST}.spec" COPYONLY)
+
+    set(SUFFIX "")
+    set(DEFINES)
+    if (ARG_NO_CLEAR_COAT)
+        set(SUFFIX "_nocc")
+        set(DEFINES -DGLTFIO_NO_CLEAR_COAT)
+        file(READ materials/${SRC}.spec.in SPEC)
+        string(REGEX REPLACE "(ClearCoat[A-Za-z]*) = optional" "\\1 = unsupported" SPEC "${SPEC}")
+        file(CONFIGURE OUTPUT "${DEST}.spec" CONTENT "${SPEC}" @ONLY)
+        set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS materials/${SRC}.spec.in)
+    else()
+        configure_file(materials/${SRC}.spec.in "${DEST}.spec" COPYONLY)
+    endif()
 
     set(TEMPLATE_ARGS
         -TCUSTOM_PARAMS="// no custom params"
@@ -98,11 +113,12 @@ function(build_ubershader NAME SRC SHADINGMODEL BLENDING)
         -TDOUBLESIDED=false
         -TTRANSPARENCY=default
         -TSHADINGMODEL=${SHADINGMODEL}
-        -TBLENDING=${BLENDING})
+        -TBLENDING=${BLENDING}
+        -TMATERIAL_NAME=${SRC}_${SHADINGMODEL}_${BLENDING}${SUFFIX})
 
     add_custom_command(
         OUTPUT "${NAME}.filamat"
-        COMMAND matc ${MATC_FLAGS} ${TEMPLATE_ARGS} -o "${NAME}.filamat" "${NAME}.mat"
+        COMMAND matc ${MATC_FLAGS} ${DEFINES} ${TEMPLATE_ARGS} -o "${NAME}.filamat" "${NAME}.mat"
         DEPENDS matc "${DEST}.mat"
         WORKING_DIRECTORY ${RESOURCE_DIR}
         COMMENT "Compiling material ${NAME}")
@@ -154,6 +170,12 @@ build_ubershader(sheen_masked              sheen           lit masked)
 build_ubershader(specular_opaque           specular        lit opaque)
 build_ubershader(specular_fade             specular        lit fade)
 build_ubershader(specular_masked           specular        lit masked)
+
+# Most lit materials don't use clear coat. These skip its lobe, and since the cheapest suitable
+# spec wins, they are picked over lit_* whenever clear coat isn't needed.
+build_ubershader(lit_opaque_nocc           base            lit opaque  NO_CLEAR_COAT)
+build_ubershader(lit_fade_nocc             base            lit fade    NO_CLEAR_COAT)
+build_ubershader(lit_masked_nocc           base            lit masked  NO_CLEAR_COAT)
 
 add_custom_target(uberz_file DEPENDS ${UBERZ_OUTPUT_PATH})
 set_target_properties(uberz_file PROPERTIES FOLDER Libs)

@@ -34,7 +34,6 @@
 
 #include <backend/DriverEnums.h>
 
-#include <utils/Hash.h>
 #include <utils/Logger.h>
 #include <utils/Panic.h>
 
@@ -360,9 +359,6 @@ void MaterialDefinition::processMain() {
     }();
 
     UTILS_UNUSED_IN_RELEASE bool success;
-
-    success = mMaterialParser->getCacheId(&cacheId);
-    assert_invariant(success);
 
     success = mMaterialParser->getSIB(&samplerInterfaceBlock);
     assert_invariant(success);
@@ -908,11 +904,6 @@ Program MaterialDefinition::getProgramWithVariants(FEngine const& engine,
 
     program.pushConstants(ShaderStage::VERTEX, pushConstants[uint8_t(ShaderStage::VERTEX)]);
     program.pushConstants(ShaderStage::FRAGMENT, pushConstants[uint8_t(ShaderStage::FRAGMENT)]);
-
-    // TODO(exv): we'll probably eventually want to replace this with the hash of the
-    // specialization, but there may be clients which depend on this value being stable across
-    // versions.
-    program.cacheId(hash::combine(size_t(cacheId), variant.key));
 
     return program;
 }
