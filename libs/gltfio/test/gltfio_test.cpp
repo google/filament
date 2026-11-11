@@ -14,7 +14,9 @@
  * limitations under the License.
  */
 
+#include "downcast.h"
 #include "DracoCache.h"
+#include "FFilamentInstance.h"
 #include "GlbBuilders.h"
 #include "Utility.h"
 
@@ -31,6 +33,7 @@
 #include <gltfio/ResourceLoader.h>
 #include <gltfio/TextureProvider.h>
 
+#include <filament/Box.h>
 #include <filament/Engine.h>
 #include <filament/MaterialEnums.h>
 #include <filament/RenderableManager.h>
@@ -1248,8 +1251,11 @@ TEST(glTFIOMaterialProvider, ConstrainMaterialRejectsOutOfBoundsUvIndices) {
             .hasSpecular = true,
             .hasSpecularTexture = true,
             .hasSpecularColorTexture = true,
+            .hasRetroreflection = true,
             .specularTextureUV = badUv,
             .specularColorTextureUV = badUv,
+            .hasRetroreflectionTexture = true,
+            .retroreflectionUV = badUv,
         };
 
         UvMap uvmap {};
@@ -1269,6 +1275,7 @@ TEST(glTFIOMaterialProvider, ConstrainMaterialRejectsOutOfBoundsUvIndices) {
         EXPECT_FALSE(key.hasVolumeThicknessTexture);
         EXPECT_FALSE(key.hasSpecularTexture);
         EXPECT_FALSE(key.hasSpecularColorTexture);
+        EXPECT_FALSE(key.hasRetroreflectionTexture);
         EXPECT_EQ(getNumUvSets(uvmap), 0u);
     }
 
@@ -1313,6 +1320,7 @@ TEST(glTFIOMaterialProvider, ProcessShaderStringHandlesOutOfBoundsUvIndices) {
         .volumeThicknessUV = 70,
         .specularTextureUV = 80,
         .specularColorTextureUV = 90,
+        .retroreflectionUV = 100,
     };
 
     UvMap uvmap {};
@@ -1322,13 +1330,14 @@ TEST(glTFIOMaterialProvider, ProcessShaderStringHandlesOutOfBoundsUvIndices) {
     std::string shader =
             "${normal}|${color}|${metallic}|${ao}|${emissive}|${transmission}|"
             "${clearCoat}|${clearCoatRoughness}|${clearCoatNormal}|"
-            "${sheenColor}|${sheenRoughness}|${volumeThickness}|${specular}|${specularColor}";
+            "${sheenColor}|${sheenRoughness}|${volumeThickness}|${specular}|${specularColor}|"
+            "${retroreflection}";
     processShaderString(&shader, uvmap, key);
 
     EXPECT_EQ(shader,
             "vec2(0)|vec2(0)|vec2(0)|vec2(0)|vec2(0)|vec2(0)|"
             "vec2(0)|vec2(0)|vec2(0)|"
-            "vec2(0)|vec2(0)|vec2(0)|vec2(0)|vec2(0)");
+            "vec2(0)|vec2(0)|vec2(0)|vec2(0)|vec2(0)|vec2(0)");
 
     // Also verify valid UV0 / UV1 replacements alongside an invalid UvSet value in uvmap.
     MaterialKey validKey {
@@ -1713,6 +1722,351 @@ TEST_F(glTFIOTest, GetEntitiesByPrefix) {
     assetLoader->destroyAsset(asset);
     AssetLoader::destroy(&assetLoader);
 }
+
+TEST_F(glTFIOTest, OutOfBoundsTexCoord) {
+    // 1. Direct constrainMaterial() call with out-of-bounds UV indices.
+    MaterialKey key = {};
+    key.hasBaseColorTexture = true;
+    key.baseColorUV = 24;
+    key.hasNormalTexture = true;
+    key.normalUV = 255;
+    key.hasOcclusionTexture = true;
+    key.aoUV = 40;
+
+    UvMap uvmap = {};
+    constrainMaterial(&key, &uvmap);
+
+    EXPECT_FALSE(key.hasBaseColorTexture);
+    EXPECT_EQ(key.baseColorUV, 0u);
+    EXPECT_FALSE(key.hasNormalTexture);
+    EXPECT_EQ(key.normalUV, 0u);
+    EXPECT_FALSE(key.hasOcclusionTexture);
+    EXPECT_EQ(key.aoUV, 0u);
+
+    // 2. Loading a glTF asset containing out-of-bounds, negative, and truncated texCoord values.
+    const std::string gltfJson = R"({
+      "asset": { "version": "2.0" },
+      "scenes": [{ "nodes": [0] }],
+      "nodes": [{ "mesh": 0 }],
+      "meshes": [{ "primitives": [{ "attributes": { "POSITION": 0 }, "material": 0 }] }],
+      "accessors": [{
+        "type": "VEC3",
+        "componentType": 5126,
+        "count": 3,
+        "bufferView": 0,
+        "min": [0, 0, 0],
+        "max": [1, 1, 0]
+      }],
+      "bufferViews": [{ "buffer": 0, "byteLength": 36 }],
+      "buffers": [{
+        "byteLength": 36,
+        "uri": "data:application/octet-stream;base64,AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACAPwAAAAAAAAAAAAAAAAAAgD8AAAAA"
+      }],
+      "textures": [{}],
+      "materials": [{
+        "name": "OobMaterial",
+        "pbrMetallicRoughness": {
+          "baseColorTexture": { "index": 0, "texCoord": 24 },
+          "metallicRoughnessTexture": { "index": 0, "texCoord": 256 }
+        },
+        "normalTexture": { "index": 0, "texCoord": 255 },
+        "occlusionTexture": { "index": 0, "texCoord": -1 }
+      }]
+    })";
+
+    AssetLoader* assetLoader = AssetLoader::create({ mEngine, mMaterialProvider, mNameManager });
+    FilamentAsset* asset = assetLoader->createAsset(
+            reinterpret_cast<const uint8_t*>(gltfJson.data()), gltfJson.size());
+    ASSERT_NE(asset, nullptr);
+
+    assetLoader->destroyAsset(asset);
+    AssetLoader::destroy(&assetLoader);
+}
+
+// Returns the local translation of the "animated" node created by makeTranslationAnimationGlb().
+static math::float3 getAnimatedNodeTranslation(Engine* engine, FilamentAsset* asset) {
+    Entity const node = asset->getFirstEntityByName("animated");
+    EXPECT_FALSE(node.isNull());
+    TransformManager& tm = engine->getTransformManager();
+    return tm.getTransform(tm.getInstance(node))[3].xyz;
+}
+
+#define EXPECT_FLOAT3_EQ(actual, expected)              \
+    do {                                                \
+        math::float3 const a_ = (actual);               \
+        math::float3 const e_ = (expected);             \
+        EXPECT_FLOAT_EQ(a_.x, e_.x);                    \
+        EXPECT_FLOAT_EQ(a_.y, e_.y);                    \
+        EXPECT_FLOAT_EQ(a_.z, e_.z);                    \
+    } while (0)
+
+// Sanity check for the Animator's sampler import: a valid translation animation must still play
+// after the hardening for issues #10134 and #10138.
+TEST_F(glTFIOTest, TranslationAnimationPlays) {
+    AssetLoader* assetLoader = AssetLoader::create({ mEngine, mMaterialProvider, mNameManager });
+    ASSERT_NE(assetLoader, nullptr);
+
+    std::vector<uint8_t> const glb = makeTranslationAnimationGlb();
+    FilamentAsset* const asset = assetLoader->createAsset(glb.data(), uint32_t(glb.size()));
+    ASSERT_NE(asset, nullptr);
+
+    ResourceLoader resourceLoader({ mEngine, ".", false });
+    ASSERT_TRUE(resourceLoader.loadResources(asset));
+
+    Animator* const animator = asset->getInstance()->getAnimator();
+    ASSERT_NE(animator, nullptr);
+    ASSERT_EQ(animator->getAnimationCount(), 1u);
+    EXPECT_FLOAT_EQ(animator->getAnimationDuration(0), 1.0f);
+
+    // Out-of-range queries must not index past the end of the animation list.
+    EXPECT_FLOAT_EQ(animator->getAnimationDuration(1), 0.0f);
+    EXPECT_STREQ(animator->getAnimationName(1), "");
+    animator->applyAnimation(1, 0.5f);
+
+    animator->applyAnimation(0, 0.5f);
+    EXPECT_FLOAT3_EQ(getAnimatedNodeTranslation(mEngine, asset), 0.5f * kTranslationAnimationEnd);
+
+    assetLoader->destroyAsset(asset);
+    AssetLoader::destroy(&assetLoader);
+}
+
+// The timeline used to be read as a packed float array, which ignored the bufferView byteStride.
+// With a stride of 8 bytes, that reader would have seen the padding value as the second keyframe
+// and reported it as the duration.
+TEST_F(glTFIOTest, StridedAnimationTimestampsAreHonored) {
+    AssetLoader* assetLoader = AssetLoader::create({ mEngine, mMaterialProvider, mNameManager });
+    ASSERT_NE(assetLoader, nullptr);
+
+    std::vector<uint8_t> const glb = makeTranslationAnimationGlb({ .timelineByteStride = 8 });
+    FilamentAsset* const asset = assetLoader->createAsset(glb.data(), uint32_t(glb.size()));
+    ASSERT_NE(asset, nullptr);
+
+    ResourceLoader resourceLoader({ mEngine, ".", false });
+    ASSERT_TRUE(resourceLoader.loadResources(asset));
+
+    Animator* const animator = asset->getInstance()->getAnimator();
+    ASSERT_NE(animator, nullptr);
+    ASSERT_EQ(animator->getAnimationCount(), 1u);
+    EXPECT_FLOAT_EQ(animator->getAnimationDuration(0), 1.0f);
+    EXPECT_NE(animator->getAnimationDuration(0), kTranslationAnimationStridePadding);
+
+    animator->applyAnimation(0, 0.5f);
+    EXPECT_FLOAT3_EQ(getAnimatedNodeTranslation(mEngine, asset), 0.5f * kTranslationAnimationEnd);
+
+    assetLoader->destroyAsset(asset);
+    AssetLoader::destroy(&assetLoader);
+}
+
+// Non-finite timestamps are rejected during sampler import, which leaves the animation in the list
+// but with no playable channels, so applying it must not move the node. An infinite timestamp used
+// to be accepted and reported as the animation's duration. A NaN timestamp would be inserted into
+// the std::map that backs the timeline, breaking its strict weak ordering; it was previously
+// caught only by accident, because NaN compares equivalent to any existing key and so tripped the
+// duplicate-timestamp check.
+TEST_F(glTFIOTest, NonFiniteAnimationTimestampsDisableChannel) {
+    const float values[] = {
+        std::numeric_limits<float>::infinity(),
+        std::numeric_limits<float>::quiet_NaN(),
+    };
+    for (float const lastTimestamp : values) {
+        SCOPED_TRACE(testing::Message() << "lastTimestamp = " << lastTimestamp);
+
+        AssetLoader* assetLoader =
+                AssetLoader::create({ mEngine, mMaterialProvider, mNameManager });
+        ASSERT_NE(assetLoader, nullptr);
+
+        std::vector<uint8_t> const glb =
+                makeTranslationAnimationGlb({ .lastTimestamp = lastTimestamp });
+        FilamentAsset* const asset = assetLoader->createAsset(glb.data(), uint32_t(glb.size()));
+        ASSERT_NE(asset, nullptr);
+
+        // cgltf_validate() does not inspect accessor contents, so the load itself succeeds.
+        ResourceLoader resourceLoader({ mEngine, ".", false });
+        ASSERT_TRUE(resourceLoader.loadResources(asset));
+
+        Animator* const animator = asset->getInstance()->getAnimator();
+        ASSERT_NE(animator, nullptr);
+        ASSERT_EQ(animator->getAnimationCount(), 1u);
+        EXPECT_FLOAT_EQ(animator->getAnimationDuration(0), 0.0f);
+
+        math::float3 const before = getAnimatedNodeTranslation(mEngine, asset);
+        animator->applyAnimation(0, 0.5f);
+        EXPECT_FLOAT3_EQ(getAnimatedNodeTranslation(mEngine, asset), before);
+
+        assetLoader->destroyAsset(asset);
+        AssetLoader::destroy(&assetLoader);
+    }
+}
+
+// A buffer that has no URI and is not the GLB BIN chunk survives cgltf_load_buffers() with null
+// data, and cgltf_validate() only checks accessors against the declared byteLength. The Animator
+// used to read the timeline from that null pointer plus the file-controlled offsets. The same
+// situation arises on builds without a file system, where missing external resources are
+// tolerated, and with EXT_meshopt_compression fallback buffers.
+TEST_F(glTFIOTest, AnimationWithUnloadedBufferIsDisabled) {
+    AssetLoader* assetLoader = AssetLoader::create({ mEngine, mMaterialProvider, mNameManager });
+    ASSERT_NE(assetLoader, nullptr);
+
+    std::vector<uint8_t> const glb =
+            makeTranslationAnimationGlb({ .timelineInUnloadedBuffer = true });
+    FilamentAsset* const asset = assetLoader->createAsset(glb.data(), uint32_t(glb.size()));
+    ASSERT_NE(asset, nullptr);
+
+    ResourceLoader resourceLoader({ mEngine, ".", false });
+    ASSERT_TRUE(resourceLoader.loadResources(asset));
+
+    Animator* const animator = asset->getInstance()->getAnimator();
+    ASSERT_NE(animator, nullptr);
+    EXPECT_EQ(animator->getAnimationCount(), 0u);
+    EXPECT_FLOAT_EQ(animator->getAnimationDuration(0), 0.0f);
+
+    math::float3 const before = getAnimatedNodeTranslation(mEngine, asset);
+    animator->applyAnimation(0, 0.5f);
+    EXPECT_FLOAT3_EQ(getAnimatedNodeTranslation(mEngine, asset), before);
+
+    assetLoader->destroyAsset(asset);
+    AssetLoader::destroy(&assetLoader);
+}
+
+// Issue #10134 follow-up: loadResources() used to mark the asset as loaded before validating it,
+// so an instance created after a failed load still got an Animator. That Animator would then read
+// the animation output accessor, which points past the end of the buffer.
+TEST_F(glTFIOTest, FailedLoadDoesNotCreateAnimator) {
+    AssetLoader* assetLoader = AssetLoader::create({ mEngine, mMaterialProvider, mNameManager });
+    ASSERT_NE(assetLoader, nullptr);
+
+    std::vector<uint8_t> const glb = makeTranslationAnimationGlb(
+            { .outputViewByteLength = 4096, .outputAccessorByteOffset = 4000 });
+    FilamentAsset* const asset = assetLoader->createAsset(glb.data(), uint32_t(glb.size()));
+    ASSERT_NE(asset, nullptr);
+
+    ResourceLoader resourceLoader({ mEngine, ".", false });
+    EXPECT_FALSE(resourceLoader.loadResources(asset));
+    EXPECT_EQ(downcast(asset->getInstance())->mAnimator, nullptr);
+
+    FilamentInstance* const instance = assetLoader->createInstance(asset);
+    ASSERT_NE(instance, nullptr);
+    EXPECT_EQ(downcast(instance)->mAnimator, nullptr);
+
+    // recomputeBoundingBoxes() must not read the source buffers either. It returns early, which
+    // leaves the bounding box that the instance copied from the asset untouched.
+    Aabb const before = instance->getBoundingBox();
+    instance->recomputeBoundingBoxes();
+    Aabb const after = instance->getBoundingBox();
+    EXPECT_FLOAT3_EQ(after.min, before.min);
+    EXPECT_FLOAT3_EQ(after.max, before.max);
+
+    assetLoader->destroyAsset(asset);
+    AssetLoader::destroy(&assetLoader);
+}
+
+// The extended loader only loads the source buffers for assets that have primitives, so the
+// buffers of an animation-only asset are never loaded. The Animator used to read the sampler data
+// from the resulting null buffer pointer, offset by the accessor and bufferView offsets.
+TEST_F(glTFIOTest, ExtendedAnimationWithoutBufferDataIsDisabled) {
+    if (!AssetConfigurationExtended::isSupported()) {
+        GTEST_SKIP() << "The extended loader is not supported on this platform.";
+    }
+    AssetConfigurationExtended ext{ .gltfPath = "." };
+    AssetLoader* assetLoader = AssetLoader::create({
+            .engine = mEngine, .materials = mMaterialProvider, .names = mNameManager,
+            .ext = &ext });
+    ASSERT_NE(assetLoader, nullptr);
+
+    std::vector<uint8_t> const glb = makeTranslationAnimationGlb();
+    FilamentAsset* const asset = assetLoader->createAsset(glb.data(), uint32_t(glb.size()));
+    ASSERT_NE(asset, nullptr);
+
+    ResourceLoader resourceLoader({ mEngine, ".", false });
+    ASSERT_TRUE(resourceLoader.loadResources(asset));
+
+    Animator* const animator = asset->getInstance()->getAnimator();
+    ASSERT_NE(animator, nullptr);
+    EXPECT_EQ(animator->getAnimationCount(), 0u);
+    animator->applyAnimation(0, 0.5f);
+
+    assetLoader->destroyAsset(asset);
+    AssetLoader::destroy(&assetLoader);
+}
+
+TEST_F(glTFIOTest, RetroreflectionMaterial) {
+    MaterialProvider* jitProvider = createJitShaderProvider(mEngine);
+    ASSERT_NE(jitProvider, nullptr);
+
+    std::string const gltf =
+            R"({"asset":{"version":"2.0"},)"
+            R"("extensionsUsed":["KHR_materials_retroreflection","KHR_materials_unlit",)"
+            R"("KHR_materials_pbrSpecularGlossiness","KHR_texture_transform"],)"
+            R"("scene":0,"scenes":[{"nodes":[0]}],"nodes":[{"mesh":0}],)"
+            R"("meshes":[{"primitives":[)"
+            R"({"attributes":{"POSITION":0,"TEXCOORD_0":1},"material":0},)"
+            R"({"attributes":{"POSITION":0,"TEXCOORD_0":1},"material":1},)"
+            R"({"attributes":{"POSITION":0,"TEXCOORD_0":1},"material":2},)"
+            R"({"attributes":{"POSITION":0,"TEXCOORD_0":1},"material":3}]}],)"
+            R"("accessors":[)"
+            R"({"bufferView":0,"componentType":5126,"count":3,"type":"VEC3","min":[0,0,0],"max":[1,1,0]},)"
+            R"({"bufferView":1,"componentType":5126,"count":3,"type":"VEC2"}],)"
+            R"("bufferViews":[)"
+            R"({"buffer":0,"byteOffset":0,"byteLength":36},)"
+            R"({"buffer":0,"byteOffset":36,"byteLength":24}],)"
+            R"("buffers":[{"byteLength":60,"uri":"data:application/octet-stream;base64,)"
+            R"(AAAAAAAAAAAAAAAAAACAPwAAAAAAAAAAAAAAAAAAgD8AAAAAAAAAAAAAAAAAAACAPwAAAAAAAAAAAIA/"}],)"
+            R"("images":[{"uri":"data:image/png;base64,)"
+            R"(iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGP4z8DwHwAFAAH/iZk9HQAAAABJRU5ErkJggg=="}],)"
+            R"("textures":[{"source":0}],)"
+            R"("materials":[)"
+            R"({"extensions":{"KHR_materials_retroreflection":{"retroreflectionFactor":0.75}}},)"
+            R"({"extensions":{"KHR_materials_retroreflection":{)"
+            R"("retroreflectionFactor":0.5,)"
+            R"("retroreflectionTexture":{"index":0,"texCoord":0,)"
+            R"("extensions":{"KHR_texture_transform":{"scale":[2.0,2.0]}}}}}},)"
+            R"({"extensions":{"KHR_materials_unlit":{},)"
+            R"("KHR_materials_retroreflection":{"retroreflectionFactor":1.0}}},)"
+            R"({"extensions":{"KHR_materials_pbrSpecularGlossiness":{},)"
+            R"("KHR_materials_retroreflection":{"retroreflectionFactor":1.0}}})"
+            R"(]})";
+
+    AssetLoader* loader = AssetLoader::create({
+            .engine = mEngine,
+            .materials = jitProvider,
+            .names = mNameManager,
+    });
+    ASSERT_NE(loader, nullptr);
+
+    FilamentAsset* asset = loader->createAsset(
+            reinterpret_cast<uint8_t const*>(gltf.data()), uint32_t(gltf.size()));
+    ASSERT_NE(asset, nullptr);
+
+    ResourceLoader resourceLoader({ mEngine, ".", false });
+    EXPECT_TRUE(resourceLoader.loadResources(asset));
+
+    FilamentInstance* instance = asset->getInstance();
+    ASSERT_NE(instance, nullptr);
+    ASSERT_EQ(instance->getMaterialInstanceCount(), 4u);
+
+    Material const* mat0 = instance->getMaterialInstances()[0]->getMaterial();
+    EXPECT_TRUE(mat0->hasParameter("retroreflectionFactor"));
+    EXPECT_FALSE(mat0->hasParameter("retroreflectionMap"));
+
+    Material const* mat1 = instance->getMaterialInstances()[1]->getMaterial();
+    EXPECT_TRUE(mat1->hasParameter("retroreflectionFactor"));
+    EXPECT_TRUE(mat1->hasParameter("retroreflectionMap"));
+    EXPECT_TRUE(mat1->hasParameter("retroreflectionUvMatrix"));
+
+    // KHR_materials_retroreflection must be ignored on unlit and specular-glossiness materials.
+    Material const* mat2 = instance->getMaterialInstances()[2]->getMaterial();
+    EXPECT_FALSE(mat2->hasParameter("retroreflectionFactor"));
+
+    Material const* mat3 = instance->getMaterialInstances()[3]->getMaterial();
+    EXPECT_FALSE(mat3->hasParameter("retroreflectionFactor"));
+
+    loader->destroyAsset(asset);
+    jitProvider->destroyMaterials();
+    delete jitProvider;
+    AssetLoader::destroy(&loader);
+}
+
+#undef EXPECT_FLOAT3_EQ
 
 int main(int argc, char** argv) {
     ::testing::InitGoogleTest(&argc, argv);

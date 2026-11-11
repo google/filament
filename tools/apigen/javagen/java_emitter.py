@@ -86,6 +86,10 @@ from .specializations import (
     ENGINE_INTERCEPTED_METHODS,
     ENGINE_METHODS_JAVA,
     ENGINE_NATIVE_DECLS_JAVA,
+    MATERIAL_BUILDER_CTOR_JAVA,
+    MATERIAL_BUILDER_METHODS_JAVA,
+    MATERIAL_BUILDER_NATIVE_DECLS_JAVA,
+    MATERIAL_BUILDER_PREAMBLE_JAVA,
     MATERIAL_GET_DEFAULT_INSTANCE_BODY_JAVA,
     MATERIAL_GET_PARAMETERS_BODY_JAVA,
     MATERIAL_GET_PARAMETERS_NATIVE_DECL_JAVA,
@@ -103,6 +107,7 @@ from .utils import (
     format_enum_entry_name,
     get_effective_method_name,
     get_size_param_attr,
+    has_skip_attr,
     indent_lines,
     is_custom_enum,
     is_reserved_or_padding_field,
@@ -454,6 +459,8 @@ class JavaEmitter:
         for m in methods_to_scan:
             if check_type(m["return_type"]): has_int_range = True
             r_info, _ = self.resolve_type_info(m["return_type"], silent=True)
+            if isinstance(m["return_type"], dict) and m["return_type"].get("is_reference") and not m["return_type"].get("is_pointer") and r_info.get("java") == self.name:
+                has_non_null = True
             if r_info.get("is_string") or r_info.get("java") == "String":
                 if m["return_type"].get("nullability") == "nullable" if isinstance(m["return_type"], dict) else False:
                     has_nullability = True
@@ -527,6 +534,38 @@ class JavaEmitter:
             has_non_null = True
             has_nullability = True
             has_size = False
+        elif self.name == "MaterialBuilder":
+            has_non_null = True
+            has_nullability = True
+            has_int_range = True
+
+        has_used_by_native_member = (
+            any(any("used_by_native" in str(a).lower() for a in m.get("attributes", [])) for m in self.methods)
+            or any(any("used_by_native" in str(a).lower() for a in f.get("attributes", [])) for f in self.fields)
+        )
+        has_invocable_interface = any(
+            not self.is_async_callback_method(m)
+            and bool(self._expand_method(m))
+            and any(self.get_invocable_info(arg["type"], m["name"]) for arg in m.get("arguments", []))
+            for m in self.methods
+        )
+        has_used_by_native_nested_struct = any(
+            not nested_ctx.is_pojo_struct()
+            and nested_ctx.name not in ("Ssct", "Gtao", "FroxelConfigurationInfo", "FroxelConfigurationInfoWithAge", "PickingQuery")
+            and JavaEmitter(nested_ctx)._get_struct_native_reflection_info()[0] is not None
+            for nested_ctx in self.nested_struct_contexts
+        )
+        has_used_by_native_builder = self.builder is not None and (
+            self.builder.is_used_by_native or self.name == "Stream"
+        )
+        needs_used_by_native = (
+            self.is_used_by_native
+            or self.name in ("View", "Engine")
+            or has_used_by_native_member
+            or has_invocable_interface
+            or has_used_by_native_nested_struct
+            or has_used_by_native_builder
+        )
 
         if has_int_range or has_non_null or has_nullability or has_size or has_restrict_to or self.cached_fields:
             if has_int_range:
@@ -539,10 +578,12 @@ class JavaEmitter:
                 out.append("import androidx.annotation.RestrictTo;")
             if has_size:
                 out.append("import androidx.annotation.Size;")
-            has_used_by_native_method = any(any("used_by_native" in str(a).lower() for a in m.get("attributes", [])) for m in self.methods)
-            if self.is_used_by_native or self.name in ("View", "Engine") or has_used_by_native_method:
+            if needs_used_by_native:
                 out.append("")
                 out.append("import com.google.android.filament.proguard.UsedByNative;")
+            out.append("")
+        elif needs_used_by_native:
+            out.append("import com.google.android.filament.proguard.UsedByNative;")
             out.append("")
 
         def check_linear_color(t):
@@ -641,6 +682,8 @@ class JavaEmitter:
             out.append("    private long mNativeObject;")
             if self.name == "Material":
                 out.append("    private final MaterialInstance mDefaultInstance;")
+            elif self.name == "MaterialBuilder":
+                out.extend(MATERIAL_BUILDER_PREAMBLE_JAVA)
             for cached in self.cached_fields.values():
                 out.append(f"    private @Nullable {cached['type']} {cached['field_name']};")
             out.append("")
@@ -683,6 +726,7 @@ class JavaEmitter:
                     
                     interfaces.append("    @FunctionalInterface")
                     interfaces.append(f"    public interface {inv_info['interface_name']} {{")
+                    interfaces.append(f'        @UsedByNative("{self.name}.cpp")')
                     interfaces.append(f"        {inv_info['java_ret']} accept({', '.join(p_decls)});\n    }}")
                     
         if interfaces:
@@ -710,7 +754,8 @@ class JavaEmitter:
             ftype = field["type"]
             jtype = self.get_java_type(ftype)
             ann = self.get_annotation(ftype)
-            
+            if any("used_by_native" in str(a).lower() for a in field.get("attributes", [])):
+                out.append(f'    @UsedByNative("{self.name}.cpp")')
             if ann:
                 out.append(f"    {ann}")
             out.append(f"    public {jtype} {fname};")
@@ -760,6 +805,13 @@ class JavaEmitter:
                     out.append("    Material(long nativeObject) {")
                     out.append("        mNativeObject = nativeObject;")
                     out.append("        mDefaultInstance = new MaterialInstance(nGetDefaultInstance(nativeObject), this);")
+                    out.append("    }")
+                    out.append("")
+                elif self.name == "MaterialBuilder":
+                    out.extend(MATERIAL_BUILDER_CTOR_JAVA)
+                    out.append(f"    {self.name}(long nativeObject) {{")
+                    out.append(f"        mNativeObject = nativeObject;")
+                    out.append("        mFinalizer = null;")
                     out.append("    }")
                     out.append("")
                 else:
@@ -839,6 +891,9 @@ class JavaEmitter:
             native_decls.extend(self.builder.generate_builder_native_decls())
         if self.name == "Engine":
             native_decls.extend(ENGINE_NATIVE_DECLS_JAVA)
+        if self.name == "MaterialBuilder":
+            out.extend(MATERIAL_BUILDER_METHODS_JAVA)
+            native_decls.extend(MATERIAL_BUILDER_NATIVE_DECLS_JAVA)
 
         # Step 15: Handle Lifetime Boilerplate & Cached Struct Getters
         if self.name == "ToneMapper":
@@ -1018,6 +1073,97 @@ class JavaEmitter:
         return "\n".join(out)
 
 
+    def _get_struct_native_reflection_info(self) -> Tuple[Optional[str], bool]:
+        """Determine if this aggregate struct is populated via JNI GetFieldID/GetMethodID reflection.
+
+        Returns:
+            Tuple of (native_cpp_filename_or_None, constructor_used_by_native).
+        """
+        if self.parent_context is not None:
+            if self.parent_context.is_aggregate:
+                return None, False
+            if self.parent_context.name == "Material" and self.name == "ParameterInfo":
+                if any(get_effective_method_name(m) == "getParameters" for m in self.parent_context.methods):
+                    return f"{self.parent_context.name}.cpp", True
+            cached_getters = {
+                c["getter"]
+                for c in self.parent_context.cached_fields.values()
+                if not c.get("is_handle_reference")
+            }
+            for m in self.parent_context.methods:
+                if m.get("is_constructor") or m["name"] in cached_getters:
+                    continue
+                ret_info, _ = self.parent_context.resolve_type_info(m["return_type"], silent=True)
+                if (
+                    ret_info.get("is_struct")
+                    and not ret_info.get("is_pojo_struct")
+                    and ret_info.get("java") == self.name
+                ) or (
+                    ret_info.get("is_struct_container")
+                    and ret_info.get("java_elem_type") == self.name
+                ):
+                    return f"{self.parent_context.name}.cpp", False
+            return None, False
+
+        def _find_owner_in_known_classes() -> Optional[str]:
+            candidates = sorted(
+                KNOWN_CLASSES.values(),
+                key=lambda c: (c.get("name", "").endswith("Test"), c.get("name", "")),
+            )
+            for owner_ir in candidates:
+                owner_name = owner_ir.get("name", "")
+                if not owner_name or owner_name == self.name:
+                    continue
+                if (
+                    owner_ir.get("is_aggregate")
+                    or owner_ir.get("is_pojo_struct")
+                    or owner_ir.get("is_nested")
+                    or owner_ir.get("parent_class")
+                    or has_skip_attr(owner_ir)
+                ):
+                    continue
+                if owner_ir.get("type", {}).get("category") == "struct" and len(owner_ir.get("fields", [])) > 0:
+                    continue
+
+                methods = [
+                    m for m in owner_ir.get("methods", [])
+                    if not has_skip_attr(m) and not m.get("is_constructor")
+                ]
+                setter_props = set()
+                for s in methods:
+                    s_name = s["name"]
+                    s_args = s.get("arguments", [])
+                    is_set = s_name.startswith("set") and len(s_name) > 3 and s_name[3].isupper()
+                    is_cfg = s_name == "configure"
+                    if (is_set or is_cfg) and len(s_args) == 1:
+                        if self._get_clean_type_name(s_args[0]["type"]) == self.name:
+                            setter_props.add("Configuration" if is_cfg else s_name[3:])
+
+                for m in methods:
+                    m_name = m["name"]
+                    m_args = m.get("arguments", [])
+                    if (
+                        m_name.startswith("get")
+                        and len(m_name) > 3
+                        and m_name[3].isupper()
+                        and len(m_args) == 0
+                        and m_name[3:] in setter_props
+                    ):
+                        continue
+                    if self._get_clean_type_name(m["return_type"]) == self.name:
+                        return f"{owner_name}.cpp"
+            return None
+
+        owner_cpp = _find_owner_in_known_classes()
+        if owner_cpp is None:
+            import os
+            from .orchestrator import _register_sibling_irs
+            wip_probe = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "wip", f"{self.name}.json")
+            if os.path.exists(wip_probe):
+                _register_sibling_irs(wip_probe)
+                owner_cpp = _find_owner_in_known_classes()
+        return owner_cpp, False
+
     def _generate_aggregate_java(self, is_nested=False, indent=""):
         """Generate Java source code for an aggregate Plain-Old-Data (POD) struct class.
 
@@ -1056,6 +1202,7 @@ class JavaEmitter:
         """
         # Step 1: Package and Import Headers (if top-level file)
         out = []
+        native_cpp_file, ctor_used_by_native = self._get_struct_native_reflection_info()
         has_int_range = any(self.get_annotation(f["type"]) and "@IntRange" in self.get_annotation(f["type"]) for f in self.fields)
         if not is_nested:
             out.append(LICENSE_HEADER)
@@ -1069,6 +1216,9 @@ class JavaEmitter:
             out.append("import androidx.annotation.NonNull;")
             out.append("import androidx.annotation.Nullable;")
             out.append("import androidx.annotation.Size;")
+            if native_cpp_file:
+                out.append("")
+                out.append("import com.google.android.filament.proguard.UsedByNative;")
             out.append("")
         
         # Step 2: Class Docstring and Declaration
@@ -1121,16 +1271,22 @@ class JavaEmitter:
                 for idx, c in enumerate(comps):
                     c_def = comp_defaults[idx] if comp_defaults and idx < len(comp_defaults) else None
                     init_str = f" = {c_def}" if c_def is not None else ""
+                    if native_cpp_file:
+                        out.append(f'{indent}    @UsedByNative("{native_cpp_file}")')
                     out.append(f"{indent}    private {scalar} m{fcap}{c}{init_str};")
             elif self.is_aggregate_struct(f["type"]):
                 sub_leaves = self.get_flattened_leaves(f["type"], prefix=fcap)
                 for sl in sub_leaves:
                     sl_def = sl.get("default_value")
                     init_str = f" = {sl_def}" if sl_def is not None else ""
+                    if native_cpp_file:
+                        out.append(f'{indent}    @UsedByNative("{native_cpp_file}")')
                     out.append(f"{indent}    private {sl['java_type']} m{sl['name']}{init_str};")
             elif f_info.get("is_slice"):
                 out.append(f"{indent}    private @Nullable {f_info['java']} m{fcap};")
             else:
+                if native_cpp_file:
+                    out.append(f'{indent}    @UsedByNative("{native_cpp_file}")')
                 ann = self.get_annotation(f["type"])
                 ann_str = f"{ann}\n{indent}    " if ann else ""
                 jtype = self.get_java_type(f["type"])
@@ -1140,6 +1296,8 @@ class JavaEmitter:
         out.append("")
         
         # Step 5: Default Zero-Initializing Constructor
+        if ctor_used_by_native and native_cpp_file:
+            out.append(f'{indent}    @UsedByNative("{native_cpp_file}")')
         out.append(f"{indent}    public {self.name}() {{")
         out.append(f"{indent}    }}")
         out.append("")
@@ -3218,7 +3376,9 @@ class JavaEmitter:
                 
                 m_in = self.get_array_input_info(arg["type"])
                 is_pointer = arg["type"].get("is_pointer", False)
-                if m_in and "assert" in m_in and ("::mat" in arg["type"]["cpp_name"] or is_pointer):
+                arg_type_str = arg["type"].get("qualified_name") or arg["type"]["cpp_name"] if isinstance(arg["type"], dict) else str(arg["type"])
+                is_mat_arg = bool(re.search(r"::mat\d", arg_type_str)) or "::TMat" in arg_type_str
+                if m_in and "assert" in m_in and (is_mat_arg or is_pointer):
                     assert_method = m_in["assert"]
                     nullability = arg["type"].get("nullability", "unspecified")
                     arg_name = arg["name"]
@@ -3302,9 +3462,20 @@ class JavaEmitter:
         # - Emits input validation bounds checks.
         # - Maps return values from native handles, enums (via EnumCache), or primitive types.
         # - Attaches convenience and vector array overloads.
+        is_self_chain = (
+            not is_static
+            and isinstance(ret_type_cpp, dict)
+            and ret_type_cpp.get("is_reference", False)
+            and not ret_type_cpp.get("is_pointer", False)
+            and ret_info.get("java") == self.name
+            and self.archetype == "handle"
+        )
         ret_type = self.get_java_type(ret_type_cpp)
         ret_ann = self.get_annotation(ret_type_cpp)
-        if self.is_attribute_bitset(ret_type_cpp):
+        if is_self_chain:
+            ret_type = self.name
+            ret_ann = "@NonNull"
+        elif self.is_attribute_bitset(ret_type_cpp):
             ret_type = "Set<VertexBuffer.VertexAttribute>"
             ret_ann = "@NonNull"
         elif ret_info.get("is_string") or ret_type == "String":
@@ -3324,6 +3495,8 @@ class JavaEmitter:
         self.emitted_signatures.add(main_sig)
 
         annotations = self._get_annotations(doc)
+        if any("used_by_native" in str(a).lower() for a in method.get("attributes", [])):
+            annotations.append(f'@UsedByNative("{self.name}.cpp")')
         if annotations:
             out += self._annotations_to_indented_list(annotations, "    ")
 
@@ -3345,7 +3518,9 @@ class JavaEmitter:
 
             m_in = self.get_array_input_info(arg["type"])
             is_pointer = arg["type"].get("is_pointer", False)
-            if m_in and "assert" in m_in and ("::mat" in arg["type"]["cpp_name"] or is_pointer):
+            arg_type_str = arg["type"].get("qualified_name") or arg["type"]["cpp_name"] if isinstance(arg["type"], dict) else str(arg["type"])
+            is_mat_arg = bool(re.search(r"::mat\d", arg_type_str)) or "::TMat" in arg_type_str
+            if m_in and "assert" in m_in and (is_mat_arg or is_pointer):
                 assert_method = m_in["assert"]
                 nullability = arg["type"].get("nullability", "unspecified")
                 arg_name = arg["name"]
@@ -3357,7 +3532,10 @@ class JavaEmitter:
                 else:
                      out.append(f"        Asserts.{assert_method}In({arg_name});")
         
-        if self.name == "MaterialInstance" and name == "duplicate":
+        if is_self_chain:
+            out.append(f"        {native_name}({', '.join(call_args)});")
+            out.append("        return this;")
+        elif self.name == "MaterialInstance" and name == "duplicate":
             out.append(f"        long nativeInstance = {native_name}({', '.join(call_args)});")
             out.append('        if (nativeInstance == 0) throw new IllegalStateException("Couldn\'t duplicate MaterialInstance");')
             out.append("        return new MaterialInstance(nativeInstance, other.getMaterial());")
@@ -3866,8 +4044,18 @@ class JavaEmitter:
             decl = f"    private static native void {native_name}({', '.join(params_list)});"
         else:
             # Standard return type mapping
+            is_self_chain = (
+                not is_static
+                and isinstance(ret_type_cpp, dict)
+                and ret_type_cpp.get("is_reference", False)
+                and not ret_type_cpp.get("is_pointer", False)
+                and ret_info.get("java") == self.name
+                and self.archetype == "handle"
+            )
             ret_ann = None
-            if self.archetype == "bitfield" and (self.get_java_type(ret_type_cpp) == "void" or ret_info.get("cpp_type") in (self.name, f"{self.name} &", f"const {self.name} &")):
+            if is_self_chain:
+                ret_type = "void"
+            elif self.archetype == "bitfield" and (self.get_java_type(ret_type_cpp) == "void" or ret_info.get("cpp_type") in (self.name, f"{self.name} &", f"const {self.name} &")):
                 ret_type = self.value_type_info.get("storage_type", "int")
             elif ret_info.get("archetype") == "bitfield":
                 ret_type = ret_info.get("storage_type", "int")
@@ -3930,6 +4118,9 @@ class JavaEmitter:
         out.append("    public static class Builder {")
         out.append("        @SuppressWarnings({\"FieldCanBeLocal\", \"UnusedDeclaration\"}) // Keep to finalize native resources")
         out.append("        private final BuilderFinalizer mFinalizer;")
+        if self.is_used_by_native or (self.parent_context and self.parent_context.name == "Stream"):
+            native_target = "StreamHelper.cpp" if (self.parent_context and self.parent_context.name == "Stream") else f"{self.parent_context.name}.cpp"
+            out.append(f'        @UsedByNative("{native_target}")')
         out.append("        private final long mNativeBuilder;")
         if self.has_retained_buffers:
             out.append("        private final java.util.List<Object> mRetainedBuffers = new java.util.ArrayList<>();")

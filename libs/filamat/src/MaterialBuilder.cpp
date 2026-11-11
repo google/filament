@@ -400,6 +400,11 @@ MaterialBuilder& MaterialBuilder::useDefaultDepthVariant() noexcept {
     return *this;
 }
 
+MaterialBuilder& MaterialBuilder::isDefaultMaterial(bool const isDefault) noexcept {
+    mIsDefaultMaterial = isDefault;
+    return *this;
+}
+
 MaterialBuilder& MaterialBuilder::materialDomain(
         MaterialDomain const materialDomain) noexcept {
     mMaterialDomain = materialDomain;
@@ -754,6 +759,7 @@ void MaterialBuilder::prepareToBuild(MaterialInfo& info) noexcept {
 
     // This is determined via static analysis of the glsl after prepareToBuild().
     info.userMaterialHasCustomDepth = false;
+    info.userMaterialVertexHasCustomDepth = false;
 }
 
 void MaterialBuilder::initPushConstants() noexcept {
@@ -830,9 +836,12 @@ bool MaterialBuilder::runSemanticAnalysis(MaterialInfo* inOutInfo,
                 targetApi, targetLanguage);
     } else {
         shaderCode = peek(ShaderStage::VERTEX, semanticCodeGenParams, mProperties);
-        success = GLSLTools::analyzeVertexShader(shaderCode, model, mMaterialDomain,
+        auto const vertexResult = GLSLTools::analyzeVertexShader(shaderCode, model, mMaterialDomain,
                 targetApi, targetLanguage);
+        success = vertexResult.has_value();
         if (success) {
+            inOutInfo->userMaterialVertexHasCustomDepth =
+                    vertexResult->userMaterialVertexHasCustomDepth;
             shaderCode = peek(ShaderStage::FRAGMENT, semanticCodeGenParams, mProperties);
             auto const result = GLSLTools::analyzeFragmentShader(shaderCode, model, mMaterialDomain,
                     targetApi, targetLanguage, mCustomSurfaceShading);
@@ -918,8 +927,9 @@ bool MaterialBuilder::generateShaders(JobSystem& jobSystem, const std::vector<Va
             mMaterialVertexCode.getCode(), mMaterialVertexCode.getLineOffset(),
             mMaterialDomain);
 
-    container.emplace<bool>(MaterialHasCustomDepthShader,
-            needsStandardDepthProgram() && !mUseDefaultDepthVariant);
+    bool const hasCustomDepthShader = needsStandardDepthProgram(info);
+    bool const hasCustomDepthFragmentShader = needsCustomDepthFragmentProgram(info);
+    container.emplace<bool>(MaterialHasCustomDepthShader, hasCustomDepthShader);
 
     std::atomic_bool cancelJobs(false);
     bool firstJob = true;
@@ -949,6 +959,16 @@ bool MaterialBuilder::generateShaders(JobSystem& jobSystem, const std::vector<Va
         JobSystem::Job* parent = jobSystem.createJob();
 
         for (const auto& v : variants) {
+            if (isSurfaceDomain && !mIsDefaultMaterial &&
+                    filament::Variant::isMotionVectorsVariant(v.variant)) {
+                if (v.stage == ShaderStage::VERTEX && !hasCustomDepthShader) {
+                    continue;
+                }
+                if (v.stage == ShaderStage::FRAGMENT && !hasCustomDepthFragmentShader) {
+                    continue;
+                }
+            }
+
             if (params.featureLevel == FeatureLevel::FEATURE_LEVEL_0 && isSurfaceDomain) {
                 assert_invariant(params.shaderModel == ShaderModel::MOBILE);
                 assert_invariant(params.targetApi == TargetApi::OPENGL);
@@ -1582,14 +1602,28 @@ bool MaterialBuilder::hasCustomVaryings() const noexcept {
     return false;
 }
 
-bool MaterialBuilder::needsStandardDepthProgram() const noexcept {
-    const bool hasEmptyVertexCode = mMaterialVertexCode.getCode().empty();
-    return !hasEmptyVertexCode ||
-           hasCustomVaryings() ||
+bool MaterialBuilder::needsCustomDepthFragmentProgram(
+        MaterialInfo const& info) const noexcept {
+    if (mUseDefaultDepthVariant) {
+        return false;
+    }
+    return info.userMaterialHasCustomDepth ||
            mBlendingMode == BlendingMode::MASKED ||
            (mTransparentShadow &&
             (mBlendingMode == BlendingMode::TRANSPARENT ||
              mBlendingMode == BlendingMode::FADE));
+}
+
+bool MaterialBuilder::needsStandardDepthProgram(MaterialInfo const& info) const noexcept {
+    if (mUseDefaultDepthVariant) {
+        return false;
+    }
+    return needsCustomDepthFragmentProgram(info) ||
+           info.userMaterialVertexHasCustomDepth ||
+           mProperties[size_t(Property::CLIP_SPACE_TRANSFORM)] ||
+           mProperties[size_t(Property::CLIP_SPACE_POSITION)] ||
+           mVertexDomain != VertexDomain::OBJECT ||
+           mUseLegacyMorphing;
 }
 
 std::string MaterialBuilder::peek(backend::ShaderStage const stage,

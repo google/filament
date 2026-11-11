@@ -92,6 +92,8 @@ public:
                 // Allow the eviction of pipelines from the cache based on some user controlled
                 // but backend defined heuristics.
                 bool enable_pipeline_cache_threshold_eviction = false;
+                // Persist the VkPipelineCache across runs through the Platform's blob cache.
+                bool enable_pipeline_cache_persistence = false;
             } vulkan;
             bool disable_parallel_shader_compile = false;
             bool disable_amortized_shader_compile = true;

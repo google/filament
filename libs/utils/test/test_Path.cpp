@@ -237,6 +237,16 @@ TEST(PathTest, Sanitization) {
     r = Path::getCanonicalPath("/../out/../in");
     EXPECT_EQ("/in", r);
 
+    // ./.. collapses to .. rather than an empty path
+    r = Path::getCanonicalPath("./..");
+    EXPECT_EQ("..", r);
+
+    r = Path::getCanonicalPath("./../out");
+    EXPECT_EQ("../out", r);
+
+    r = Path::getCanonicalPath("./out/../..");
+    EXPECT_EQ("..", r);
+
     // No sanitizing required
     r = Path::getCanonicalPath("out");
     EXPECT_EQ("out", r);
@@ -416,4 +426,91 @@ TEST(PathTest, GetExtension) {
 
     p = Path();
     EXPECT_EQ(p.getExtension(), "");
+}
+
+TEST(PathTest, IsAncestorOf) {
+    // Empty paths
+    EXPECT_FALSE(Path().isAncestorOf(Path()));
+    EXPECT_FALSE(Path().isAncestorOf(Path("out")));
+    EXPECT_FALSE(Path().isAncestorOf(Path("/out")));
+    EXPECT_FALSE(Path("/").isAncestorOf(Path()));
+    EXPECT_FALSE(Path(".").isAncestorOf(Path()));
+
+    // Root and absolute paths
+    EXPECT_TRUE(Path("/").isAncestorOf(Path("/out")));
+    EXPECT_TRUE(Path("/").isAncestorOf(Path("/out/bin")));
+    EXPECT_FALSE(Path("/").isAncestorOf(Path("/")));
+    EXPECT_FALSE(Path("/").isAncestorOf(Path("out")));
+
+    EXPECT_TRUE(Path("/out/blue").isAncestorOf(Path("/out/blue/bin")));
+    EXPECT_TRUE(Path("/out/blue/").isAncestorOf(Path("/out/blue/bin")));
+    EXPECT_TRUE(Path("/out/blue").isAncestorOf(Path("/out/blue/bin/")));
+    EXPECT_TRUE(Path("/out/blue").isAncestorOf(Path("/out/blue/sub/../bin")));
+
+    // A path is not an ancestor of itself
+    EXPECT_FALSE(Path("/out/blue").isAncestorOf(Path("/out/blue")));
+    EXPECT_FALSE(Path("/out/blue/").isAncestorOf(Path("/out/blue")));
+    EXPECT_FALSE(Path("/out/blue").isAncestorOf(Path("/out/blue/")));
+
+    // Shared character prefix that is not a segment boundary
+    EXPECT_FALSE(Path("/out/blue").isAncestorOf(Path("/out/blueberry")));
+    EXPECT_FALSE(Path("out/blue").isAncestorOf(Path("out/blueberry")));
+
+    // Descendant vs ancestor and escaping via ..
+    EXPECT_FALSE(Path("/out/blue/bin").isAncestorOf(Path("/out/blue")));
+    EXPECT_FALSE(Path("/out/blue").isAncestorOf(Path("/out/blue/../green")));
+
+    // Absolute vs relative mismatch
+    EXPECT_FALSE(Path("/out").isAncestorOf(Path("out/bin")));
+    EXPECT_FALSE(Path("out").isAncestorOf(Path("/out/bin")));
+
+    // Relative paths and leading "."
+    EXPECT_TRUE(Path("out/blue").isAncestorOf(Path("out/blue/bin")));
+    EXPECT_TRUE(Path("./out/blue").isAncestorOf(Path("out/blue/bin")));
+    EXPECT_TRUE(Path("out/blue").isAncestorOf(Path("./out/blue/bin")));
+    EXPECT_FALSE(Path("./out/blue").isAncestorOf(Path("out/blue")));
+
+    EXPECT_TRUE(Path(".").isAncestorOf(Path("out")));
+    EXPECT_TRUE(Path(".").isAncestorOf(Path("./out/bin")));
+    EXPECT_TRUE(Path("./").isAncestorOf(Path("out")));
+    EXPECT_FALSE(Path(".").isAncestorOf(Path(".")));
+    EXPECT_FALSE(Path(".").isAncestorOf(Path("./")));
+    EXPECT_FALSE(Path(".").isAncestorOf(Path("..")));
+    EXPECT_FALSE(Path(".").isAncestorOf(Path("../out")));
+    EXPECT_FALSE(Path(".").isAncestorOf(Path("out/../../bin")));
+
+    // Relative paths with leading ".."
+    EXPECT_TRUE(Path("..").isAncestorOf(Path("../out")));
+    EXPECT_TRUE(Path("..").isAncestorOf(Path(".")));
+    EXPECT_TRUE(Path("..").isAncestorOf(Path("out")));
+    EXPECT_FALSE(Path("..").isAncestorOf(Path("..")));
+    EXPECT_FALSE(Path("..").isAncestorOf(Path("../..")));
+    EXPECT_FALSE(Path("..").isAncestorOf(Path("../../out")));
+    EXPECT_TRUE(Path("../..").isAncestorOf(Path("..")));
+    EXPECT_TRUE(Path("../..").isAncestorOf(Path("../out")));
+    EXPECT_TRUE(Path("../models").isAncestorOf(Path("../models/tex.png")));
+    EXPECT_FALSE(Path("../models").isAncestorOf(Path("../other/tex.png")));
+    EXPECT_FALSE(Path("../models").isAncestorOf(Path("models/tex.png")));
+
+    // Concatenation containment checks
+    Path const modelDir("/models/helmet/");
+    EXPECT_TRUE(modelDir.isAncestorOf(modelDir.concat("albedo.png")));
+    EXPECT_TRUE(modelDir.isAncestorOf(modelDir.concat("sub/../albedo.png")));
+    EXPECT_FALSE(modelDir.isAncestorOf(modelDir.concat("../other.png")));
+    EXPECT_FALSE(modelDir.isAncestorOf(modelDir.concat("../../etc/foo.png")));
+    EXPECT_FALSE(modelDir.isAncestorOf(modelDir.concat("/etc/foo.png")));
+    EXPECT_FALSE(modelDir.isAncestorOf(modelDir.concat("")));
+    EXPECT_FALSE(modelDir.isAncestorOf(modelDir.concat(".")));
+
+    // Concatenation containment checks with a relative model directory
+    Path const relativeModelDir("models/");
+    EXPECT_TRUE(relativeModelDir.isAncestorOf(relativeModelDir.concat("albedo.png")));
+    EXPECT_FALSE(relativeModelDir.isAncestorOf(relativeModelDir.concat("../albedo.png")));
+
+    // Concatenation containment checks with "." as the model directory
+    Path const currentDir(".");
+    EXPECT_TRUE(currentDir.isAncestorOf(currentDir.concat("albedo.png")));
+    EXPECT_TRUE(currentDir.isAncestorOf(currentDir.concat("sub/albedo.png")));
+    EXPECT_FALSE(currentDir.isAncestorOf(currentDir.concat("../albedo.png")));
+    EXPECT_FALSE(currentDir.isAncestorOf(currentDir.concat("sub/../../albedo.png")));
 }

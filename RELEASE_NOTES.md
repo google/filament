@@ -7,6 +7,18 @@ A new header is inserted each time a *tag* is created.
 Instead, if you are authoring a PR for the main branch, add your release note to
 [NEW_RELEASE_NOTES.md](./NEW_RELEASE_NOTES.md).
 
+## v1.80.1
+
+- engine: fix PCSS soft shadows of point and spot lights using the directional light's bulb radius
+- engine: fix a shader program leak when rendering PCSS or VSM shadows with the program cache
+  disabled
+- vulkan: with the `backend.vulkan.enable_pipeline_cache_persistence` feature flag, the backend
+  keeps its `VkPipelineCache` across runs through `Platform::setBlobFunc`, as the GL backend does
+  for program binaries; the blob functions must be set before the `Engine` is created
+- materials: the new `retroreflection` material property can be used in the lit (standard) shading
+  model to create retroreflective surfaces
+- gltf: `KHR_materials_retroreflection` is now supported
+
 ## v1.80.0
 
 - filamat: convert FOG variant into a specialization constant. [⚠️ **Recompile Materials**]

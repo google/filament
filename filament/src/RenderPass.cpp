@@ -849,9 +849,16 @@ RenderPass::Command* RenderPass::generateCommandsImpl(CommandTypeFlags extraFlag
                 // with a MOT variant also write their (zero) motion vectors to overwrite any
                 // previous channel's motion vectors. Note that the dynamic specialization constants
                 // key, computed above for the DEPTH variant, is the same with MOT.
-                bool const mot = (renderableMoved | motionVectorsChannelDepthClear) &
-                        ma->hasMotionVectorsVariant();
-                cmd.info.materialVariant.setMotionVectors(mot);
+                bool const mot = isMotionVectorsPass &&
+                        ((renderableMoved | motionVectorsChannelDepthClear) &
+                         ma->hasMotionVectorsVariant());
+                // MOT is (MNT | PCK), and PCK is the picking bit: setting the MOT bits to false
+                // outside of the motion vectors pass would also clear the picking bit (and the
+                // VSM one), silently turning a picking command into a plain depth command that
+                // writes no color, so the picking buffer would never be filled.
+                if (isMotionVectorsPass) {
+                    cmd.info.materialVariant.setMotionVectors(mot);
+                }
                 cmd.info.rasterState.colorWrite = depthColorWrite | mot;
                 cmd.info.rasterState.culling = cullingMode;
 

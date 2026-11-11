@@ -32,6 +32,7 @@
 #include <assert.h>
 #include <stdint.h>
 #include <stdlib.h>
+#include <string.h>
 
 namespace utils {
 
@@ -383,12 +384,30 @@ public:
     FreeList(FreeList&& rhs) noexcept = default;
     FreeList& operator=(FreeList&& rhs) noexcept = default;
 
+    [[nodiscard]] void* pop(size_t const stride, size_t const extra = 0) noexcept {
+        assert(stride == mStride);
+        assert(extra == mExtra);
+        if (UTILS_LIKELY(mHead != nullptr)) {
+            Node* const head = mHead;
+            mHead = head->next;
+            // this could indicate a use after free
+            assert(!mHead || (mHead >= mBegin && mHead < mEnd));
+            return head;
+        }
+        if (UTILS_LIKELY(mCur < mEnd)) {
+            assert(stride > 0);
+            void* const p = mCur;
+            mCur = pointermath::add(p, stride);
+            if (UTILS_UNLIKELY(extra > 0)) {
+                memset(static_cast<char*>(p) - extra, 0, extra);
+            }
+            return p;
+        }
+        return nullptr;
+    }
+
     [[nodiscard]] void* pop() noexcept {
-        Node* const head = mHead;
-        mHead = head ? head->next : nullptr;
-        // this could indicate a use after free
-        assert(!mHead || mHead >= mBegin && mHead < mEnd);
-        return head;
+        return pop(mStride, mExtra);
     }
 
     void push(void* p) noexcept {
@@ -401,8 +420,8 @@ public:
         mHead = head;
     }
 
-    void *getFirst() noexcept {
-        return mHead;
+    void* getFirst() noexcept {
+        return mBegin;
     }
 
     struct Node {
@@ -411,16 +430,20 @@ public:
 
 private:
     friend class AtomicFreeList;
-    static Node* init(void* begin, void* end,
+    struct InitInfo {
+        Node* begin;
+        size_t stride;
+        size_t count;
+    };
+    static InitInfo init(void* begin, void* end,
             size_t elementSize, size_t alignment, size_t extra) noexcept;
 
     Node* mHead = nullptr;
-
-#ifndef NDEBUG
-    // These are needed only for debugging...
-    void* mBegin = nullptr;
+    void* mCur = nullptr;
     void* mEnd = nullptr;
-#endif
+    void* mBegin = nullptr;
+    uint32_t mStride = 0;
+    uint32_t mExtra = 0;
 };
 
 class AtomicFreeList {
@@ -431,38 +454,66 @@ public:
     AtomicFreeList(const AtomicFreeList& rhs) = delete;
     AtomicFreeList& operator=(const AtomicFreeList& rhs) = delete;
 
-    [[nodiscard]] void* pop() noexcept {
+    [[nodiscard]] void* pop(size_t const stride, size_t const extra = 0) noexcept {
+        assert(stride % sizeof(Node) == 0);
+        assert(stride / sizeof(Node) == mStrideInNodes);
+        assert(extra == mExtra);
         Node* const pStorage = mStorage;
 
         HeadPtr currentHead = mHead.load(std::memory_order_relaxed);
-        while (currentHead.offset >= 0) {
-            // The value of "pNext" we load here might already contain application data if another
-            // thread raced ahead of us. But in that case, the computed "newHead" will be discarded
-            // since compare_exchange_weak() fails. Then this thread will loop with the updated
-            // value of currentHead, and try again.
-            // We isolate this speculative read in readNode() with UTILS_NO_SANITIZE_THREAD so
-            // TSAN ignores the benign data race on node.next without disabling TSAN instrumentation
-            // on the acquire/release CAS on mHead below.
-            Node const node = readNode(pStorage, currentHead.offset);
-            Node const* const pNext = node.next;
-            const HeadPtr newHead{ pNext ? int32_t(pNext - pStorage) : -1, currentHead.tag + 1 };
-            // In the rare case that the other thread that raced ahead of us already returned the
-            // same mHead we just loaded, but it now has a different "next" value, the tag field
-            // will not match, and compare_exchange_weak() will fail and prevent that particular
-            // race condition.
-            // acquire: no read/write can be reordered before this
-            if (mHead.compare_exchange_weak(currentHead, newHead,
-                    std::memory_order_acquire, std::memory_order_relaxed)) {
-                // This assert needs to occur after we have validated that there was no race condition
-                // Otherwise, next might already contain application data, if another thread
-                // raced ahead of us after we loaded mHead, but before we loaded mHead->next.
-                assert(!pNext || pNext >= pStorage);
-                break;
+        for (;;) {
+            while (currentHead.offset >= 0) {
+                // The value of "pNext" we load here might already contain application data if another
+                // thread raced ahead of us. But in that case, the computed "newHead" will be discarded
+                // since compare_exchange_weak() fails. Then this thread will loop with the updated
+                // value of currentHead, and try again.
+                // We isolate this speculative read in readNode() with UTILS_NO_SANITIZE_THREAD so
+                // TSAN ignores the benign data race on node.next without disabling TSAN instrumentation
+                // on the acquire/release CAS on mHead below.
+                Node const node = readNode(pStorage, currentHead.offset);
+                Node const* const pNext = node.next;
+                const HeadPtr newHead{ pNext ? int32_t(pNext - pStorage) : -1, currentHead.tag + 1 };
+                // In the rare case that the other thread that raced ahead of us already returned the
+                // same mHead we just loaded, but it now has a different "next" value, the tag field
+                // will not match, and compare_exchange_weak() will fail and prevent that particular
+                // race condition.
+                // acquire: no read/write can be reordered before this
+                if (mHead.compare_exchange_weak(currentHead, newHead,
+                        std::memory_order_acquire, std::memory_order_relaxed)) {
+                    // This assert needs to occur after we have validated that there was no race condition
+                    // Otherwise, next might already contain application data, if another thread
+                    // raced ahead of us after we loaded mHead, but before we loaded mHead->next.
+                    assert(!pNext || pNext >= pStorage);
+                    void* const p = pStorage + currentHead.offset;
+                    assert(p >= pStorage);
+                    return p;
+                }
+            }
+
+            uint32_t const strideInNodes = uint32_t(stride / sizeof(Node));
+            // A stride of 0 would hand out the same slot forever.
+            assert(strideInNodes > 0);
+            uint32_t cur = mCurOffset.load(std::memory_order_relaxed);
+            while (cur < mEndOffset) {
+                if (mCurOffset.compare_exchange_weak(cur, cur + strideInNodes,
+                        std::memory_order_relaxed, std::memory_order_relaxed)) {
+                    void* const p = pStorage + cur;
+                    if (UTILS_UNLIKELY(extra > 0)) {
+                        memset(static_cast<char*>(p) - extra, 0, extra);
+                    }
+                    return p;
+                }
+            }
+
+            currentHead = mHead.load(std::memory_order_relaxed);
+            if (currentHead.offset < 0) {
+                return nullptr;
             }
         }
-        void* p = (currentHead.offset >= 0) ? (pStorage + currentHead.offset) : nullptr;
-        assert(!p || p >= pStorage);
-        return p;
+    }
+
+    [[nodiscard]] void* pop() noexcept {
+        return pop(size_t(mStrideInNodes) * sizeof(Node), mExtra);
     }
 
     void push(void* p) noexcept {
@@ -483,7 +534,7 @@ public:
     }
 
     void* getFirst() noexcept {
-        return mStorage + mHead.load(std::memory_order_relaxed).offset;
+        return mStorage;
     }
 
     // There is a benign data race when a pop() is interrupted by a
@@ -527,8 +578,12 @@ private:
     };
 
     std::atomic<HeadPtr> mHead{};
+    std::atomic<uint32_t> mCurOffset{ 0 };
 
     Node* mStorage = nullptr;
+    uint32_t mEndOffset = 0;
+    uint32_t mStrideInNodes = 0;
+    uint32_t mExtra = 0;
 };
 
 // ------------------------------------------------------------------------------------------------
@@ -541,6 +596,11 @@ template <
 class PoolAllocator {
     static_assert(ELEMENT_SIZE >= sizeof(typename FREELIST::Node),
             "ELEMENT_SIZE must accommodate at least a FreeList::Node");
+    static_assert(ALIGNMENT && !(ALIGNMENT & (ALIGNMENT - 1)),
+            "ALIGNMENT must be a power of 2");
+
+    static constexpr size_t STRIDE =
+            (ELEMENT_SIZE + OFFSET + ALIGNMENT - 1) & ~(ALIGNMENT - 1);
 public:
     // our allocator concept
     [[nodiscard]] void* alloc(size_t const size = ELEMENT_SIZE,
@@ -548,7 +608,7 @@ public:
         assert(size <= ELEMENT_SIZE);
         assert(alignment <= ALIGNMENT);
         assert(offset == OFFSET);
-        return mFreeList.pop();
+        return mFreeList.pop(STRIDE, OFFSET);
     }
 
     void free(void* p, size_t = ELEMENT_SIZE) noexcept {

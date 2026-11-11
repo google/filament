@@ -38,6 +38,7 @@
 
 #include "DynamicSpecConstKey.h"
 #include "LocalProgramCache.h"
+#include "MaterialParser.h"
 
 #include "details/Engine.h"
 #include "details/Material.h"
@@ -1169,7 +1170,16 @@ TEST_F(MotionVectorsTest, MaterialVertexDisplacement) {
     Material const* const material = buildMaterial({
             .vertex = kDisplacementVertex, .offsetParameter = true });
     ASSERT_NE(material, nullptr);
-    EXPECT_TRUE(downcast(material)->hasMotionVectorsVariant());
+    FMaterial const* const fmaterial = downcast(material);
+    EXPECT_TRUE(fmaterial->hasMotionVectorsVariant());
+    EXPECT_TRUE(fmaterial->getDefinition().hasCustomDepthShader);
+    // The package contains the custom MOT vertex shader, but omits the MOT fragment shader and
+    // shares the default material's one.
+    MaterialParser const& parser = fmaterial->getDefinition().getMaterialParser();
+    backend::ShaderModel const sm = downcast(mEngine)->getShaderModel();
+    Variant const mot{ Variant::SPECIAL_MOT_VARIANT };
+    EXPECT_TRUE(parser.hasShader(sm, mot, backend::ShaderStage::VERTEX));
+    EXPECT_FALSE(parser.hasShader(sm, mot, backend::ShaderStage::FRAGMENT));
     MaterialInstance* const mi = createMaterialInstance(material);
     mi->setParameter("offset", float3{ 0.0f, 0.5f, 0.0f });
     Entity const quad = createQuad(mScene, translation(-0.2f, -0.5f), mi);
@@ -1276,8 +1286,10 @@ TEST_F(MotionVectorsTest, CompileSharedMotionVectorsPrograms) {
     if (!engine.getDriverApi().isParallelShaderCompileSupported()) {
         GTEST_SKIP() << "Engine::compile() only prepares programs with parallel compilation";
     }
+    // Even with a custom varying and a non-empty vertex shader that doesn't modify position,
+    // the material omits MOT shaders from its package and shares the default material's programs.
     Material const* const material = buildMaterial({
-            .variantFilter = UserVariantFilterMask(UserVariantFilterBit::MOTION_VECTORS) });
+            .vertex = kLocalPositionVertex, .localPosVariable = true });
     ASSERT_NE(material, nullptr);
     FMaterial const* const fmaterial = downcast(material);
     EXPECT_TRUE(fmaterial->hasMotionVectorsVariant());

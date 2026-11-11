@@ -466,6 +466,13 @@ void OpenGLContext::initBugs(Bugs* bugs, Extensions const& exts,
                 // Renderer of the form [Mesa Intel(R) HD Graphics 505 (APL 3)]
                 // b/405252622
                 bugs->disable_invalidate_framebuffer = true;
+
+                // Seen on
+                // [Intel]
+                // [Mesa Intel(R) Arc(tm) A750 Graphics (DG2)]
+                // [4.6 (Core Profile) Mesa 26.0.8-1ubuntu0.3]
+                // [4.60]
+                bugs->disable_framebuffer_fetch_extension = true;
             }
         } else if (strstr(renderer, "PowerVR")) {
             // PowerVR GPU

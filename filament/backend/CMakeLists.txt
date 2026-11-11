@@ -644,6 +644,7 @@ if (FILAMENT_BUILD_TESTING)
             test/test_ThreadPriorityOverride.cpp
             test/test_AsyncUploads.cpp
             test/test_Platform.cpp
+            test/test_VulkanPipelineCache.cpp
         )
         if (FILAMENT_SUPPORTS_VULKAN)
             list(APPEND BACKEND_TEST_SRC
@@ -655,6 +656,7 @@ if (FILAMENT_BUILD_TESTING)
                     test/test_WebGPUAsyncTaskCounter.cpp
                     test/test_WebGPUComposeSwizzle.cpp
                     test/test_WebGPUSpecializationConstantProcessor.cpp
+                    test/test_WebGPUTextureUsage.cpp
                     test/test_WebGPUVertexHelper.cpp)
         endif()
         if (APPLE)
