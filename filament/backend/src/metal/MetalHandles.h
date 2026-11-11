@@ -301,6 +301,9 @@ struct PixelBufferShape {
     // Offset into the buffer where the pixel data begins.
     uint32_t sourceOffset;
 
+    // totalBytes minus the last row's trailing padding.
+    uint32_t sourceBytes;
+
     static PixelBufferShape compute(const PixelBufferDescriptor& data, TextureFormat format,
             MTLSize size, uint32_t byteOffset);
 };

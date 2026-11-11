@@ -187,6 +187,14 @@ Many compressed texture formats are supported as well, which include (but are no
 | [RGB_BPTC_UNSIGNED_FLOAT](-r-g-b_-b-p-t-c_-u-n-s-i-g-n-e-d_-f-l-o-a-t/index.md) | [main]<br>[RGB_BPTC_UNSIGNED_FLOAT](-r-g-b_-b-p-t-c_-u-n-s-i-g-n-e-d_-f-l-o-a-t/index.md) |
 | [RGBA_BPTC_UNORM](-r-g-b-a_-b-p-t-c_-u-n-o-r-m/index.md) | [main]<br>[RGBA_BPTC_UNORM](-r-g-b-a_-b-p-t-c_-u-n-o-r-m/index.md) |
 | [SRGB_ALPHA_BPTC_UNORM](-s-r-g-b_-a-l-p-h-a_-b-p-t-c_-u-n-o-r-m/index.md) | [main]<br>[SRGB_ALPHA_BPTC_UNORM](-s-r-g-b_-a-l-p-h-a_-b-p-t-c_-u-n-o-r-m/index.md) |
+| [R16](-r16/index.md) | [main]<br>[R16](-r16/index.md) |
+| [R16_SNORM](-r16_-s-n-o-r-m/index.md) | [main]<br>[R16_SNORM](-r16_-s-n-o-r-m/index.md) |
+| [RG16](-r-g16/index.md) | [main]<br>[RG16](-r-g16/index.md) |
+| [RG16_SNORM](-r-g16_-s-n-o-r-m/index.md) | [main]<br>[RG16_SNORM](-r-g16_-s-n-o-r-m/index.md) |
+| [RGB16](-r-g-b16/index.md) | [main]<br>[RGB16](-r-g-b16/index.md) |
+| [RGB16_SNORM](-r-g-b16_-s-n-o-r-m/index.md) | [main]<br>[RGB16_SNORM](-r-g-b16_-s-n-o-r-m/index.md) |
+| [RGBA16](-r-g-b-a16/index.md) | [main]<br>[RGBA16](-r-g-b-a16/index.md) |
+| [RGBA16_SNORM](-r-g-b-a16_-s-n-o-r-m/index.md) | [main]<br>[RGBA16_SNORM](-r-g-b-a16_-s-n-o-r-m/index.md) |
 
 ## Functions
 

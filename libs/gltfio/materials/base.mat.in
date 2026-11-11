@@ -1,5 +1,5 @@
 material {
-    name : base_${SHADINGMODEL}_${BLENDING},
+    name : ${MATERIAL_NAME},
     requires : [ uv0, uv1, color ],
     shadingModel : ${SHADINGMODEL},
     blending : ${BLENDING},
@@ -87,7 +87,7 @@ fragment {
                 material.normal = texture(materialParams_normalMap, uv).xyz * 2.0 - 1.0;
                 material.normal.xy *= materialParams.normalScale;
             }
-            #if defined(SHADING_MODEL_LIT)
+            #if defined(SHADING_MODEL_LIT) && !defined(GLTFIO_NO_CLEAR_COAT)
             if (materialParams.clearCoatNormalIndex > -1) {
                 highp float2 uv = uvs[materialParams.clearCoatNormalIndex];
                 uv = (vec3(uv, 1.0) * materialParams.clearCoatNormalUvMatrix).xy;
@@ -120,6 +120,7 @@ fragment {
 
                 // KHR_materials_clearcoat forbids clear coat from
                 // being applied in the specular/glossiness model
+                #if !defined(GLTFIO_NO_CLEAR_COAT)
                 material.clearCoat = materialParams.clearCoatFactor;
                 material.clearCoatRoughness = materialParams.clearCoatRoughnessFactor;
 
@@ -133,6 +134,7 @@ fragment {
                     uv = (vec3(uv, 1.0) * materialParams.clearCoatRoughnessUvMatrix).xy;
                     material.clearCoatRoughness *= texture(materialParams_clearCoatRoughnessMap, uv).g;
                 }
+                #endif
             #endif
 
             material.emissive = vec4(materialParams.emissiveStrength *
