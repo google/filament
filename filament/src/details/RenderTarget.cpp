@@ -119,7 +119,11 @@ RenderTarget* RenderTarget::Builder::build(Engine& engine) const {
         if (attachment.texture) {
             const uint32_t w = attachment.texture->getWidth(attachment.mipLevel);
             const uint32_t h = attachment.texture->getHeight(attachment.mipLevel);
-            const uint32_t d = attachment.texture->getDepth(attachment.mipLevel);
+            // Only 3D textures shrink in depth with mip level; the layer count of
+            // 2D-array and cubemap-array textures is the same at every level.
+            const uint32_t d = attachment.texture->getDepth(
+                    attachment.texture->getTarget() == Texture::Sampler::SAMPLER_3D
+                            ? attachment.mipLevel : 0);
             const uint32_t l = attachment.layerCount;
             if (l > 0) {
                 FILAMENT_CHECK_PRECONDITION(

@@ -1157,6 +1157,12 @@ enum class TextureFormat : uint16_t {
     RGB_BPTC_UNSIGNED_FLOAT,// BC6H unsigned [106]
     RGBA_BPTC_UNORM,        // BC7 [107]
     SRGB_ALPHA_BPTC_UNORM,  // BC7 sRGB [108]
+
+    // 16-bit normalized formats
+    R16, R16_SNORM,         // [109 - 110]
+    RG16, RG16_SNORM,       // [111 - 112]
+    RGB16, RGB16_SNORM,     // [113 - 114]
+    RGBA16, RGBA16_SNORM,   // [115 - 116]
 };
 
 TextureType getTextureType(TextureFormat format) noexcept;
@@ -1232,6 +1238,9 @@ constexpr bool isColorFormat(TextureFormat format) noexcept {
         case TextureFormat::R8:
         case TextureFormat::RG8:
         case TextureFormat::RGBA8:
+        case TextureFormat::R16:
+        case TextureFormat::RG16:
+        case TextureFormat::RGBA16:
         case TextureFormat::R16F:
         case TextureFormat::RG16F:
         case TextureFormat::RGBA16F:
@@ -1243,6 +1252,7 @@ constexpr bool isColorFormat(TextureFormat format) noexcept {
         case TextureFormat::SRGB8:
         case TextureFormat::SRGB8_A8:
         case TextureFormat::RGB8:
+        case TextureFormat::RGB16:
         case TextureFormat::RGB565:
         case TextureFormat::RGB5_A1:
         case TextureFormat::RGBA4:
@@ -1297,7 +1307,7 @@ constexpr bool isSignedIntFormat(TextureFormat format) {
 
 //! returns whether this format is a compressed format
 constexpr bool isCompressedFormat(TextureFormat format) noexcept {
-    return format >= TextureFormat::EAC_R11;
+    return format >= TextureFormat::EAC_R11 && format <= TextureFormat::SRGB_ALPHA_BPTC_UNORM;
 }
 
 //! returns whether this format is an ETC2 compressed format
