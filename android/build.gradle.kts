@@ -56,99 +56,76 @@
 //     signingPassword=key password
 //
 
-buildscript {
-    def path = providers
-            .gradleProperty("com.google.android.filament.dist-dir")
-            .get()
+import com.android.build.api.dsl.LibraryExtension
 
-    def directory = objects.fileProperty().fileValue(new File(path)).getAsFile().get()
-    def filamentPath = directory.absolutePath
+buildscript {
+    val path = providers
+        .gradleProperty("com.google.android.filament.dist-dir")
+        .get()
+
+    val directory = objects.fileProperty().fileValue(File(path)).asFile.get()
+    var filamentPath = directory.absolutePath
 
     // Our CMake scripts require a forward-slash path for the FILAMENT_DIST_DIR
     // variable, so here we convert the native path to a forward-slash path.
-    filamentPath = filamentPath.replace(File.separator, '/')
-    ext.filamentPath = filamentPath
+    filamentPath = filamentPath.replace(File.separator, "/")
+    extra["filamentPath"] = filamentPath
 
     // Warning: changing this property does not work well with incremental builds.
-    def excludeVulkan = providers
-            .gradleProperty("com.google.android.filament.exclude-vulkan")
-            .isPresent()
+    val excludeVulkan = providers
+        .gradleProperty("com.google.android.filament.exclude-vulkan")
+        .isPresent
 
-    def includeWebGPU = providers
-            .gradleProperty("com.google.android.filament.include-webgpu")
-            .isPresent()
+    val includeWebGPU = providers
+        .gradleProperty("com.google.android.filament.include-webgpu")
+        .isPresent
 
-    def fgviewer = providers
-                 .gradleProperty("com.google.android.filament.fgviewer")
-                 .isPresent()
+    val fgviewer = providers
+        .gradleProperty("com.google.android.filament.fgviewer")
+        .isPresent
 
-    def matdbg = providers
-            .gradleProperty("com.google.android.filament.matdbg")
-            .isPresent()
+    val matdbg = providers
+        .gradleProperty("com.google.android.filament.matdbg")
+        .isPresent
 
-    def matnopt = providers
-            .gradleProperty("com.google.android.filament.matnopt")
-            .isPresent()
+    val matnopt = providers
+        .gradleProperty("com.google.android.filament.matnopt")
+        .isPresent
 
-    def mutexdebug = providers
-            .gradleProperty("com.google.android.filament.mutexdebug")
-            .isPresent()
+    val mutexdebug = providers
+        .gradleProperty("com.google.android.filament.mutexdebug")
+        .isPresent
 
-    def abis = ["arm64-v8a", "armeabi-v7a", "x86_64", "x86"]
-    def newAbis = providers
-            .gradleProperty("com.google.android.filament.abis")
-            .get()
-            .split(',')
+    var abis = listOf("arm64-v8a", "armeabi-v7a", "x86_64", "x86")
+    val newAbis = providers
+        .gradleProperty("com.google.android.filament.abis")
+        .get()
+        .split(",")
     if (!newAbis.contains("all")) {
         abis = newAbis
     }
 
-    ext.versions = [
-        'jdk': 21,
-        'minSdk': 21,
-        'targetSdk': 37,
-        'compileSdk': 37,
-        'kotlin': '2.4.0',
-        'kotlin_coroutines': '1.11.0',
-        'buildTools': '36.0.0',
-        'ndk': '30.0.16248370',
-        'androidx_core': '1.19.0',
-        'androidx_annotations': '1.10.0'
-    ]
-
-    ext.deps = [
-        'androidx': [
-            'annotations': "androidx.annotation:annotation:${versions.androidx_annotations}",
-            'core': "androidx.core:core:${versions.androidx_core}"
-        ],
-        'kotlin': "org.jetbrains.kotlin:kotlin-stdlib-jdk8:${versions.kotlin}",
-        'coroutines': [
-            'core': "org.jetbrains.kotlinx:kotlinx-coroutines-core:${versions.kotlin_coroutines}",
-            'android': "org.jetbrains.kotlinx:kotlinx-coroutines-android:${versions.kotlin_coroutines}",
-        ]
-    ]
-
     dependencies {
-        classpath 'com.android.tools.build:gradle:9.5.1'
-        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:${versions.kotlin}"
+        classpath(libs.android.gradle.plugin)
+        classpath(libs.kotlin.gradle.plugin)
     }
 
-    ext.cmakeArgs = [
+    extra["cmakeArgs"] = listOf(
         "--no-warn-unused-cli",
         "-DANDROID_WEAK_API_DEFS=ON",
         "-DANDROID_PIE=ON",
         "-DANDROID_PLATFORM=21",
         "-DANDROID_STL=c++_static",
-        "-DFILAMENT_DIST_DIR=${filamentPath}".toString(),
-        "-DFILAMENT_SUPPORTS_VULKAN=${excludeVulkan ? 'OFF' : 'ON'}".toString(),
-        "-DFILAMENT_SUPPORTS_WEBGPU=${includeWebGPU ? 'ON' : 'OFF'}".toString(),
-        "-DFILAMENT_ENABLE_FGVIEWER=${fgviewer ? 'ON' : 'OFF'}".toString(),
-        "-DFILAMENT_ENABLE_MATDBG=${matdbg ? 'ON' : 'OFF'}".toString(),
-        "-DFILAMENT_DISABLE_MATOPT=${matnopt ? 'ON' : 'OFF'}".toString(),
-        "-DFILAMENT_DEBUG_MUTEX=${mutexdebug ? 'ON' : 'OFF'}".toString()
-    ]
+        "-DFILAMENT_DIST_DIR=$filamentPath",
+        "-DFILAMENT_SUPPORTS_VULKAN=${if (excludeVulkan) "OFF" else "ON"}",
+        "-DFILAMENT_SUPPORTS_WEBGPU=${if (includeWebGPU) "ON" else "OFF"}",
+        "-DFILAMENT_ENABLE_FGVIEWER=${if (fgviewer) "ON" else "OFF"}",
+        "-DFILAMENT_ENABLE_MATDBG=${if (matdbg) "ON" else "OFF"}",
+        "-DFILAMENT_DISABLE_MATOPT=${if (matnopt) "ON" else "OFF"}",
+        "-DFILAMENT_DEBUG_MUTEX=${if (mutexdebug) "ON" else "OFF"}"
+    )
 
-    ext.cppFlags = [
+    extra["cppFlags"] = listOf(
         "-std=c++17",
         "-fno-stack-protector",
         "-fno-unwind-tables",
@@ -168,10 +145,10 @@ buildscript {
         "-Wno-unused-command-line-argument",
         "-Wl,--gc-sections",
         "-Wl,-Bsymbolic-functions",
-        "-Wl,--hash-style=both", // Required to support API levels below 23
-    ]
+        "-Wl,--hash-style=both" // Required to support API levels below 23
+    )
 
-    ext.abis = abis
+    extra["abis"] = abis
 
     repositories {
         mavenCentral()
@@ -180,25 +157,34 @@ buildscript {
 }
 
 plugins {
-    id "io.github.gradle-nexus.publish-plugin" version "2.0.0"
+    alias(libs.plugins.nexus.publish)
 }
 
 // See https://github.com/gradle-nexus/publish-plugin
 // Publish to https://oss.sonatype.org/ (not s01)
 nexusPublishing {
-    packageGroup = 'com.google.android'
+    packageGroup.set("com.google.android")
     repositories {
         sonatype {
-            stagingProfileId = '9a75a224a4f17b'
+            stagingProfileId.set("9a75a224a4f17b")
             nexusUrl.set(uri("https://ossrh-staging-api.central.sonatype.com/service/local/"))
             snapshotRepositoryUrl.set(uri("https://central.sonatype.com/repository/maven-snapshots/"))
         }
     }
 }
 
+val versionCatalog = libs
+
+@Suppress("UNCHECKED_CAST")
+val rootCmakeArgs = rootProject.extra["cmakeArgs"] as List<String>
+@Suppress("UNCHECKED_CAST")
+val rootCppFlags = rootProject.extra["cppFlags"] as List<String>
+@Suppress("UNCHECKED_CAST")
+val rootAbis = rootProject.extra["abis"] as List<String>
+
 subprojects {
-    group = GROUP
-    version = VERSION_NAME
+    group = providers.gradleProperty("GROUP").get()
+    version = providers.gradleProperty("VERSION_NAME").get()
 
     repositories {
         mavenCentral()
@@ -206,62 +192,56 @@ subprojects {
     }
 
     if (!name.startsWith("sample") && name != "filament-tools" && name != "gradle-plugin") {
-        apply plugin: 'com.android.library'
+        apply(plugin = "com.android.library")
 
-        android {
-            buildToolsVersion versions.buildTools
-            compileSdkVersion versions.compileSdk
-            ndkVersion versions.ndk
+        extensions.configure<LibraryExtension> {
+            buildToolsVersion = versionCatalog.versions.buildTools.get()
+            compileSdk = versionCatalog.versions.compileSdk.get().toInt()
+            ndkVersion = versionCatalog.versions.ndk.get()
 
             defaultConfig {
-                minSdkVersion versions.minSdk
-                targetSdkVersion versions.targetSdk
+                minSdk = versionCatalog.versions.minSdk.get().toInt()
 
                 externalNativeBuild {
                     cmake {
-                        arguments.addAll(rootProject.ext.cmakeArgs)
-                        cppFlags.addAll(rootProject.ext.cppFlags)
+                        arguments.addAll(rootCmakeArgs)
+                        cppFlags.addAll(rootCppFlags)
                     }
                 }
 
                 ndk {
                     //noinspection ChromeOsAbiSupport
-                    abiFilters(*rootProject.ext.abis)
+                    abiFilters.addAll(rootAbis)
                 }
 
                 buildFeatures {
-                    buildConfig true
+                    buildConfig = true
                 }
 
-                consumerProguardFiles '../proguard-rules.pro'
+                consumerProguardFiles("../proguard-rules.pro")
             }
 
             externalNativeBuild {
                 cmake {
-                    version "3.19.0+"
-                    path "CMakeLists.txt"
-                }
-            }
-
-            sourceSets {
-                main {
-                    jni.srcDirs "src/main/cpp"
+                    version = versionCatalog.versions.cmake.get()
+                    path = file("CMakeLists.txt")
                 }
             }
 
             compileOptions {
-                sourceCompatibility versions.jdk
-                targetCompatibility versions.jdk
+                val jdkVersion = JavaVersion.toVersion(versionCatalog.versions.jdk.get())
+                sourceCompatibility = jdkVersion
+                targetCompatibility = jdkVersion
             }
         }
     }
 }
 
 gradle.taskGraph.whenReady {
-    gradle.taskGraph.allTasks.each {
-        it.onlyIf {
-            !it.project.ext.has('isSample') ||
-                    !project.hasProperty('com.google.android.filament.skip-samples')
-         }
+    allTasks.forEach { task ->
+        task.onlyIf {
+            !task.project.extra.has("isSample") ||
+                !project.hasProperty("com.google.android.filament.skip-samples")
+        }
     }
 }

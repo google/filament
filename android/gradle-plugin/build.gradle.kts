@@ -1,7 +1,7 @@
 plugins {
     `java-gradle-plugin`
-    kotlin("jvm") version "2.4.0"
-    id("com.gradle.plugin-publish") version "2.1.0"
+    alias(libs.plugins.kotlin.jvm)
+    alias(libs.plugins.plugin.publish)
 }
 
 group = "com.google.android.filament"
@@ -28,5 +28,5 @@ repositories {
 }
 
 dependencies {
-    implementation("com.google.gradle:osdetector-gradle-plugin:1.7.3")
+    implementation(libs.osdetector.gradle.plugin)
 }

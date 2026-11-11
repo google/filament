@@ -1,9 +1,11 @@
 plugins {
-    id "org.jetbrains.dokka" version "1.9.20"
+    id("com.android.library")
+    alias(libs.plugins.dokka)
+    `maven-publish`
 }
 
 android {
-    namespace 'com.google.android.filament'
+    namespace = "com.google.android.filament"
 
     publishing {
         singleVariant("release") {
@@ -14,23 +16,23 @@ android {
 }
 
 dependencies {
-    implementation deps.androidx.annotations
+    implementation(libs.androidx.annotations)
 }
 
-apply from: rootProject.file('gradle/gradle-mvn-push.gradle')
+apply(from = rootProject.file("gradle/gradle-mvn-push.gradle.kts"))
 
-afterEvaluate { project ->
+afterEvaluate {
     publishing {
         publications {
-            release(MavenPublication) {
-                artifactId = POM_ARTIFACT_ID
-                from components.release
+            register<MavenPublication>("release") {
+                artifactId = project.property("POM_ARTIFACT_ID") as String
+                from(components["release"])
             }
         }
     }
 }
 
-dokkaGfm {
+tasks.dokkaGfm {
     dokkaSourceSets {
         // Use 'register' instead of 'configureEach' to force Dokka
         // to create a new source set from scratch.
