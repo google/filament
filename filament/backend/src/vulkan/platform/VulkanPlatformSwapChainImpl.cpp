@@ -176,7 +176,12 @@ VkResult VulkanPlatformSurfaceSwapChain::create() {
     }
 
 #ifdef __ANDROID__
-    NativeWindow::enableFrameTimestamps(static_cast<ANativeWindow*>(mNativeWindow), true);
+    // Frame timestamps only mean something for windows SurfaceFlinger composites. Enabling them
+    // on other consumers, such as a MediaCodec input surface, can crash the codec process and
+    // the app.
+    if (NativeWindow::queuesToWindowComposer(static_cast<ANativeWindow*>(mNativeWindow))) {
+        NativeWindow::enableFrameTimestamps(static_cast<ANativeWindow*>(mNativeWindow), true);
+    }
     // on Android, disable producer throttling
     if (NativeWindow::isProducerThrottlingSupported()) {
         NativeWindow::setProducerThrottlingEnabled(
