@@ -148,6 +148,16 @@ struct TranslationAnimationOptions {
 // be made invalid or unreadable.
 std::vector<uint8_t> makeTranslationAnimationGlb(TranslationAnimationOptions const& options = {});
 
+// The translation of the inverse bind matrix that makeUnusableInverseBindMatricesGlb() stores for
+// its second skin.
+constexpr filament::math::float3 kSkinInverseBindTranslation = { 1.0f, 2.0f, 3.0f };
+
+// Builds a GLB with no meshes and two skins, "skin0" and "skin1", of one joint each. The inverse
+// bind matrices accessor of "skin0" is made of UNSIGNED_SHORT components, which cgltf_validate()
+// accepts but which cannot be used. The one of "skin1" is valid, and holds a translation by
+// kSkinInverseBindTranslation. Reproduces issue #10795.
+std::vector<uint8_t> makeUnusableInverseBindMatricesGlb();
+
 } // namespace test
 
 #endif // TNT_GLTFIO_TEST_GLBBUILDERS_H

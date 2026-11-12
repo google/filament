@@ -1025,4 +1025,29 @@ std::vector<uint8_t> makeTranslationAnimationGlb(TranslationAnimationOptions con
     return assembleGlb(std::move(json), std::move(bin));
 }
 
+std::vector<uint8_t> makeUnusableInverseBindMatricesGlb() {
+    std::string json =
+            R"({"asset":{"version":"2.0"},"scene":0,"scenes":[{"nodes":[0]}],)"
+            R"("nodes":[{"name":"root","children":[1,2]},{"name":"joint0"},{"name":"joint1"}],)"
+            R"("skins":[{"name":"skin0","joints":[1],"inverseBindMatrices":0},)"
+            R"({"name":"skin1","joints":[2],"inverseBindMatrices":1}],)"
+            R"("accessors":[)"
+            R"({"bufferView":0,"componentType":5123,"count":1,"type":"MAT4"},)"
+            R"({"bufferView":1,"componentType":5126,"count":1,"type":"MAT4"}],)"
+            R"("bufferViews":[{"buffer":0,"byteOffset":0,"byteLength":32},)"
+            R"({"buffer":0,"byteOffset":32,"byteLength":64}],)"
+            R"("buffers":[{"byteLength":96}]})";
+
+    std::vector<uint8_t> bin(96, 0);
+    // The matrix of "skin0" (16 x uint16) at byte offset 0 is left at zero.
+    // The matrix of "skin1" (16 x float, column-major) at byte offset 32.
+    float* matrix = reinterpret_cast<float*>(bin.data() + 32);
+    matrix[0] = matrix[5] = matrix[10] = matrix[15] = 1.0f;
+    matrix[12] = kSkinInverseBindTranslation.x;
+    matrix[13] = kSkinInverseBindTranslation.y;
+    matrix[14] = kSkinInverseBindTranslation.z;
+
+    return assembleGlb(std::move(json), std::move(bin));
+}
+
 } // namespace test
