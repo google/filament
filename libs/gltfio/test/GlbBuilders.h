@@ -84,6 +84,11 @@ std::vector<uint8_t> makeColorSeamMorphGlb(MorphMaterial material);
 // mesh also contains a second primitive with a valid POSITION attribute.
 std::vector<uint8_t> makePositionlessPrimitiveGlb(bool includeValidSiblingPrimitive = false);
 
+// Builds a KHR_mesh_quantization triangle whose POSITION uses `componentType` and spans its full
+// integer range, optionally with a +X morph target. Reproduces issue #10817.
+std::vector<uint8_t> makeNormalizedPositionGlb(int componentType, bool withMorphTarget = false,
+        bool normalized = true);
+
 // Builds a single-triangle GLB using KHR_draco_mesh_compression whose compressed bufferView holds
 // invalid Draco bytes, so that Draco decoding fails and the primitive's accessors are left with a
 // null buffer_view.

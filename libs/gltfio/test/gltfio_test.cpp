@@ -56,12 +56,15 @@
 #endif
 #include <gtest/gtest.h>
 
+#include <algorithm>
+#include <array>
 #include <cstdint>
 #include <cstring>
 #include <filesystem>
 #include <fstream>
 #include <limits>
 #include <string>
+#include <tuple>
 #include <unordered_map>
 #include <vector>
 
@@ -1108,6 +1111,177 @@ TEST_F(glTFIOTest, MeshWithPositionlessAndValidPrimitives) {
         AssetConfigurationExtended ext{ .gltfPath = "." };
         checkLoad(&ext);
     }
+}
+
+// Quantized POSITION types and the extreme values makeNormalizedPositionGlb() stores.
+struct QuantizedPositionCase {
+    int componentType;
+    float lo;
+    float hi;
+};
+constexpr QuantizedPositionCase kQuantizedPositionCases[] = {
+    { 5120, -127.0f, 127.0f },     // BYTE
+    { 5121, 0.0f, 255.0f },        // UNSIGNED_BYTE
+    { 5122, -32767.0f, 32767.0f }, // SHORT
+    { 5123, 0.0f, 65535.0f },      // UNSIGNED_SHORT
+};
+
+static constexpr float decodeQuantized(QuantizedPositionCase const& c, float value,
+        bool normalized) {
+    return normalized ? value / c.hi : value;
+}
+
+// Issue #10817: quantized POSITION bounds must be decoded like the vertices.
+TEST_F(glTFIOTest, QuantizedPositionBoundsAreDecoded) {
+    auto checkLoad = [&](AssetConfigurationExtended* ext, QuantizedPositionCase const& c,
+            bool withMorphTarget, bool normalized) {
+        SCOPED_TRACE(testing::Message() << "componentType=" << c.componentType
+                                        << " normalized=" << normalized
+                                        << " extended=" << (ext != nullptr)
+                                        << " morph=" << withMorphTarget);
+        std::vector<uint8_t> const glb =
+                makeNormalizedPositionGlb(c.componentType, withMorphTarget, normalized);
+
+        AssetLoader* assetLoader = AssetLoader::create({
+                .engine = mEngine,
+                .materials = mMaterialProvider,
+                .names = mNameManager,
+                .ext = ext,
+        });
+        ASSERT_NE(assetLoader, nullptr);
+
+        FilamentAsset* asset = assetLoader->createAsset(glb.data(), uint32_t(glb.size()));
+        ASSERT_NE(asset, nullptr);
+
+        ResourceLoader resourceLoader({ mEngine, ".", false });
+        EXPECT_TRUE(resourceLoader.loadResources(asset));
+
+        // The +X morph delta only extends max.x.
+        float const lo = decodeQuantized(c, c.lo, normalized);
+        float const hi = decodeQuantized(c, c.hi, normalized);
+        Aabb const bounds = asset->getBoundingBox();
+        EXPECT_FLOAT_EQ(bounds.min.x, lo);
+        EXPECT_FLOAT_EQ(bounds.min.y, lo);
+        EXPECT_FLOAT_EQ(bounds.min.z, lo);
+        EXPECT_FLOAT_EQ(bounds.max.x, withMorphTarget ? 2.0f * hi : hi);
+        EXPECT_FLOAT_EQ(bounds.max.y, hi);
+        EXPECT_FLOAT_EQ(bounds.max.z, hi);
+
+        assetLoader->destroyAsset(asset);
+        AssetLoader::destroy(&assetLoader);
+    };
+
+    for (QuantizedPositionCase const& c : kQuantizedPositionCases) {
+        for (bool const normalized : { true, false }) {
+            for (bool const withMorphTarget : { false, true }) {
+                checkLoad(nullptr, c, withMorphTarget, normalized);
+                if (AssetConfigurationExtended::isSupported()) {
+                    AssetConfigurationExtended ext{ .gltfPath = "." };
+                    checkLoad(&ext, c, withMorphTarget, normalized);
+                }
+            }
+        }
+    }
+}
+
+// The extended loader must decode every quantized POSITION type, including morph deltas.
+TEST(glTFIOTangentsJobExtended, QuantizedPositionsAreDecoded) {
+    using math::float3;
+    auto sorted = [](float3 const* v, size_t count) {
+        std::vector<float3> result(v, v + count);
+        std::sort(result.begin(), result.end(), [](float3 const& a, float3 const& b) {
+            return std::tie(a.x, a.y, a.z) < std::tie(b.x, b.y, b.z);
+        });
+        return result;
+    };
+
+    for (QuantizedPositionCase const& c : kQuantizedPositionCases) {
+        for (bool const normalized : { true, false }) {
+            SCOPED_TRACE(testing::Message() << "componentType=" << c.componentType
+                                            << " normalized=" << normalized);
+            std::vector<uint8_t> const glb = makeNormalizedPositionGlb(c.componentType,
+                    /* withMorphTarget = */ true, normalized);
+
+            cgltf_options options{};
+            cgltf_data* data = nullptr;
+            ASSERT_EQ(cgltf_parse(&options, glb.data(), glb.size(), &data), cgltf_result_success);
+            ASSERT_EQ(cgltf_load_buffers(&options, data, "."), cgltf_result_success);
+            cgltf_primitive const* prim = &data->meshes[0].primitives[0];
+
+            float const lo = decodeQuantized(c, c.lo, normalized);
+            float const hi = decodeQuantized(c, c.hi, normalized);
+
+            // Base positions.
+            {
+                TangentsJobExtended::Params params{ .in = { .prim = prim,
+                        .morphTargetIndex = TangentsJobExtended::kMorphTargetUnused } };
+                TangentsJobExtended::run(&params);
+                auto& out = params.out;
+                ASSERT_EQ(out.vertexCount, 3u);
+                ASSERT_NE(out.positions, nullptr);
+                std::vector<float3> const expected =
+                        sorted(std::array{ float3{ lo, lo, lo }, float3{ hi, hi, hi },
+                                       float3{ lo, hi, lo } }.data(), 3);
+                std::vector<float3> const actual = sorted(out.positions, out.vertexCount);
+                for (size_t v = 0; v < 3; ++v) {
+                    EXPECT_FLOAT_EQ(actual[v].x, expected[v].x);
+                    EXPECT_FLOAT_EQ(actual[v].y, expected[v].y);
+                    EXPECT_FLOAT_EQ(actual[v].z, expected[v].z);
+                }
+                free(out.positions);
+                free(out.tbn);
+                free(out.triangles);
+            }
+
+            // Morph target 0: the output positions are the morph deltas.
+            {
+                TangentsJobExtended::Params params{
+                        .in = { .prim = prim, .morphTargetIndex = 0 } };
+                TangentsJobExtended::run(&params);
+                auto& out = params.out;
+                ASSERT_EQ(out.vertexCount, 3u);
+                ASSERT_NE(out.positions, nullptr);
+                std::vector<float3> const expected =
+                        sorted(std::array{ float3{ 0.0f }, float3{ hi, 0.0f, 0.0f },
+                                       float3{ 0.0f } }.data(), 3);
+                std::vector<float3> const actual = sorted(out.positions, out.vertexCount);
+                for (size_t v = 0; v < 3; ++v) {
+                    EXPECT_FLOAT_EQ(actual[v].x, expected[v].x);
+                    EXPECT_FLOAT_EQ(actual[v].y, expected[v].y);
+                    EXPECT_FLOAT_EQ(actual[v].z, expected[v].z);
+                }
+                free(out.positions);
+                free(out.tbn);
+                free(out.triangles);
+            }
+
+            cgltf_free(data);
+        }
+    }
+}
+
+// glTF clamps signed normalized values to -1, including the most negative integer.
+TEST(glTFIOCgltf, SignedNormalizedValuesAreClamped) {
+    auto unpack = [](void* data, size_t size, cgltf_component_type type, size_t count) {
+        cgltf_buffer buffer{ .size = size, .data = data };
+        cgltf_buffer_view view{ .buffer = &buffer, .size = size };
+        cgltf_accessor accessor{ .component_type = type, .normalized = true,
+                .type = cgltf_type_scalar, .count = count, .stride = size / count,
+                .buffer_view = &view };
+        std::vector<float> out(count);
+        EXPECT_EQ(cgltf_accessor_unpack_floats(&accessor, out.data(), count), count);
+        return out;
+    };
+
+    int16_t shorts[] = { -32768, -32767, 32767 };
+    std::vector<float> const s =
+            unpack(shorts, sizeof(shorts), cgltf_component_type_r_16, std::size(shorts));
+    EXPECT_EQ(s, (std::vector<float>{ -1.0f, -1.0f, 1.0f }));
+
+    int8_t bytes[] = { -128, -127, 127 };
+    std::vector<float> const b =
+            unpack(bytes, sizeof(bytes), cgltf_component_type_r_8, std::size(bytes));
+    EXPECT_EQ(b, (std::vector<float>{ -1.0f, -1.0f, 1.0f }));
 }
 
 TEST_F(glTFIOTest, EmptyImageDoesNotCrash) {

@@ -1225,12 +1225,12 @@ bool FAssetLoader::createPrimitive(const cgltf_primitive& inPrim, const char* na
         vertexCount = innerAccessor->count;
 
         // The positions accessor is required to have min/max properties, use them to expand
-        // the bounding box for this primitive.
+        // the bounding box for this primitive. Normalized (quantized) bounds must be decoded first.
         if (atype == cgltf_attribute_type_position) {
-            const float* minp = &innerAccessor->min[0];
-            const float* maxp = &innerAccessor->max[0];
-            outPrim->aabb.min = min(outPrim->aabb.min, float3(minp[0], minp[1], minp[2]));
-            outPrim->aabb.max = max(outPrim->aabb.max, float3(maxp[0], maxp[1], maxp[2]));
+            outPrim->aabb.min = min(outPrim->aabb.min,
+                    utility::dequantizeBounds(innerAccessor, innerAccessor->min));
+            outPrim->aabb.max = max(outPrim->aabb.max,
+                    utility::dequantizeBounds(innerAccessor, innerAccessor->max));
         }
 
         VertexBuffer::AttributeType fatype;
@@ -1306,12 +1306,10 @@ bool FAssetLoader::createPrimitive(const cgltf_primitive& inPrim, const char* na
             }
 
             Aabb targetAabb(baseAabb);
-            const float* minp = &innerAccessor->min[0];
-            const float* maxp = &innerAccessor->max[0];
 
             // We assume that the range of morph target weight is [0, 1].
-            targetAabb.min += float3(minp[0], minp[1], minp[2]);
-            targetAabb.max += float3(maxp[0], maxp[1], maxp[2]);
+            targetAabb.min += utility::dequantizeBounds(innerAccessor, innerAccessor->min);
+            targetAabb.max += utility::dequantizeBounds(innerAccessor, innerAccessor->max);
 
             outPrim->aabb.min = min(outPrim->aabb.min, targetAabb.min);
             outPrim->aabb.max = max(outPrim->aabb.max, targetAabb.max);

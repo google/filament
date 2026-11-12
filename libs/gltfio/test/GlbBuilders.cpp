@@ -567,6 +567,81 @@ std::vector<uint8_t> makePositionlessPrimitiveGlb(bool includeValidSiblingPrimit
     return assembleGlb(std::move(json), std::move(bin));
 }
 
+std::vector<uint8_t> makeNormalizedPositionGlb(int componentType, bool withMorphTarget,
+        bool normalized) {
+    bool const isSigned = componentType == 5120 || componentType == 5122;
+    bool const isShort = componentType == 5122 || componentType == 5123;
+    int32_t const hi = isShort ? (isSigned ? 32767 : 65535) : (isSigned ? 127 : 255);
+    int32_t const lo = isSigned ? -hi : 0;
+    uint32_t const componentSize = isShort ? 2u : 1u;
+    // VEC3 elements are padded to 4 components so that every element is 4-byte aligned.
+    uint32_t const stride = 4u * componentSize;
+    uint32_t const viewLength = 3u * stride;
+
+    std::vector<uint8_t> bin;
+    auto const appendComponent = [&](int32_t value) {
+        uint32_t const bits = uint32_t(value);
+        bin.push_back(uint8_t(bits & 0xffu));
+        if (isShort) {
+            bin.push_back(uint8_t((bits >> 8u) & 0xffu));
+        }
+    };
+    auto const appendVertex = [&](int32_t x, int32_t y, int32_t z) {
+        appendComponent(x);
+        appendComponent(y);
+        appendComponent(z);
+        appendComponent(0);
+    };
+
+    // Base positions: one vertex at each corner of the quantized range.
+    appendVertex(lo, lo, lo);
+    appendVertex(hi, hi, hi);
+    appendVertex(lo, hi, lo);
+
+    // Morph position deltas: only +X, by up to the full quantized range.
+    if (withMorphTarget) {
+        appendVertex(0, 0, 0);
+        appendVertex(hi, 0, 0);
+        appendVertex(0, 0, 0);
+    }
+
+    std::string const ctype = std::to_string(componentType);
+    std::string const sLo = std::to_string(lo);
+    std::string const sHi = std::to_string(hi);
+    std::string const sStride = std::to_string(stride);
+    std::string const sViewLength = std::to_string(viewLength);
+    std::string const sNormalized = normalized ? "true" : "false";
+
+    std::string accessors =
+            R"({"bufferView":0,"componentType":)" + ctype + R"(,"normalized":)" + sNormalized +
+            R"(,"count":3,"type":"VEC3","min":[)" + sLo + "," + sLo + "," + sLo +
+            R"(],"max":[)" + sHi + "," + sHi + "," + sHi + "]}";
+    std::string bufferViews = R"({"buffer":0,"byteOffset":0,"byteLength":)" + sViewLength +
+            R"(,"byteStride":)" + sStride + "}";
+    std::string targets;
+    if (withMorphTarget) {
+        accessors += R"(,{"bufferView":1,"componentType":)" + ctype + R"(,"normalized":)" +
+                sNormalized + R"(,"count":3,"type":"VEC3","min":[0,0,0],"max":[)" + sHi +
+                ",0,0]}";
+        bufferViews += R"(,{"buffer":0,"byteOffset":)" + sViewLength + R"(,"byteLength":)" +
+                sViewLength + R"(,"byteStride":)" + sStride + "}";
+        targets = R"(,"targets":[{"POSITION":1}])";
+    }
+
+    std::string json =
+            R"({"asset":{"version":"2.0"},)"
+            R"("extensionsUsed":["KHR_mesh_quantization"],)"
+            R"("extensionsRequired":["KHR_mesh_quantization"],)"
+            R"("scene":0,"scenes":[{"nodes":[0]}],"nodes":[{"mesh":0}],)"
+            R"("meshes":[{)" + std::string(withMorphTarget ? R"("weights":[0],)" : "") +
+            R"("primitives":[{"attributes":{"POSITION":0})" + targets + "}]}],"
+            R"("accessors":[)" + accessors + "],"
+            R"("bufferViews":[)" + bufferViews + "],"
+            R"("buffers":[{"byteLength":)" + std::to_string(bin.size()) + "}]}";
+
+    return assembleGlb(std::move(json), std::move(bin));
+}
+
 std::vector<uint8_t> makeInvalidDracoGlb() {
     std::string json = R"({
   "asset": { "version": "2.0" },
