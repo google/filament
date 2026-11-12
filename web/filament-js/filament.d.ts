@@ -144,6 +144,13 @@ export interface Renderer$ClearOptions {
     discard?: boolean;
 }
 
+export enum Renderer$SkipFrameHint {
+    IDLE,
+    CADENCE,
+    GPU_CATCH_UP,
+    RECLAIM_MEMORY,
+}
+
 export interface LightManager$ShadowOptions$Vsm {
     elvsm?: boolean;
     blurWidth?: number;
@@ -567,7 +574,7 @@ export class Renderer {
     public setDesiredPresentationTime(monotonicClockNs: number): void;
     public setRenderingDeadline(monotonicClockNs: number): void;
     public setVsyncTime(steadyClockTimeNano: number): void;
-    public skipFrame(vsyncSteadyClockTimeNano: number): void;
+    public skipFrame(vsyncSteadyClockTimeNano?: number, hint?: Renderer$SkipFrameHint): void;
     public shouldRenderFrame(): boolean;
     public copyFrame(dstSwapChain: SwapChain, dstViewport: float4, srcViewport: float4,
             flags: number): void;

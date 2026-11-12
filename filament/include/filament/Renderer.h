@@ -296,12 +296,63 @@ public:
     void setVsyncTime(uint64_t steadyClockTimeNano) noexcept;
 
     /**
+     * Hints informing Filament why a frame is being skipped so it can adjust cache eviction and
+     * asynchronous background work accordingly.
+     *
+     * @see skipFrame()
+     */
+    enum class SkipFrameHint : uint8_t {
+        /**
+         * The client is temporarily idle (for example, when scene content has not changed).
+         * Transient caches age out gradually over consecutive skipped frames, and queued
+         * asynchronous operations continue to run.
+         */
+        IDLE = 0,
+
+        /**
+         * The frame is skipped to maintain a target frame rate cadence below the display refresh
+         * rate. Transient caches are kept warm for the next rendered frame, and queued
+         * asynchronous operations continue to run.
+         */
+        CADENCE = 1,
+
+        /**
+         * The frame is skipped because the GPU has fallen behind. Transient caches are kept warm
+         * for the next rendered frame, and amortized asynchronous operations are deferred to avoid
+         * adding GPU load.
+         */
+        GPU_CATCH_UP = 2,
+
+        /**
+         * The client is stopping rendering and wants unused transient caches (such as FrameGraph
+         * textures and staging buffers) evicted immediately without blocking.
+         *
+         * Because command execution is asynchronous and in-flight GPU frames retain references to
+         * transient resources until completion, a single non-blocking call may not free resources
+         * used by frames still executing on the GPU. To synchronously reclaim all transient memory
+         * before returning (for example, when pausing rendering or handling a system memory trim
+         * callback), drain the GPU before and after calling skipFrame():
+         *
+         * ~~~~~~~~~~~{.cpp}
+         * engine->flushAndWait();
+         * renderer->skipFrame(0, Renderer::SkipFrameHint::RECLAIM_MEMORY);
+         * engine->flushAndWait();
+         * ~~~~~~~~~~~
+         */
+        RECLAIM_MEMORY = 3,
+    };
+
+    /**
      * Call skipFrame when momentarily skipping frames, for instance if the content of the
      * scene doesn't change.
      *
-     * @param vsyncSteadyClockTimeNano
+     * @param vsyncSteadyClockTimeNano VSYNC timestamp in nanoseconds, or 0 if unavailable.
+     * @param hint Intent hint guiding transient cache eviction and background work.
+     *
+     * @see SkipFrameHint
      */
-    void skipFrame(uint64_t vsyncSteadyClockTimeNano = 0u);
+    void skipFrame(uint64_t vsyncSteadyClockTimeNano = 0u,
+            SkipFrameHint hint = SkipFrameHint::IDLE);
 
     /**
      * Returns true if the current frame should be rendered.

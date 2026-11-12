@@ -121,7 +121,7 @@ public:
     void setVsyncTime(uint64_t steadyClockTimeNano) noexcept;
 
     // skip a frame
-    void skipFrame(uint64_t vsyncSteadyClockTimeNano);
+    void skipFrame(uint64_t vsyncSteadyClockTimeNano, SkipFrameHint hint);
 
     // Whether a frame should be rendered or not.
     bool shouldRenderFrame() const noexcept;

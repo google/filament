@@ -43,6 +43,7 @@ public:
     }
 
     void gc() noexcept;
+    void drain() noexcept;
     void print() const noexcept;
     void terminate() noexcept;
 

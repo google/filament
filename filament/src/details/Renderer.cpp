@@ -49,6 +49,8 @@
 #include <filament/Options.h>
 #include <filament/Renderer.h>
 
+#include <private/backend/Driver.h>
+
 #include <backend/DriverApiForward.h>
 #include <backend/DriverEnums.h>
 #include <backend/Handle.h>
@@ -355,7 +357,7 @@ std::pair<float, float2> FRenderer::prepareUpscaler(float2 const scale,
     return { bias, derivativesScale };
 }
 
-void FRenderer::skipFrame(uint64_t const vsyncSteadyClockTimeNano) {
+void FRenderer::skipFrame(uint64_t const vsyncSteadyClockTimeNano, SkipFrameHint const hint) {
     FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_FILAMENT);
 
     FILAMENT_CHECK_PRECONDITION(!mSwapChain) <<
@@ -373,14 +375,33 @@ void FRenderer::skipFrame(uint64_t const vsyncSteadyClockTimeNano) {
 
     mFrameInfoManager.updateUserHistory(nullptr, driver);
 
-    // Gives the backend a chance to execute periodic tasks. This must be called before
-    // the frame skipper.
-    driver.tick();
+    TextureCache::CachePolicy cachePolicy = TextureCache::CachePolicy::AGE;
+    backend::SkipFrameFlags skipFlags = backend::SkipFrameFlags::NONE;
+    switch (hint) {
+        case SkipFrameHint::IDLE:
+            cachePolicy = TextureCache::CachePolicy::AGE;
+            skipFlags = backend::SkipFrameFlags::NONE;
+            break;
+        case SkipFrameHint::CADENCE:
+            cachePolicy = TextureCache::CachePolicy::KEEP;
+            skipFlags = backend::SkipFrameFlags::KEEP_CACHES;
+            break;
+        case SkipFrameHint::GPU_CATCH_UP:
+            cachePolicy = TextureCache::CachePolicy::KEEP;
+            skipFlags = backend::SkipFrameFlags::KEEP_CACHES |
+                        backend::SkipFrameFlags::DEFER_ASYNC_WORK;
+            break;
+        case SkipFrameHint::RECLAIM_MEMORY:
+            cachePolicy = TextureCache::CachePolicy::EVICT_ALL;
+            skipFlags = backend::SkipFrameFlags::EVICT_CACHES;
+            break;
+    }
 
-    driver.skipFrame();
+    // Run TextureCache GC before driver.skipFrame() and engine.flush() so any destroyTexture()
+    // commands enter the command stream before the backend executes its handle/cache GC.
+    mResourceAllocator->gc(cachePolicy);
 
-    // do this before engine.flush()
-    mResourceAllocator->gc(true);
+    driver.skipFrame(skipFlags);
 
     engine.flush();     // flush command stream
 

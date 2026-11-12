@@ -83,10 +83,14 @@ public:
     // Evicts old unused buffers and bumps the current frame number.
     void gc() noexcept;
 
+    // Destroys all currently unused buffers without asserting that no buffers are in flight.
+    void evictAll() noexcept;
+
     // Destroys all unused buffers.
     void reset() noexcept;
 
 private:
+    void clearFreeStagesLocked() noexcept;
     MetalContext& mContext;
 
     // Synchronizes access to mFreeStages, mUsedStages, and mutable data inside MetalBufferPoolEntrys.

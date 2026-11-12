@@ -197,8 +197,8 @@ TextureHandle TextureCache::createTexture(StaticString const name,
             if (mDebugger && mDebugger->checkRecentEviction(key, evictedName, reason)) {
                 const char* reasonStr = "";
                 switch (reason) {
-                    case EvictionReason::SKIPPED_FRAME:
-                        reasonStr = "it was evicted when a frame was skipped";
+                    case EvictionReason::FORCED_EVICTION:
+                        reasonStr = "it was explicitly evicted";
                         break;
                     case EvictionReason::AGED_OUT:
                         reasonStr = "it aged out (unused for too many frames)";
@@ -251,13 +251,10 @@ void TextureCache::destroyTexture(TextureHandle const h) noexcept {
     }
 }
 
-void TextureCache::gc(bool const skippedFrame) noexcept {
-    // this is called regularly -- usually once per frame
-
-    // increase our age at each (non-skipped) frame
-    const size_t age = mAge;
-    if (!skippedFrame) {
-        mAge++;
+void TextureCache::gc(CachePolicy const policy) noexcept {
+    // This is called regularly -- usually once per frame.
+    if (policy == CachePolicy::KEEP) {
+        return;
     }
 
     // Purging strategy:
@@ -271,8 +268,17 @@ void TextureCache::gc(bool const skippedFrame) noexcept {
 
     auto& textureCache = mTextureCache;
 
-    // when skipping a frame, the maximum age to keep in the cache
-    constexpr size_t MAX_AGE_SKIPPED_FRAME = 1;
+    if (policy == CachePolicy::EVICT_ALL) {
+        for (auto it = textureCache.begin(); it != textureCache.end();) {
+            it = purge(it, EvictionReason::FORCED_EVICTION);
+        }
+#if FILAMENT_TEXTURE_CACHE_DEBUG
+        if (mDebugger) {
+            mDebugger->ageRecentEvictions(mAge);
+        }
+#endif
+        return;
+    }
 
     // maximum entry count to evict per GC, under the soft mCacheMaxAge limit
     constexpr size_t MAX_EVICTION_COUNT = 1;
@@ -291,6 +297,7 @@ void TextureCache::gc(bool const skippedFrame) noexcept {
     uint32_t evictedCount = 0;
     for (auto it = textureCache.begin(); it != textureCache.end();) {
         size_t const ageDiff = age - it->second.age;
+<<<<<<< HEAD
         bool const evictSkipped = skippedFrame && ageDiff > MAX_AGE_SKIPPED_FRAME;
         bool const evictHardAgedOut = !skippedFrame && ageDiff >= cacheMaxAgeHard;
         bool const evictSoftAgedOut = !skippedFrame && !evictHardAgedOut &&
@@ -303,6 +310,11 @@ void TextureCache::gc(bool const skippedFrame) noexcept {
                     ? EvictionReason::SKIPPED_FRAME
                     : EvictionReason::AGED_OUT;
             it = purge(it, reason);
+=======
+        if (ageDiff >= mCacheMaxAge && evictedCount < MAX_EVICTION_COUNT) {
+            evictedCount++;
+            it = purge(it, EvictionReason::AGED_OUT);
+>>>>>>> 95f88d553b3 (Add Renderer::skipFrame intent hints)
         } else {
             // build the set of ages present in the cache after eviction
             ages.set(std::min(size_t(31), ageDiff));
@@ -312,7 +324,7 @@ void TextureCache::gc(bool const skippedFrame) noexcept {
 
     // if we have more than MAX_UNIQUE_AGE_COUNT ages, we evict all the resources that
     // are older than the MAX_UNIQUE_AGE_COUNT'th age.
-    if (!skippedFrame && ages.count() > MAX_UNIQUE_AGE_COUNT) {
+    if (ages.count() > MAX_UNIQUE_AGE_COUNT) {
         uint32_t bits = ages.getValue();
         // remove from the set the ages we keep
         for (size_t i = 0; i < MAX_UNIQUE_AGE_COUNT; i++) {

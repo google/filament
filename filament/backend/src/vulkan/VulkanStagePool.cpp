@@ -263,6 +263,47 @@ fvkmemory::resource_ptr<VulkanStageImage::Resource> VulkanStagePool::acquireImag
     return wrapAsResource(stageImage);
 }
 
+void VulkanStagePool::reclaimCompleted() noexcept {
+    FVK_SYSTRACE_CONTEXT();
+    FVK_SYSTRACE_START("stagepool::reclaimCompleted");
+
+    decltype(mStages) stages;
+    stages.swap(mStages);
+    for (auto& pair : stages) {
+        if (pair.second->isSafeToReset()) {
+            pair.second->reset();
+            mStages.insert({ pair.second->capacity(), pair.second });
+        } else {
+            mStages.insert(pair);
+        }
+    }
+
+    FVK_SYSTRACE_END();
+}
+
+void VulkanStagePool::evictAll() noexcept {
+    FVK_SYSTRACE_CONTEXT();
+    FVK_SYSTRACE_START("stagepool::evictAll");
+
+    decltype(mStages) stages;
+    stages.swap(mStages);
+    for (auto& pair : stages) {
+        if (pair.second->isSafeToReset()) {
+            destroyStage(pair.second);
+        } else {
+            mStages.insert(pair);
+        }
+    }
+
+    for (auto image : mFreeImages) {
+        vmaDestroyImage(mAllocator, image->image(), image->memory());
+        delete image;
+    }
+    mFreeImages.clear();
+
+    FVK_SYSTRACE_END();
+}
+
 void VulkanStagePool::gc() noexcept {
     FVK_SYSTRACE_CONTEXT();
     FVK_SYSTRACE_START("stagepool::gc");

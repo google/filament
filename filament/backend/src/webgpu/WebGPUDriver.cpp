@@ -229,8 +229,17 @@ void WebGPUDriver::endFrame(const uint32_t /* frameId */) {
     }
 }
 
-void WebGPUDriver::skipFrame(int) {
-    if (getJobWorker()) {
+void WebGPUDriver::skipFrame(SkipFrameFlags const flags) {
+    mQueueManager.flush();
+    tick(0);
+
+    if (any(flags & SkipFrameFlags::EVICT_CACHES)) {
+        mStagePool.evictAll();
+    } else {
+        mStagePool.gc();
+    }
+
+    if (none(flags & SkipFrameFlags::DEFER_ASYNC_WORK) && getJobWorker()) {
         getJobWorker()->processFrame();
     }
 }

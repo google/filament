@@ -45,6 +45,9 @@ public:
     // Evicts old unused `VulkanGpuBuffer` and bumps the current frame number
     void gc() noexcept;
 
+    // Destroys all unused pooled `VulkanGpuBuffer` entries immediately.
+    void evictAll() noexcept;
+
     // Destroys all unused `VulkanGpuBuffer`.
     // This should be called while the context's VkDevice is still alive.
     void terminate() noexcept;

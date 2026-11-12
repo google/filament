@@ -233,6 +233,12 @@ public:
     fvkmemory::resource_ptr<VulkanStageImage::Resource> acquireImage(PixelDataFormat format, PixelDataType type,
             uint32_t width, uint32_t height);
 
+    // Resets completed empty stages for reuse without destroying stages, aging, or evicting images.
+    void reclaimCompleted() noexcept;
+
+    // Destroys all idle stages and free images immediately, retaining any stages still in use.
+    void evictAll() noexcept;
+
     // Evicts old unused stages and bumps the current frame number.
     void gc() noexcept;
 

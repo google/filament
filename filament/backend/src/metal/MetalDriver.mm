@@ -409,8 +409,19 @@ void MetalDriver::endFrame(uint32_t frameId) {
     }
 }
 
-void MetalDriver::skipFrame(int) {
-    if (getJobWorker()) {
+void MetalDriver::skipFrame(SkipFrameFlags const flags) {
+    tick(0);
+    submitPendingCommands(mContext);
+
+    if (any(flags & SkipFrameFlags::EVICT_CACHES)) {
+        mContext->bufferPool->evictAll();
+        CVMetalTextureCacheFlush(mContext->textureCache, 0);
+    } else if (none(flags & SkipFrameFlags::KEEP_CACHES)) {
+        mContext->bufferPool->gc();
+        CVMetalTextureCacheFlush(mContext->textureCache, 0);
+    }
+
+    if (none(flags & SkipFrameFlags::DEFER_ASYNC_WORK) && getJobWorker()) {
         getJobWorker()->processFrame();
     }
 }

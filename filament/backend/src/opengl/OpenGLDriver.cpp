@@ -4656,8 +4656,10 @@ void OpenGLDriver::endFrame(UTILS_UNUSED uint32_t const frameId) {
     }
 }
 
-void OpenGLDriver::skipFrame(int) {
-    if (getJobWorker()) {
+void OpenGLDriver::skipFrame(SkipFrameFlags const flags) {
+    tick(0);
+
+    if (none(flags & SkipFrameFlags::DEFER_ASYNC_WORK) && getJobWorker()) {
         getJobWorker()->processFrame();
     }
 }

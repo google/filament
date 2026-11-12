@@ -71,8 +71,8 @@ void Renderer::setFrameScheduleTime(std::chrono::steady_clock::time_point const 
     downcast(this)->setFrameScheduleTime(time);
 }
 
-void Renderer::skipFrame(uint64_t const vsyncSteadyClockTimeNano) {
-    downcast(this)->skipFrame(vsyncSteadyClockTimeNano);
+void Renderer::skipFrame(uint64_t const vsyncSteadyClockTimeNano, SkipFrameHint const hint) {
+    downcast(this)->skipFrame(vsyncSteadyClockTimeNano, hint);
 }
 
 bool Renderer::shouldRenderFrame() const noexcept {

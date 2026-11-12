@@ -22,9 +22,16 @@
 #include "Skip.h"
 #include "TrianglePrimitive.h"
 
+#include <private/backend/CommandBufferQueue.h>
+#include <private/backend/CommandStream.h>
+#include <private/backend/Driver.h>
+#include <private/backend/PlatformFactory.h>
+
 #include <backend/BufferDescriptor.h>
 #include <backend/CallbackHandler.h>
+#include <backend/DriverEnums.h>
 #include <backend/PixelBufferDescriptor.h>
+#include <backend/Platform.h>
 
 #include <atomic>
 #include <chrono>
@@ -108,7 +115,7 @@ TEST_F(BackendTest, BasicAsyncFlow) {
             // skipFrame(); a real app does this every frame via the Renderer, but this low-level
             // test bypasses that loop entirely. Backends with a dedicated worker thread (OpenGL,
             // Metal) don't need this, but calling it is harmless for them too.
-            api.skipFrame();
+            api.skipFrame(SkipFrameFlags::NONE);
             api.finish();
             executeCommands();
             getDriver().purge();
@@ -263,7 +270,7 @@ TEST_F(BackendTest, CanceledAsyncCallInvokesCallback) {
             // skipFrame(); a real app does this every frame via the Renderer, but this low-level
             // test bypasses that loop entirely. Backends with a dedicated worker thread (OpenGL,
             // Metal) don't need this, but calling it is harmless for them too.
-            api.skipFrame();
+            api.skipFrame(SkipFrameFlags::NONE);
             api.finish();
             executeCommands();
             getDriver().purge();
@@ -302,7 +309,7 @@ TEST_F(BackendTest, CanceledSetVertexBufferObjectAsyncInvokesCallback) {
         int attempts = 0;
         while (!flag && attempts < 1000) {
             // See BasicAsyncFlow for why skipFrame() is needed here.
-            api.skipFrame();
+            api.skipFrame(SkipFrameFlags::NONE);
             api.finish();
             executeCommands();
             getDriver().purge();
@@ -491,7 +498,7 @@ TEST_F(BackendTest, DestroyAfterAsyncUpdatePreservesFifo) {
         int attempts = 0;
         while (!flag && attempts < 1000) {
             // See BasicAsyncFlow for why skipFrame() is needed here.
-            api.skipFrame();
+            api.skipFrame(SkipFrameFlags::NONE);
             api.finish();
             executeCommands();
             getDriver().purge();
@@ -1076,6 +1083,112 @@ TEST_F(BackendTest, CanceledQueuedAsyncUploadReleasesBufferThroughHandler) {
     EXPECT_TRUE(uploads.indexRelease.throughHandler) << "updateIndexBufferAsync";
     EXPECT_TRUE(uploads.bufferRelease.throughHandler) << "updateBufferObjectAsync";
     EXPECT_TRUE(uploads.imageRelease.throughHandler) << "update3DImageAsync";
+}
+
+TEST(AsyncUploadsAmortizedTest, DeferAsyncWorkDefersAmortizationJobs) {
+    if (BackendTest::sBackend == Backend::NOOP) {
+        GTEST_SKIP() << "NOOP backend does not execute async jobs.";
+    }
+
+    auto backend = static_cast<filament::backend::Backend>(BackendTest::sBackend);
+    Platform* platform = PlatformFactory::create(&backend);
+    ASSERT_NE(platform, nullptr);
+
+    if (static_cast<uint8_t>(backend) != static_cast<uint8_t>(BackendTest::sBackend)) {
+        PlatformFactory::destroy(&platform);
+        GTEST_SKIP() << "Requested backend is unavailable on this host.";
+    }
+
+    struct ConfigAccessor : BackendTest {
+        static Platform::DriverConfig get() { return getDriverConfig(); }
+    };
+    Platform::DriverConfig driverConfig = ConfigAccessor::get();
+    driverConfig.asynchronousMode = Platform::AsynchronousMode::AMORTIZATION;
+    Driver* driver = platform->createDriver(nullptr, driverConfig);
+    ASSERT_NE(driver, nullptr);
+
+    if (!driver->isAsynchronousModeEnabled()) {
+        driver->terminate();
+        delete driver;
+        PlatformFactory::destroy(&platform);
+        GTEST_SKIP() << "Backend does not enable asynchronous mode with AMORTIZATION.";
+    }
+
+    constexpr size_t kMinCommandBuffersSize = 1 * 1024 * 1024;
+    constexpr size_t kCommandBuffersSize = 3 * kMinCommandBuffersSize;
+    CommandBufferQueue queue(kMinCommandBuffersSize, kCommandBuffersSize, /*paused=*/false);
+    CommandStream api(*driver, queue.getCircularBuffer());
+
+    auto flushAndExecute = [&]() {
+        queue.flush();
+        auto buffers = queue.waitForCommands();
+        for (auto& item : buffers) {
+            if (item.begin) {
+                api.execute(item.begin);
+                queue.releaseBuffer(item);
+            }
+        }
+    };
+
+    constexpr uint32_t kBufferSize = 256;
+    Handle<HwBufferObject> bo = api.createBufferObject(
+            kBufferSize, BufferObjectBinding::UNIFORM, BufferUsage::STATIC);
+
+    std::atomic_bool done{ false };
+    AsyncCallStatus asyncStatus = AsyncCallStatus::CANCELED;
+    struct State {
+        std::atomic_bool* done;
+        AsyncCallStatus* status;
+    } state{ &done, &asyncStatus };
+
+    void* const staging = std::malloc(kBufferSize);
+    ASSERT_NE(staging, nullptr);
+    std::memset(staging, 0xAB, kBufferSize);
+    BufferDescriptor desc(
+            staging, kBufferSize,
+            [](void* buffer, size_t, void*) { std::free(buffer); }, nullptr);
+
+    api.updateBufferObjectAsync(
+            bo, std::move(desc), 0, nullptr,
+            [](void* user, AsyncCallStatus status) {
+                auto* s = static_cast<State*>(user);
+                *s->status = status;
+                s->done->store(true, std::memory_order_release);
+            },
+            &state);
+    flushAndExecute();
+    driver->purge();
+
+    // Skipping frames with DEFER_ASYNC_WORK (GPU_CATCH_UP) must not advance the AmortizationWorker.
+    // Do not call api.finish() here, because finish() explicitly drains getJobWorker().
+    for (int i = 0; i < 5; ++i) {
+        api.skipFrame(SkipFrameFlags::KEEP_CACHES | SkipFrameFlags::DEFER_ASYNC_WORK);
+        flushAndExecute();
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        driver->purge();
+    }
+    EXPECT_FALSE(done.load(std::memory_order_acquire));
+
+    // Once DEFER_ASYNC_WORK is cleared, skipFrame drives the AmortizationWorker to completion.
+    int attempts = 0;
+    while (!done.load(std::memory_order_acquire) && attempts < 1000) {
+        api.skipFrame(SkipFrameFlags::NONE);
+        flushAndExecute();
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        driver->purge();
+        ++attempts;
+    }
+    EXPECT_TRUE(done.load(std::memory_order_acquire));
+    EXPECT_EQ(asyncStatus, AsyncCallStatus::COMPLETED);
+
+    api.destroyBufferObject(bo);
+    api.finish();
+    flushAndExecute();
+    driver->purge();
+
+    driver->terminate();
+    delete driver;
+    PlatformFactory::destroy(&platform);
 }
 
 } // namespace test

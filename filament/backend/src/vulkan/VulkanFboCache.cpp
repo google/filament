@@ -377,9 +377,6 @@ void VulkanFboCache::terminate() noexcept {
         mRenderPassRefCount[pair.first.renderPass]--;
     }
     mFramebufferCache.clear();
-
-    mRenderPassRefCount.clear();
-    mRenderPassCache.clear();
 }
 
 // Frees up old framebuffers and render passes, then nulls out their key.  Doesn't bother removing
