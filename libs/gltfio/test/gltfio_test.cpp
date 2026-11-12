@@ -56,12 +56,15 @@
 #endif
 #include <gtest/gtest.h>
 
+#include <algorithm>
+#include <array>
 #include <cstdint>
 #include <cstring>
 #include <filesystem>
 #include <fstream>
 #include <limits>
 #include <string>
+#include <tuple>
 #include <unordered_map>
 #include <vector>
 
@@ -1172,12 +1175,87 @@ TEST_F(glTFIOTest, QuantizedPositionBoundsAreDecoded) {
         for (bool const normalized : { true, false }) {
             for (bool const withMorphTarget : { false, true }) {
                 checkLoad(nullptr, c, withMorphTarget, normalized);
-                // TODO: the extended loader panics on the other quantized types.
-                if (c.componentType == 5121 && AssetConfigurationExtended::isSupported()) {
+                if (AssetConfigurationExtended::isSupported()) {
                     AssetConfigurationExtended ext{ .gltfPath = "." };
                     checkLoad(&ext, c, withMorphTarget, normalized);
                 }
             }
+        }
+    }
+}
+
+// The extended loader must decode every quantized POSITION type, including morph deltas.
+TEST(glTFIOTangentsJobExtended, QuantizedPositionsAreDecoded) {
+    using math::float3;
+    auto sorted = [](float3 const* v, size_t count) {
+        std::vector<float3> result(v, v + count);
+        std::sort(result.begin(), result.end(), [](float3 const& a, float3 const& b) {
+            return std::tie(a.x, a.y, a.z) < std::tie(b.x, b.y, b.z);
+        });
+        return result;
+    };
+
+    for (QuantizedPositionCase const& c : kQuantizedPositionCases) {
+        for (bool const normalized : { true, false }) {
+            SCOPED_TRACE(testing::Message() << "componentType=" << c.componentType
+                                            << " normalized=" << normalized);
+            std::vector<uint8_t> const glb = makeNormalizedPositionGlb(c.componentType,
+                    /* withMorphTarget = */ true, normalized);
+
+            cgltf_options options{};
+            cgltf_data* data = nullptr;
+            ASSERT_EQ(cgltf_parse(&options, glb.data(), glb.size(), &data), cgltf_result_success);
+            ASSERT_EQ(cgltf_load_buffers(&options, data, "."), cgltf_result_success);
+            cgltf_primitive const* prim = &data->meshes[0].primitives[0];
+
+            float const lo = decodeQuantized(c, c.lo, normalized);
+            float const hi = decodeQuantized(c, c.hi, normalized);
+
+            // Base positions.
+            {
+                TangentsJobExtended::Params params{ .in = { .prim = prim,
+                        .morphTargetIndex = TangentsJobExtended::kMorphTargetUnused } };
+                TangentsJobExtended::run(&params);
+                auto& out = params.out;
+                ASSERT_EQ(out.vertexCount, 3u);
+                ASSERT_NE(out.positions, nullptr);
+                std::vector<float3> const expected =
+                        sorted(std::array{ float3{ lo, lo, lo }, float3{ hi, hi, hi },
+                                       float3{ lo, hi, lo } }.data(), 3);
+                std::vector<float3> const actual = sorted(out.positions, out.vertexCount);
+                for (size_t v = 0; v < 3; ++v) {
+                    EXPECT_FLOAT_EQ(actual[v].x, expected[v].x);
+                    EXPECT_FLOAT_EQ(actual[v].y, expected[v].y);
+                    EXPECT_FLOAT_EQ(actual[v].z, expected[v].z);
+                }
+                free(out.positions);
+                free(out.tbn);
+                free(out.triangles);
+            }
+
+            // Morph target 0: the output positions are the morph deltas.
+            {
+                TangentsJobExtended::Params params{
+                        .in = { .prim = prim, .morphTargetIndex = 0 } };
+                TangentsJobExtended::run(&params);
+                auto& out = params.out;
+                ASSERT_EQ(out.vertexCount, 3u);
+                ASSERT_NE(out.positions, nullptr);
+                std::vector<float3> const expected =
+                        sorted(std::array{ float3{ 0.0f }, float3{ hi, 0.0f, 0.0f },
+                                       float3{ 0.0f } }.data(), 3);
+                std::vector<float3> const actual = sorted(out.positions, out.vertexCount);
+                for (size_t v = 0; v < 3; ++v) {
+                    EXPECT_FLOAT_EQ(actual[v].x, expected[v].x);
+                    EXPECT_FLOAT_EQ(actual[v].y, expected[v].y);
+                    EXPECT_FLOAT_EQ(actual[v].z, expected[v].z);
+                }
+                free(out.positions);
+                free(out.tbn);
+                free(out.triangles);
+            }
+
+            cgltf_free(data);
         }
     }
 }
