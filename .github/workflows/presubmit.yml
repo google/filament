@@ -924,27 +924,22 @@ jobs:
     needs: [check-verification]
     if: >
       always() && !cancelled() && !needs.check-verification.outputs.skip
-      && needs.check-verification.outputs.code-correctness == 'true'
+      && (needs.check-verification.outputs.code-correctness == 'true'
+          || needs.check-verification.outputs.check-headers == 'true')
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           fetch-depth: 0
           persist-credentials: false
-      - uses: ./.github/actions/linux-prereq
-      # This job compiles two configurations, so it restores both caches into the same ccache
-      # directory. The two archives hold disjoint objects, because ccache keys on the full
-      # compiler command line and an asan object never shares a hash with a release one; the only
-      # files they have in common are the statistics counters, which the action zeroes anyway.
-      - uses: ./.github/actions/ccache
-        with:
-          config: desktop-release
-      - uses: ./.github/actions/ccache
-        with:
-          config: desktop-asan-debug
       - name: Get commit message
         id: get_commit_msg
+        if: needs.check-verification.outputs.check-headers == 'true'
         uses: ./.github/actions/get-commit-msg
+      # Run header organization before installing Linux packages or restoring compiler caches:
+      # it needs only Python 3 and fails within seconds on misordered includes, and when a PR only
+      # touches non-Linux C/C++ files (e.g. Android JNI), the rest of this job is skipped entirely.
       - name: Check - header organization
+        if: needs.check-verification.outputs.check-headers == 'true'
         env:
           COMMIT_MESSAGE: ${{ steps.get_commit_msg.outputs.msg }}
           GIHUB_SHA: ${{ github.sha }}
@@ -962,7 +957,22 @@ jobs:
           else
             bash test/code-correctness/check-headers.sh ${GITHUB_SHA}
           fi
+      - uses: ./.github/actions/linux-prereq
+        if: needs.check-verification.outputs.code-correctness == 'true'
+      # This job compiles two configurations, so it restores both caches into the same ccache
+      # directory. The two archives hold disjoint objects, because ccache keys on the full
+      # compiler command line and an asan object never shares a hash with a release one; the only
+      # files they have in common are the statistics counters, which the action zeroes anyway.
+      - uses: ./.github/actions/ccache
+        if: needs.check-verification.outputs.code-correctness == 'true'
+        with:
+          config: desktop-release
+      - uses: ./.github/actions/ccache
+        if: needs.check-verification.outputs.code-correctness == 'true'
+        with:
+          config: desktop-asan-debug
       - name: Run build script
+        if: needs.check-verification.outputs.code-correctness == 'true'
         # We need to build before clang-tidy can run analysis
         run: |
           # -b enables ASAN and UBSAN (Address and Undefined Behavior Sanitizers) for the debug build.
@@ -977,12 +987,15 @@ jobs:
           # and build-linux share the desktop-release cache.
           ./build.sh -W -y none -p desktop release && ninja -C out/cmake-release install
       - uses: ./.github/actions/ccache-stats
-        if: ${{ !cancelled() }}
+        if: ${{ !cancelled() && needs.check-verification.outputs.code-correctness == 'true' }}
       - name: Check - clang-tidy (exception escape)
+        if: needs.check-verification.outputs.code-correctness == 'true'
         run: bash test/code-correctness/clang-tidy-proxy.sh
       - name: Check - public header inclusion
+        if: needs.check-verification.outputs.code-correctness == 'true'
         run: bash test/code-correctness/headers-inclusion.sh out/release/filament/include
       - name: Check - Filament unit tests
+        if: needs.check-verification.outputs.code-correctness == 'true'
         run: |
           # The tests that render, such as RenderingTest, use Mesa's software Vulkan driver.
           sudo apt-get install -y libvulkan1 mesa-vulkan-drivers
