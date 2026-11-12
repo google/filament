@@ -71,19 +71,37 @@ void WebGPUStagePool::recycleBuffer(wgpu::Buffer buffer) {
             });
 }
 
-void WebGPUStagePool::gc() {
+void WebGPUStagePool::reclaimInProgress(bool const evict) {
     // We found that MapAsync would sometimes lead to GetMappedRange returning nullptr if the
-    // command using that staging buffer has not finished executing, so here we only recycle those
-    // buffers that are not still being used by any command
+    // command using that staging buffer has not finished executing, so here we only reclaim those
+    // buffers that are not still being used by any command.
     std::vector<std::pair<std::shared_ptr<WebGPUSubmissionState>, wgpu::Buffer>> stillInProgress;
     for (auto& [st, buffer]: mInProgress) {
         if (st->getStatus() == FenceStatus::CONDITION_SATISFIED) {
-            recycleBuffer(buffer);
+            if (evict) {
+                buffer.Destroy();
+            } else {
+                recycleBuffer(buffer);
+            }
         } else {
             stillInProgress.push_back({st, buffer});
         }
     }
     std::swap(mInProgress, stillInProgress);
+}
+
+void WebGPUStagePool::gc() {
+    reclaimInProgress(false);
+}
+
+void WebGPUStagePool::evictAll() {
+    reclaimInProgress(true);
+
+    utils::LockGuard const lock(mMutex);
+    for (auto& [size, buffer] : mBuffers) {
+        buffer.Destroy();
+    }
+    mBuffers.clear();
 }
 
 wgpu::Buffer WebGPUStagePool::createNewBuffer(size_t bufferSize) {

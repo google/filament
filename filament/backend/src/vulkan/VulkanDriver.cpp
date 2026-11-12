@@ -461,10 +461,15 @@ void VulkanDriver::tick(int) {
     // If the Renderer is skipping a lot of frames, it's possible for
     // commands to accumulate, since we only flush command buffers if
     // driver.flush() is called, or in endFrame(). This ensures that
-    // flush and gc run regularly, even during skipped frames.
+    // flush and non-evicting cleanup run regularly without evicting warm caches.
     if (++mTicksSinceLastGc == MAX_TICKS_BETWEEN_GC) {
         flush();
-        collectGarbage(); // Resets mTicksSinceLastGc to 0.
+        mCommands.gc();
+        // Run ResourceManager GC before reclaimCompleted() so completed staging segments are
+        // destroyed and stages become safe to reset immediately.
+        mResourceManager.gc();
+        mStagePool.reclaimCompleted();
+        mTicksSinceLastGc = 0;
     }
 }
 
@@ -537,8 +542,43 @@ void VulkanDriver::endFrame(uint32_t frameId) {
     }
 }
 
-void VulkanDriver::skipFrame(int) {
-    if (getJobWorker()) {
+void VulkanDriver::skipFrame(SkipFrameFlags const flags) {
+    assert_invariant(!(any(flags & SkipFrameFlags::KEEP_CACHES) &&
+                       any(flags & SkipFrameFlags::EVICT_CACHES)));
+
+    // Submit any pending transfer or transition commands recorded outside a frame.
+    endCommandRecording();
+
+    mCommands.updateFences();
+    mReadPixels.gc();
+    mCommands.gc();
+    mDescriptorSetCache.gc();
+    mTicksSinceLastGc = 0;
+
+    if (any(flags & SkipFrameFlags::KEEP_CACHES)) {
+        mResourceManager.gc();
+        mStagePool.reclaimCompleted();
+    } else if (any(flags & SkipFrameFlags::EVICT_CACHES)) {
+        // Evict framebuffers first, then drain ResourceManager so retired staging segments,
+        // stage images, pooled buffers, and framebuffer -> render target -> texture chains are
+        // all freed before pool eviction runs.
+        mFramebufferCache.evictAll();
+        mResourceManager.drain();
+        mStagePool.evictAll();
+        mBufferCache.evictAll();
+        mPipelineCache.gc();
+    } else {
+        // Free what the retired command buffers released so the stage pool sees completed
+        // segments as empty, then run the same aging pass as endFrame().
+        mResourceManager.gc();
+        collectGarbage();
+    }
+
+#if FVK_ENABLED(FVK_DEBUG_RESOURCE_LEAK)
+    mResourceManager.print();
+#endif
+
+    if (none(flags & SkipFrameFlags::DEFER_ASYNC_WORK) && getJobWorker()) {
         getJobWorker()->processFrame();
     }
 }

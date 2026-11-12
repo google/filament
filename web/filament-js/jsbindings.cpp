@@ -813,7 +813,15 @@ class_<Renderer>("Renderer")
     .function("setDesiredPresentationTime", select_overload<void(int64_t)>(&Renderer::setDesiredPresentationTime))
     .function("setRenderingDeadline", select_overload<void(int64_t)>(&Renderer::setRenderingDeadline))
     .function("setVsyncTime", &Renderer::setVsyncTime)
-    .function("skipFrame", &Renderer::skipFrame)
+    .function("skipFrame", EMBIND_LAMBDA(void, (Renderer* self), {
+        self->skipFrame();
+    }), allow_raw_pointers())
+    .function("skipFrame", EMBIND_LAMBDA(void, (Renderer* self, uint64_t vsyncSteadyClockTimeNano), {
+        self->skipFrame(vsyncSteadyClockTimeNano);
+    }), allow_raw_pointers())
+    .function("skipFrame", EMBIND_LAMBDA(void, (Renderer* self, uint64_t vsyncSteadyClockTimeNano, Renderer::SkipFrameHint hint), {
+        self->skipFrame(vsyncSteadyClockTimeNano, hint);
+    }), allow_raw_pointers())
     .function("shouldRenderFrame", &Renderer::shouldRenderFrame)
     .function("beginFrame", EMBIND_LAMBDA(bool, (Renderer* self, SwapChain* swapChain), {
         return self->beginFrame(swapChain);

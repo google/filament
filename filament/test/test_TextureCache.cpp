@@ -66,7 +66,7 @@ protected:
     DriverApi& mDriverApi;
 };
 
-TEST_F(TextureCacheTest, SkippedFramePreservesLastRenderedFrameAndPurgesOlder) {
+TEST_F(TextureCacheTest, KeepPolicyPreservesAllEntriesWithoutAdvancingAge) {
     Engine::Config config{};
     config.resourceAllocatorCacheMaxAge = 1;
     TextureCache cache{ config, mDriverApi };
@@ -78,7 +78,7 @@ TEST_F(TextureCacheTest, SkippedFramePreservesLastRenderedFrameAndPurgesOlder) {
     cache.destroyTexture(t100);
     cache.destroyTexture(t200);
     cache.destroyTexture(t300);
-    cache.gc(false);
+    cache.gc();
 
     // Frame 1: reuse only t100; t200 and t300 remain unused from Frame 0.
     TextureHandle const t100_f1 = allocTexture(cache, 100);
@@ -86,20 +86,21 @@ TEST_F(TextureCacheTest, SkippedFramePreservesLastRenderedFrameAndPurgesOlder) {
     cache.destroyTexture(t100_f1);
     // At end of Frame 1, t200 and t300 have ageDiff == 1 >= mCacheMaxAge (1).
     // Only MAX_EVICTION_COUNT (1) texture (t200) is evicted; t300 stays in the cache.
-    cache.gc(false);
+    cache.gc();
 
-    // Frame 2 & 3 (skipped frames): should purge t300 (from Frame 0, ageDiff == 2 > 1)
-    // while keeping t100 (from Frame 1, the last rendered frame, ageDiff == 1).
-    cache.gc(true);
-    cache.gc(true);
+    // Frames 2..11 (CADENCE / KEEP): neither advances mAge nor evicts any cached entries, so
+    // both t100 (from Frame 1) and t300 (left over from Frame 0) stay warm.
+    for (int i = 0; i < 10; ++i) {
+        cache.gc(TextureCache::CachePolicy::KEEP);
+    }
 
-    // Next rendered frame: t100 must be a cache hit, while t200 and t300 must be cache misses.
+    // Next rendered frame: t100 and t300 must both be cache hits, while t200 was evicted at Frame 1.
     TextureHandle const t100_f4 = allocTexture(cache, 100);
     TextureHandle const t200_f4 = allocTexture(cache, 200);
     TextureHandle const t300_f4 = allocTexture(cache, 300);
     EXPECT_EQ(t100_f4.getId(), t100.getId());
     EXPECT_NE(t200_f4.getId(), t200.getId());
-    EXPECT_NE(t300_f4.getId(), t300.getId());
+    EXPECT_EQ(t300_f4.getId(), t300.getId());
 
     cache.destroyTexture(t100_f4);
     cache.destroyTexture(t200_f4);
@@ -119,13 +120,13 @@ TEST_F(TextureCacheTest, AgedOutRateLimitedEviction) {
     cache.destroyTexture(t100);
     cache.destroyTexture(t200);
     cache.destroyTexture(t300);
-    cache.gc(false);
+    cache.gc();
 
     // Frame 1 (no textures used): all 3 have ageDiff == 1, only 1 (t100) is evicted.
-    cache.gc(false);
+    cache.gc();
 
     // Frame 2 (no textures used): all remaining have ageDiff == 2, only 1 (t200) is evicted.
-    cache.gc(false);
+    cache.gc();
 
     // t300 should still be in the cache, while t100 and t200 were evicted.
     TextureHandle const t300_check = allocTexture(cache, 300);
@@ -152,18 +153,18 @@ TEST_F(TextureCacheTest, UniqueAgeLimitRetainsThreeBuckets) {
     TextureHandle const tA2 = allocTexture(cache, 101);
     cache.destroyTexture(tA1);
     cache.destroyTexture(tA2);
-    cache.gc(false);
+    cache.gc();
 
     // Frame 1: bucket B
     TextureHandle const tB = allocTexture(cache, 200);
     cache.destroyTexture(tB);
-    cache.gc(false);
+    cache.gc();
 
     // Frame 2: bucket C -> now 3 unique ages {0, 1, 2} are in the cache.
     // Since MAX_UNIQUE_AGE_COUNT is 3, all 3 buckets must survive.
     TextureHandle const tC = allocTexture(cache, 300);
     cache.destroyTexture(tC);
-    cache.gc(false);
+    cache.gc();
 
     // Verify bucket A's first texture is still cached (re-check it out and return it at Frame 3,
     // while tA2 remains at Frame 0's age!).
@@ -174,7 +175,7 @@ TEST_F(TextureCacheTest, UniqueAgeLimitRetainsThreeBuckets) {
     // C (ageDiff == 1), and D (ageDiff == 0).
     TextureHandle const tD = allocTexture(cache, 400);
     cache.destroyTexture(tD);
-    cache.gc(false);
+    cache.gc();
 
     // Bucket A (ageDiff == 3 at Frame 3 gc) must have been completely purged (both tA1 and tA2),
     // whereas Bucket B (ageDiff == 2), Bucket C (ageDiff == 1), and Bucket D (ageDiff == 0)
@@ -196,6 +197,59 @@ TEST_F(TextureCacheTest, UniqueAgeLimitRetainsThreeBuckets) {
     cache.destroyTexture(tD_check);
     cache.destroyTexture(tA1_check);
     cache.destroyTexture(tA2_check);
+    cache.terminate();
+}
+
+TEST_F(TextureCacheTest, IdleAgePolicyEvictsEvenLastRenderedFrame) {
+    Engine::Config config{};
+    config.resourceAllocatorCacheMaxAge = 1;
+    TextureCache cache{ config, mDriverApi };
+
+    // Frame 0: allocate and return a texture.
+    TextureHandle const t100 = allocTexture(cache, 100);
+    cache.destroyTexture(t100);
+    cache.gc(TextureCache::CachePolicy::AGE);
+
+    // Frame 1 (IDLE): t100 now has ageDiff == 1 >= mCacheMaxAge (1) and is evicted.
+    cache.gc(TextureCache::CachePolicy::AGE);
+
+    TextureHandle const t100_check = allocTexture(cache, 100);
+    EXPECT_NE(t100_check.getId(), t100.getId());
+
+    cache.destroyTexture(t100_check);
+    cache.terminate();
+}
+
+TEST_F(TextureCacheTest, EvictAllPurgesEveryEntryImmediately) {
+    Engine::Config config{};
+    config.resourceAllocatorCacheMaxAge = 10;
+    TextureCache cache{ config, mDriverApi };
+
+    // Frame 0 & 1: populate multiple textures with ageDiff == 0 and ageDiff == 1 (well below
+    // mCacheMaxAge and above MAX_EVICTION_COUNT = 1).
+    TextureHandle const t100 = allocTexture(cache, 100);
+    TextureHandle const t200 = allocTexture(cache, 200);
+    cache.destroyTexture(t100);
+    cache.destroyTexture(t200);
+    cache.gc(TextureCache::CachePolicy::AGE);
+
+    TextureHandle const t300 = allocTexture(cache, 300);
+    cache.destroyTexture(t300);
+    cache.gc(TextureCache::CachePolicy::AGE);
+
+    // A single EVICT_ALL call must purge all cached textures regardless of age or rate limits.
+    cache.gc(TextureCache::CachePolicy::EVICT_ALL);
+
+    TextureHandle const t100_check = allocTexture(cache, 100);
+    TextureHandle const t200_check = allocTexture(cache, 200);
+    TextureHandle const t300_check = allocTexture(cache, 300);
+    EXPECT_NE(t100_check.getId(), t100.getId());
+    EXPECT_NE(t200_check.getId(), t200.getId());
+    EXPECT_NE(t300_check.getId(), t300.getId());
+
+    cache.destroyTexture(t100_check);
+    cache.destroyTexture(t200_check);
+    cache.destroyTexture(t300_check);
     cache.terminate();
 }
 

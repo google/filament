@@ -23,7 +23,6 @@
 #include <filament/Renderer.h>
 #include <filament/Viewport.h>
 
-#include <backend/DriverEnums.h>
 #include <backend/PixelBufferDescriptor.h>
 
 #include <utils/FixedCapacityVector.h>
@@ -159,10 +158,10 @@ Java_com_google_android_filament_Renderer_nSetVsyncTime(JNIEnv *env, jclass claz
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_google_android_filament_Renderer_nSkipFrame(JNIEnv *env, jclass clazz, jlong nativeRenderer, jlong vsyncSteadyClockTimeNano) {
+Java_com_google_android_filament_Renderer_nSkipFrame(JNIEnv *env, jclass clazz, jlong nativeRenderer, jlong vsyncSteadyClockTimeNano, jint hint) {
     Renderer* const that = (Renderer*) nativeRenderer;
     wrapJni(env, [=]() {
-        that->skipFrame((uint64_t)vsyncSteadyClockTimeNano);
+        that->skipFrame((uint64_t)vsyncSteadyClockTimeNano, (Renderer::SkipFrameHint)hint);
     });
 }
 

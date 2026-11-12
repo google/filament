@@ -27,12 +27,14 @@
 #include <backend/TargetBufferInfo.h>
 #include <backend/AcquiredImage.h>
 
+#include <utils/BitmaskEnum.h>
 #include <utils/CString.h>
 #include <utils/ImmutableCString.h>
 #include <utils/FixedCapacityVector.h>
 #include <utils/compiler.h>
 
 #include <functional>
+#include <type_traits>
 
 #include <stddef.h>
 #include <stdint.h>
@@ -48,6 +50,21 @@
 #define FILAMENT_DEBUG_COMMANDS_SYSTRACE     0x4
 
 #define FILAMENT_DEBUG_COMMANDS              FILAMENT_DEBUG_COMMANDS_NONE
+
+namespace filament::backend {
+
+enum class SkipFrameFlags : uint8_t {
+    NONE             = 0,
+    KEEP_CACHES      = 1u << 0,
+    EVICT_CACHES     = 1u << 1,
+    DEFER_ASYNC_WORK = 1u << 2,
+};
+
+} // namespace filament::backend
+
+template<>
+struct utils::EnableBitMaskOperators<filament::backend::SkipFrameFlags>
+        : public std::true_type {};
 
 namespace filament::backend {
 

@@ -39,8 +39,10 @@ public:
             std::shared_ptr<WebGPUSubmissionState> submissionState);
     void recycleBuffer(wgpu::Buffer buffer);
     void gc();
+    void evictAll();
 
 private:
+    void reclaimInProgress(bool evict);
     wgpu::Buffer createNewBuffer(size_t bufferSize);
     std::multimap<uint32_t, wgpu::Buffer> mBuffers;
     std::vector<std::pair<std::shared_ptr<WebGPUSubmissionState>, wgpu::Buffer>> mInProgress;

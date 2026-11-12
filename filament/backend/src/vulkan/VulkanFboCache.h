@@ -112,6 +112,10 @@ public:
     // Evicts old unused Vulkan objects. Call this once per frame.
     void gc() noexcept;
 
+    // Evicts all cached VkFramebuffer entries immediately. VkRenderPass entries are kept and age
+    // out through gc().
+    void evictAll() noexcept;
+
     // Frees all Framebuffer objects. Call this every time a the swapchain is resized
     void resetFramebuffers() noexcept;
 

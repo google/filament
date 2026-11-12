@@ -3125,6 +3125,63 @@ TEST(FilamentTest, FrameHistoryStreamTest) {
     Engine::destroy(&engine);
 }
 
+TEST(FilamentTest, RendererSkipFrameHints) {
+    Engine* engine = Engine::create(Engine::Backend::NOOP);
+    SwapChain* swapChain = engine->createSwapChain(nullptr);
+    Renderer* renderer = engine->createRenderer();
+    FrameHistoryStream history(renderer);
+
+    auto submitRenderedFrame = [&](uint64_t vsyncTime) {
+        renderer->setVsyncTime(vsyncTime);
+        ASSERT_TRUE(renderer->beginFrame(swapChain));
+        renderer->endFrame();
+    };
+
+    uint64_t constexpr kFrameDurationNs = 16666666ull;
+    uint64_t vsync = kFrameDurationNs;
+
+    // Default arguments (vsync = 0, hint = IDLE) and explicit vsync (hint = IDLE).
+    submitRenderedFrame(vsync);
+    engine->flushAndWait();
+    renderer->skipFrame();
+    vsync += kFrameDurationNs;
+    renderer->skipFrame(vsync);
+
+    // CADENCE, GPU_CATCH_UP, and RECLAIM_MEMORY hints.
+    vsync += kFrameDurationNs;
+    renderer->skipFrame(vsync, Renderer::SkipFrameHint::CADENCE);
+    vsync += kFrameDurationNs;
+    renderer->skipFrame(vsync, Renderer::SkipFrameHint::GPU_CATCH_UP);
+    vsync += kFrameDurationNs;
+    renderer->skipFrame(vsync, Renderer::SkipFrameHint::RECLAIM_MEMORY);
+
+    vsync += kFrameDurationNs;
+    submitRenderedFrame(vsync);
+    engine->flushAndWait();
+
+    // Advance one more frame so FrameInfoManager publishes the second rendered frame into user history.
+    vsync += kFrameDurationNs;
+    submitRenderedFrame(vsync);
+    engine->flushAndWait();
+
+    size_t validCount = 0;
+    size_t missingCount = 0;
+    for (auto const& frame : history.getNewFrames()) {
+        if (frame) {
+            ++validCount;
+        } else {
+            ++missingCount;
+        }
+    }
+
+    EXPECT_EQ(validCount, 2u);
+    EXPECT_EQ(missingCount, 5u);
+
+    engine->destroy(swapChain);
+    engine->destroy(renderer);
+    Engine::destroy(&engine);
+}
+
 TEST(FilamentTest, FlushAndWaitDispatchesCallbacksOfPendingCommands) {
     Engine* engine = Engine::create(Engine::Backend::NOOP);
     BufferObject* bo = BufferObject::Builder().size(sizeof(uint32_t)).build(*engine);

@@ -56,10 +56,20 @@ void ResourceManager::gc() noexcept {
     FVK_SYSTRACE_END();
 }
 
-void ResourceManager::terminate() noexcept {
-    while (!mThreadSafeGcList.empty() || !mGcList.empty()) {
+void ResourceManager::drain() noexcept {
+    while (true) {
+        {
+            utils::LockGuard const lock(mThreadSafeGcListMutex);
+            if (mThreadSafeGcList.empty() && mGcList.empty()) {
+                return;
+            }
+        }
         gc();
     }
+}
+
+void ResourceManager::terminate() noexcept {
+    drain();
 }
 
 void ResourceManager::destroyWithType(ResourceType type, HandleId id) {

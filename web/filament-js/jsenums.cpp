@@ -28,6 +28,7 @@
 #include <filament/IndexBuffer.h>
 #include <filament/LightManager.h>
 #include <filament/RenderableManager.h>
+#include <filament/Renderer.h>
 #include <filament/RenderTarget.h>
 #include <filament/Texture.h>
 #include <filament/TextureSampler.h>
@@ -499,5 +500,11 @@ enum_<ktxreader::Ktx2Reader::Result>("Ktx2Reader$Result")
     enum_<filament::viewer::AutomationEngine::Options::ExportFormat>("AutomationEngine$ExportFormat")
         .value("TIFF", filament::viewer::AutomationEngine::Options::ExportFormat::TIFF)
         .value("PPM", filament::viewer::AutomationEngine::Options::ExportFormat::PPM);
+
+    enum_<filament::Renderer::SkipFrameHint>("Renderer$SkipFrameHint")
+        .value("IDLE", filament::Renderer::SkipFrameHint::IDLE)
+        .value("CADENCE", filament::Renderer::SkipFrameHint::CADENCE)
+        .value("GPU_CATCH_UP", filament::Renderer::SkipFrameHint::GPU_CATCH_UP)
+        .value("RECLAIM_MEMORY", filament::Renderer::SkipFrameHint::RECLAIM_MEMORY);
 
 }

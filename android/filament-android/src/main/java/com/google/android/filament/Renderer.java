@@ -68,6 +68,56 @@ public class Renderer {
     private @Nullable ClearOptions mClearOptions;
 
     /**
+     * Hints informing Filament why a frame is being skipped so it can adjust cache eviction and asynchronous background work accordingly.
+     *
+     * @see #skipFrame
+     */
+    public enum SkipFrameHint {
+        /**
+         * The client is temporarily idle (for example, when scene content has not changed).
+         *
+         * <p>Transient caches age out gradually over consecutive skipped frames, and queued
+         * asynchronous operations continue to run.</p>
+         */
+        IDLE,
+        /**
+         * The frame is skipped to maintain a target frame rate cadence below the display refresh rate.
+         *
+         * <p>Transient caches are kept warm for the next rendered frame, and queued
+         * asynchronous operations continue to run.</p>
+         */
+        CADENCE,
+        /**
+         * The frame is skipped because the GPU has fallen behind.
+         *
+         * <p>Transient caches are kept warm
+         * for the next rendered frame, and amortized asynchronous operations are deferred to avoid
+         * adding GPU load.</p>
+         */
+        GPU_CATCH_UP,
+        /**
+         * The client is stopping rendering and wants unused transient caches (such as FrameGraph textures and staging buffers) evicted immediately without blocking.
+         *
+         * <p>Because command execution is asynchronous and in-flight GPU frames retain references to
+         * transient resources until completion, a single non-blocking call may not free resources
+         * used by frames still executing on the GPU. To synchronously reclaim all transient memory
+         * before returning (for example, when pausing rendering or handling a system memory trim
+         * callback), drain the GPU before and after calling skipFrame():</p>
+         *
+         * <pre>{@code
+         * engine->flushAndWait();
+         * renderer->skipFrame(0, Renderer::SkipFrameHint::RECLAIM_MEMORY);
+         * engine->flushAndWait();
+         *
+         * }</pre>
+         */
+        RECLAIM_MEMORY;
+
+        /** @return the value of this enum constant as used by the native Filament engine. */
+        public int toFilamentNative() { return ordinal(); }
+    }
+
+    /**
      * Indicates that the dstSwapChain passed into copyFrame() should be committed after the frame has been copied.
      *
      * @see #copyFrame
@@ -187,18 +237,36 @@ public class Renderer {
         nSetVsyncTime(getNativeObject(), steadyClockTimeNano);
     }
 
-    /** Call skipFrame when momentarily skipping frames, for instance if the content of the scene doesn't change. */
+    /**
+     * Call skipFrame when momentarily skipping frames, for instance if the content of the scene doesn't change.
+     *
+     * @see SkipFrameHint
+     */
     public void skipFrame() {
-        skipFrame(0);
+        skipFrame(0, SkipFrameHint.IDLE);
     }
 
     /**
      * Call skipFrame when momentarily skipping frames, for instance if the content of the scene doesn't change.
      *
-     * @param vsyncSteadyClockTimeNano
+     * @param vsyncSteadyClockTimeNano VSYNC timestamp in nanoseconds, or 0 if unavailable.
+     *
+     * @see SkipFrameHint
      */
     public void skipFrame(@IntRange(from = 0) long vsyncSteadyClockTimeNano) {
-        nSkipFrame(getNativeObject(), vsyncSteadyClockTimeNano);
+        skipFrame(vsyncSteadyClockTimeNano, SkipFrameHint.IDLE);
+    }
+
+    /**
+     * Call skipFrame when momentarily skipping frames, for instance if the content of the scene doesn't change.
+     *
+     * @param vsyncSteadyClockTimeNano VSYNC timestamp in nanoseconds, or 0 if unavailable.
+     * @param hint Intent hint guiding transient cache eviction and background work.
+     *
+     * @see SkipFrameHint
+     */
+    public void skipFrame(@IntRange(from = 0) long vsyncSteadyClockTimeNano, @NonNull SkipFrameHint hint) {
+        nSkipFrame(getNativeObject(), vsyncSteadyClockTimeNano, hint.toFilamentNative());
     }
 
     /**
@@ -1359,7 +1427,7 @@ public class Renderer {
     private static native void nSetFrameRateOptions(long nativeRenderer, float optionsHeadRoomRatio, float optionsScaleRate, int optionsHistory, int optionsInterval);
     private static native void nSetClearOptions(long nativeRenderer, double optionsClearColorX, double optionsClearColorY, double optionsClearColorZ, double optionsClearColorW, int optionsClearStencil, boolean optionsClear, boolean optionsDiscard);
     private static native void nSetVsyncTime(long nativeRenderer, @IntRange(from = 0) long steadyClockTimeNano);
-    private static native void nSkipFrame(long nativeRenderer, @IntRange(from = 0) long vsyncSteadyClockTimeNano);
+    private static native void nSkipFrame(long nativeRenderer, @IntRange(from = 0) long vsyncSteadyClockTimeNano, int hint);
     private static native boolean nShouldRenderFrame(long nativeRenderer);
     private static native boolean nBeginFrame(long nativeRenderer, long nativeSwapChain, @IntRange(from = 0) long vsyncSteadyClockTimeNano);
     private static native void nSetPresentationTime(long nativeRenderer, long monotonic_clock_ns);

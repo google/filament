@@ -86,9 +86,15 @@ protected:
 class TextureCache final : public TextureCacheInterface {
 public:
     enum class EvictionReason {
-        SKIPPED_FRAME,
+        FORCED_EVICTION,
         AGED_OUT,
         UNIQUE_AGE_LIMIT
+    };
+
+    enum class CachePolicy : uint8_t {
+        AGE,       // Advance mAge and evict entries past mCacheMaxAge (rate-limited) or unique-age limit.
+        KEEP,      // Do not advance mAge and do not evict any entries.
+        EVICT_ALL, // Immediately purge all entries currently in mTextureCache.
     };
 
     explicit TextureCache(std::shared_ptr<TextureCacheDisposer> disposer,
@@ -121,7 +127,7 @@ public:
 
     void destroyTexture(backend::TextureHandle h) noexcept override;
 
-    void gc(bool skippedFrame = false) noexcept;
+    void gc(CachePolicy policy = CachePolicy::AGE) noexcept;
 
 private:
     size_t const mCacheMaxAge;

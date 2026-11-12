@@ -110,13 +110,22 @@ void VulkanBufferCache::gc() noexcept {
     FVK_SYSTRACE_END();
 }
 
-void VulkanBufferCache::terminate() noexcept {
+void VulkanBufferCache::evictAll() noexcept {
+    FVK_SYSTRACE_CONTEXT();
+    FVK_SYSTRACE_START("VulkanBufferCache::evictAll");
+
     for (auto& bufferPool: mGpuBufferPools) {
         for (auto& poolEntry: bufferPool) {
             destroy(poolEntry.second.gpuBuffer);
         }
         bufferPool.clear();
     }
+
+    FVK_SYSTRACE_END();
+}
+
+void VulkanBufferCache::terminate() noexcept {
+    evictAll();
 }
 
 void VulkanBufferCache::release(VulkanGpuBuffer const* gpuBuffer) noexcept {

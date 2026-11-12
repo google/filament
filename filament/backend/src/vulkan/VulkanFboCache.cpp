@@ -373,6 +373,20 @@ void VulkanFboCache::resetFramebuffers() noexcept {
     mFramebufferCache.clear();
 }
 
+void VulkanFboCache::evictAll() noexcept {
+    FVK_SYSTRACE_CONTEXT();
+    FVK_SYSTRACE_START("fbocache::evictAll");
+
+    // Only framebuffers are evicted, because they hold references to render targets and their
+    // textures. Render passes consume no GPU memory and are left to age out through gc().
+    // VulkanPipelineCache keys pipelines on the raw VkRenderPass handle, and gc() expires both on
+    // the same schedule. Destroying a render pass here would let the driver reuse its handle for
+    // an incompatible render pass while pipelines keyed on the old one are still cached.
+    resetFramebuffers();
+
+    FVK_SYSTRACE_END();
+}
+
 void VulkanFboCache::terminate() noexcept {
     resetFramebuffers();
 

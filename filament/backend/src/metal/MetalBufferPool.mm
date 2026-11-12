@@ -105,14 +105,23 @@ void MetalBufferPool::gc() noexcept {
     }
 }
 
-void MetalBufferPool::reset() noexcept {
-    utils::LockGuard const lock(mMutex);
-
-    assert_invariant(mUsedStages.empty());
+void MetalBufferPool::clearFreeStagesLocked() noexcept {
     for (auto pair : mFreeStages) {
         delete pair.second;
     }
     mFreeStages.clear();
+}
+
+void MetalBufferPool::evictAll() noexcept {
+    utils::LockGuard const lock(mMutex);
+    clearFreeStagesLocked();
+}
+
+void MetalBufferPool::reset() noexcept {
+    utils::LockGuard const lock(mMutex);
+
+    assert_invariant(mUsedStages.empty());
+    clearFreeStagesLocked();
 }
 
 MetalBumpAllocator::MetalBumpAllocator(id<MTLDevice> device, size_t capacity)
