@@ -1,6 +1,12 @@
-// Filament tools plugin
+// Filament tools and convention plugins
 pluginManagement {
+    includeBuild("build-logic")
     includeBuild("gradle-plugin")
+    repositories {
+        google()
+        mavenCentral()
+        gradlePluginPortal()
+    }
 }
 plugins {
     id("org.gradle.toolchains.foojay-resolver-convention") version "1.0.0"
@@ -14,25 +20,27 @@ include(":filament-utils-android")
 include(":filament-tools")
 
 // Samples
-include(":samples:sample-gltf-viewer")
-include(":samples:sample-hello-camera")
-include(":samples:sample-hello-triangle")
-include(":samples:sample-time-projection")
-include(":samples:sample-procedural-effect")
-include(":samples:sample-procedural-texture-quad")
-include(":samples:sample-image-based-lighting")
-include(":samples:sample-lit-cube")
-include(":samples:sample-live-wallpaper")
-include(":samples:sample-material-builder")
-include(":samples:sample-material-instance-stress")
-include(":samples:sample-multi-view")
-include(":samples:sample-page-curl")
-include(":samples:sample-stream-test")
-include(":samples:sample-texture-view")
-include(":samples:sample-texture-target")
-include(":samples:sample-textured-object")
-include(":samples:sample-transparent-view")
-include(":samples:sample-render-validation")
-include(":samples:sample-cpp-viewer")
+if (!providers.gradleProperty("com.google.android.filament.skip-samples").isPresent) {
+    include(":samples:sample-gltf-viewer")
+    include(":samples:sample-hello-camera")
+    include(":samples:sample-hello-triangle")
+    include(":samples:sample-time-projection")
+    include(":samples:sample-procedural-effect")
+    include(":samples:sample-procedural-texture-quad")
+    include(":samples:sample-image-based-lighting")
+    include(":samples:sample-lit-cube")
+    include(":samples:sample-live-wallpaper")
+    include(":samples:sample-material-builder")
+    include(":samples:sample-material-instance-stress")
+    include(":samples:sample-multi-view")
+    include(":samples:sample-page-curl")
+    include(":samples:sample-stream-test")
+    include(":samples:sample-texture-view")
+    include(":samples:sample-texture-target")
+    include(":samples:sample-textured-object")
+    include(":samples:sample-transparent-view")
+    include(":samples:sample-render-validation")
+    include(":samples:sample-cpp-viewer")
+}
 
 rootProject.name = "filament"

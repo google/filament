@@ -16,6 +16,7 @@
 
 package com.google.android.filament.gradle
 
+import com.android.build.api.dsl.CommonExtension
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 
@@ -25,37 +26,67 @@ class FilamentPlugin : Plugin<Project> {
 
         val extension = project.extensions.create("filament", FilamentExtension::class.java, project)
 
-        project.afterEvaluate {
-            extension.tools.resolve(project)
-
-            project.tasks.register("filamentCompileMaterials", MaterialCompileTask::class.java) { task ->
-                task.enabled = extension.materialInputDir.isPresent && extension.materialOutputDir.isPresent
-                task.inputDir.set(extension.materialInputDir.orNull)
-                task.outputDir.set(extension.materialOutputDir.orNull)
-                task.matcTool.from(extension.tools.matcToolFiles)
-            }
-
-            project.tasks.register("filamentGenerateIbl", IblGenerateTask::class.java) { task ->
-                task.enabled = extension.iblInputFile.isPresent && extension.iblOutputDir.isPresent
-                task.cmgenArgs.set(extension.cmgenArgs)
-                task.inputFile.set(extension.iblInputFile.orNull)
-                task.outputDir.set(extension.iblOutputDir.orNull)
-                task.cmgenTool.from(extension.tools.cmgenToolFiles)
-            }
-
-            project.tasks.register("filamentCompileMesh", MeshCompileTask::class.java) { task ->
-                task.enabled = extension.meshInputFile.isPresent && extension.meshOutputDir.isPresent
-                task.inputFile.set(extension.meshInputFile.orNull)
-                task.outputDir.set(extension.meshOutputDir.orNull)
-                task.filameshTool.from(extension.tools.filameshToolFiles)
-            }
-
-            project.tasks.named("preBuild").configure { task ->
-                task.dependsOn(
-                    "filamentCompileMaterials",
-                    "filamentGenerateIbl",
-                    "filamentCompileMesh"
+        project.plugins.withId("com.android.base") {
+            project.extensions.configure(CommonExtension::class.java) { android ->
+                android.sourceSets.getByName("main").assets.directories.add(
+                    project.layout.buildDirectory.dir("generated/assets/filament").get().asFile.path
                 )
+            }
+        }
+
+        val compileMaterials = project.tasks.register("filamentCompileMaterials", MaterialCompileTask::class.java) { task ->
+            task.onlyIf { task.inputDir.isPresent && task.outputDir.isPresent }
+            task.inputDir.set(extension.materialInputDir)
+            task.outputDir.set(extension.materialOutputDir)
+            task.matcTool.from(project.provider {
+                if (extension.materialInputDir.isPresent && extension.materialOutputDir.isPresent) {
+                    extension.tools.matcToolFiles
+                } else {
+                    project.files()
+                }
+            })
+            task.excludeVulkan.set(
+                project.providers.gradleProperty("com.google.android.filament.exclude-vulkan")
+                    .map { it != "false" }
+                    .orElse(false)
+            )
+            task.matNoOpt.set(
+                project.providers.gradleProperty("com.google.android.filament.matnopt")
+                    .map { it != "false" }
+                    .orElse(false)
+            )
+        }
+
+        val generateIbl = project.tasks.register("filamentGenerateIbl", IblGenerateTask::class.java) { task ->
+            task.onlyIf { task.inputFile.isPresent && task.outputDir.isPresent }
+            task.cmgenArgs.set(extension.cmgenArgs)
+            task.inputFile.set(extension.iblInputFile)
+            task.outputDir.set(extension.iblOutputDir)
+            task.cmgenTool.from(project.provider {
+                if (extension.iblInputFile.isPresent && extension.iblOutputDir.isPresent) {
+                    extension.tools.cmgenToolFiles
+                } else {
+                    project.files()
+                }
+            })
+        }
+
+        val compileMesh = project.tasks.register("filamentCompileMesh", MeshCompileTask::class.java) { task ->
+            task.onlyIf { task.inputFile.isPresent && task.outputDir.isPresent }
+            task.inputFile.set(extension.meshInputFile)
+            task.outputDir.set(extension.meshOutputDir)
+            task.filameshTool.from(project.provider {
+                if (extension.meshInputFile.isPresent && extension.meshOutputDir.isPresent) {
+                    extension.tools.filameshToolFiles
+                } else {
+                    project.files()
+                }
+            })
+        }
+
+        project.tasks.configureEach { task ->
+            if (task.name.startsWith("generate") && task.name.endsWith("Assets")) {
+                task.dependsOn(compileMaterials, generateIbl, compileMesh)
             }
         }
     }
