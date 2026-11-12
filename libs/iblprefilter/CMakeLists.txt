@@ -110,7 +110,7 @@ else()
         # TODO: aggressive vectorization is currently broken on Android
         #        -fslp-vectorize-aggressive
         -fvisibility-inlines-hidden
-        -fstrict-vtable-pointers
+        $<$<CXX_COMPILER_ID:Clang,AppleClang>:-fstrict-vtable-pointers>
     )
 endif()
 
