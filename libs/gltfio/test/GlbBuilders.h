@@ -79,6 +79,12 @@ std::vector<uint8_t> makeSparseTangentMorphGlb(int morphTargetCount, int tangent
 // with the base vertex buffer.
 std::vector<uint8_t> makeColorSeamMorphGlb(MorphMaterial material);
 
+// Builds a GLB whose mesh has two single-triangle primitives that share their accessors, each with
+// one morph target. The morph target POSITION accessor is a VEC4 of floats, and its bufferView,
+// which is the last thing in the buffer, declares `byteStride`. A stride below 16 makes the
+// elements overlap, which cgltf_validate() accepts. Reproduces issue #10796.
+std::vector<uint8_t> makeStridedVec4MorphGlb(uint32_t byteStride);
+
 // Builds a GLB whose first primitive has only a TEXCOORD_0 attribute (no POSITION) and uses the
 // default lit material, reproducing issue #10638. When `includeValidSiblingPrimitive` is true, the
 // mesh also contains a second primitive with a valid POSITION attribute.

@@ -636,15 +636,21 @@ inline bool uploadBuffers(FFilamentAsset* asset, Engine& engine,
                 continue;
             }
             cgltf_accessor_unpack_floats(accessor, floatsData, floatsCount);
+
+            // Always upload the unpacked floats: unlike the raw bytes of the bufferView, they are
+            // tightly packed and take the accessor's byteStride and sparse data into account.
             if (accessor->type == cgltf_type_vec3) {
                 slot.morphTargetBuffer->setPositionsAt(engine, slot.bufferIndex,
                         (const float3*) floatsData,
                         slot.morphTargetCount,
                         slot.morphTargetOffset);
-            } else {
+            } else if (accessor->type == cgltf_type_vec4) {
                 slot.morphTargetBuffer->setPositionsAt(engine, slot.bufferIndex,
-                        (const float4*) data, slot.morphTargetBuffer->getVertexCount(),
+                        (const float4*) floatsData,
+                        slot.morphTargetCount,
                         slot.morphTargetOffset);
+            } else {
+                LOG(WARNING) << "Unsupported morph target position type, skipping.";
             }
             free(floatsData);
             continue;
