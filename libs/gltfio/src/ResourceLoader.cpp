@@ -239,7 +239,14 @@ inline void createSkins(cgltf_data const* gltf, bool normalize,
             name = CString(srcSkin.name);
         }
         const cgltf_accessor* srcMatrices = srcSkin.inverse_bind_matrices;
-        FixedCapacityVector<mat4f> inverseBindMatrices(srcSkin.joints_count);
+
+        // This list is indexed with the glTF skin index, just like FFilamentInstance::mSkins, so
+        // every skin gets an entry. A skin whose matrices are absent, or rejected below, keeps
+        // identity matrices, which is what glTF prescribes when inverseBindMatrices is undefined.
+        FFilamentAsset::Skin& skin = skins.emplace_back(FFilamentAsset::Skin{
+                .name = std::move(name),
+                .inverseBindMatrices = FixedCapacityVector<mat4f>(srcSkin.joints_count),
+        });
         if (srcMatrices) {
             if (srcMatrices->type != cgltf_type_mat4 ||
                     srcMatrices->component_type != cgltf_component_type_r_32f) {
@@ -283,13 +290,9 @@ inline void createSkins(cgltf_data const* gltf, bool normalize,
                 srcBuffer = (uint8_t*) srcMatrices->buffer_view->buffer->data + totalOffset;
             }
 
-            memcpy((uint8_t*) inverseBindMatrices.data(), (const void*) srcBuffer, requiredBytes);
+            memcpy((uint8_t*) skin.inverseBindMatrices.data(), (const void*) srcBuffer,
+                    requiredBytes);
         }
-        FFilamentAsset::Skin skin{
-                .name = std::move(name),
-                .inverseBindMatrices = std::move(inverseBindMatrices),
-        };
-        skins.emplace_back(std::move(skin));
     }
 }
 

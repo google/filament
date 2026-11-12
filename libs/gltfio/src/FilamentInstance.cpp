@@ -60,7 +60,8 @@ size_t FFilamentInstance::getSkinCount() const noexcept {
 }
 
 const char* FFilamentInstance::getSkinNameAt(size_t skinIndex) const noexcept {
-    if (mSkins.size() <= skinIndex) {
+    // The names are stored in the asset, which only has them once its resources are loaded.
+    if (mOwner->mSkins.size() <= skinIndex) {
         return nullptr;
     }
     return mOwner->mSkins[skinIndex].name.c_str();
