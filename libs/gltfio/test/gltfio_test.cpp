@@ -1110,6 +1110,78 @@ TEST_F(glTFIOTest, MeshWithPositionlessAndValidPrimitives) {
     }
 }
 
+// Quantized POSITION types and the extreme values makeNormalizedPositionGlb() stores.
+struct QuantizedPositionCase {
+    int componentType;
+    float lo;
+    float hi;
+};
+constexpr QuantizedPositionCase kQuantizedPositionCases[] = {
+    { 5120, -127.0f, 127.0f },     // BYTE
+    { 5121, 0.0f, 255.0f },        // UNSIGNED_BYTE
+    { 5122, -32767.0f, 32767.0f }, // SHORT
+    { 5123, 0.0f, 65535.0f },      // UNSIGNED_SHORT
+};
+
+static constexpr float decodeQuantized(QuantizedPositionCase const& c, float value,
+        bool normalized) {
+    return normalized ? value / c.hi : value;
+}
+
+// Issue #10817: quantized POSITION bounds must be decoded like the vertices.
+TEST_F(glTFIOTest, QuantizedPositionBoundsAreDecoded) {
+    auto checkLoad = [&](AssetConfigurationExtended* ext, QuantizedPositionCase const& c,
+            bool withMorphTarget, bool normalized) {
+        SCOPED_TRACE(testing::Message() << "componentType=" << c.componentType
+                                        << " normalized=" << normalized
+                                        << " extended=" << (ext != nullptr)
+                                        << " morph=" << withMorphTarget);
+        std::vector<uint8_t> const glb =
+                makeNormalizedPositionGlb(c.componentType, withMorphTarget, normalized);
+
+        AssetLoader* assetLoader = AssetLoader::create({
+                .engine = mEngine,
+                .materials = mMaterialProvider,
+                .names = mNameManager,
+                .ext = ext,
+        });
+        ASSERT_NE(assetLoader, nullptr);
+
+        FilamentAsset* asset = assetLoader->createAsset(glb.data(), uint32_t(glb.size()));
+        ASSERT_NE(asset, nullptr);
+
+        ResourceLoader resourceLoader({ mEngine, ".", false });
+        EXPECT_TRUE(resourceLoader.loadResources(asset));
+
+        // The +X morph delta only extends max.x.
+        float const lo = decodeQuantized(c, c.lo, normalized);
+        float const hi = decodeQuantized(c, c.hi, normalized);
+        Aabb const bounds = asset->getBoundingBox();
+        EXPECT_FLOAT_EQ(bounds.min.x, lo);
+        EXPECT_FLOAT_EQ(bounds.min.y, lo);
+        EXPECT_FLOAT_EQ(bounds.min.z, lo);
+        EXPECT_FLOAT_EQ(bounds.max.x, withMorphTarget ? 2.0f * hi : hi);
+        EXPECT_FLOAT_EQ(bounds.max.y, hi);
+        EXPECT_FLOAT_EQ(bounds.max.z, hi);
+
+        assetLoader->destroyAsset(asset);
+        AssetLoader::destroy(&assetLoader);
+    };
+
+    for (QuantizedPositionCase const& c : kQuantizedPositionCases) {
+        for (bool const normalized : { true, false }) {
+            for (bool const withMorphTarget : { false, true }) {
+                checkLoad(nullptr, c, withMorphTarget, normalized);
+                // TODO: the extended loader panics on the other quantized types.
+                if (c.componentType == 5121 && AssetConfigurationExtended::isSupported()) {
+                    AssetConfigurationExtended ext{ .gltfPath = "." };
+                    checkLoad(&ext, c, withMorphTarget, normalized);
+                }
+            }
+        }
+    }
+}
+
 TEST_F(glTFIOTest, EmptyImageDoesNotCrash) {
     AssetLoader* assetLoader = AssetLoader::create({ mEngine, mMaterialProvider, mNameManager });
     ASSERT_NE(assetLoader, nullptr);
