@@ -1,0 +1,39 @@
+[versions]
+jdk = "21"
+minSdk = "21"
+targetSdk = "37"
+compileSdk = "37"
+buildTools = "36.0.0"
+ndk = "30.0.16248370"
+cmake = "3.19.0+"
+agp = "9.5.1"
+kotlin = "2.4.0"
+kotlinx-coroutines = "1.11.0"
+androidx-core = "1.19.0"
+androidx-annotations = "1.10.0"
+androidx-constraintlayout = "2.1.4"
+android-material = "1.10.0"
+dokka = "1.9.20"
+nexus-publish = "2.0.0"
+undercouch-download = "5.6.0"
+plugin-publish = "2.1.0"
+osdetector = "1.7.3"
+
+[libraries]
+android-gradle-plugin = { module = "com.android.tools.build:gradle", version.ref = "agp" }
+kotlin-gradle-plugin = { module = "org.jetbrains.kotlin:kotlin-gradle-plugin", version.ref = "kotlin" }
+kotlin-stdlib = { module = "org.jetbrains.kotlin:kotlin-stdlib-jdk8", version.ref = "kotlin" }
+kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "kotlinx-coroutines" }
+kotlinx-coroutines-android = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-android", version.ref = "kotlinx-coroutines" }
+androidx-annotations = { module = "androidx.annotation:annotation", version.ref = "androidx-annotations" }
+androidx-core = { module = "androidx.core:core", version.ref = "androidx-core" }
+androidx-constraintlayout = { module = "androidx.constraintlayout:constraintlayout", version.ref = "androidx-constraintlayout" }
+android-material = { module = "com.google.android.material:material", version.ref = "android-material" }
+osdetector-gradle-plugin = { module = "com.google.gradle:osdetector-gradle-plugin", version.ref = "osdetector" }
+
+[plugins]
+kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
+dokka = { id = "org.jetbrains.dokka", version.ref = "dokka" }
+nexus-publish = { id = "io.github.gradle-nexus.publish-plugin", version.ref = "nexus-publish" }
+undercouch-download = { id = "de.undercouch.download", version.ref = "undercouch-download" }
+plugin-publish = { id = "com.gradle.plugin-publish", version.ref = "plugin-publish" }

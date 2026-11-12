@@ -30,8 +30,8 @@
 #include <utils/Path.h>
 
 #include <functional>
-#include <vector>
 #include <unordered_set>
+#include <vector>
 
 struct ImDrawData;
 struct ImGuiIO;
@@ -73,6 +73,9 @@ public:
 
     // Returns the client-owned view, useful for drawing 2D overlays.
     filament::View* getView() const { return mView; }
+
+    // Applies a custom dark pastel theme to the ImGui context.
+    void applyDarkPastelStyle();
 
   private:
       void createBuffers(int numRequiredBuffers);
