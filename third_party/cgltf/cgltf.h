@@ -2287,12 +2287,19 @@ static cgltf_float cgltf_component_read_float(const void* in, cgltf_component_ty
 		switch (component_type)
 		{
 			// note: glTF spec doesn't currently define normalized conversions for 32-bit integers
+			// note: glTF spec clamps signed normalized values to -1
 			case cgltf_component_type_r_16:
-				return *((const int16_t*) in) / (cgltf_float)32767;
+			{
+				cgltf_float value = *((const int16_t*) in) / (cgltf_float)32767;
+				return value < -1 ? -1 : value;
+			}
 			case cgltf_component_type_r_16u:
 				return *((const uint16_t*) in) / (cgltf_float)65535;
 			case cgltf_component_type_r_8:
-				return *((const int8_t*) in) / (cgltf_float)127;
+			{
+				cgltf_float value = *((const int8_t*) in) / (cgltf_float)127;
+				return value < -1 ? -1 : value;
+			}
 			case cgltf_component_type_r_8u:
 				return *((const uint8_t*) in) / (cgltf_float)255;
 			default:

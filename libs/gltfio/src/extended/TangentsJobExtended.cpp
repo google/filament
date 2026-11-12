@@ -29,9 +29,11 @@
 #include <utils/Panic.h>
 #include <utils/StructureOfArrays.h>
 
+#include <algorithm>
 #include <cstring>
 #include <memory>
 #include <unordered_map>
+#include <vector>
 
 using namespace filament;
 using namespace filament::gltfio;
@@ -242,6 +244,34 @@ void copy(InDataType in, size_t inStride, OutDataType out, size_t outStride, siz
     PANIC_POSTCONDITION("Invalid conversion");
 }
 
+// Decodes integer data into `outDim` floats per vertex with cgltf, which follows the glTF spec
+// (normalization, stride, sparse). Missing components get 0 (w gets 1). Zero-fills on failure.
+void unpackIntegerToFloat(cgltf_accessor const* accessor, size_t const vertexCount, float* out,
+        size_t const outDim) {
+    size_t const inDim = cgltf_num_components(accessor->type);
+    size_t const floatCount = inDim * vertexCount;
+
+    std::vector<float> scratch;
+    float* const dst = inDim == outDim ? out : (scratch.resize(floatCount), scratch.data());
+
+    if (cgltf_accessor_unpack_floats(accessor, dst, floatCount) != floatCount) {
+        utils::slog.e << "Unable to decode vertex attribute data" << utils::io::endl;
+        std::memset(out, 0, sizeof(float) * outDim * vertexCount);
+        return;
+    }
+
+    if (inDim != outDim) {
+        size_t const copied = std::min(inDim, outDim);
+        for (size_t v = 0; v < vertexCount; ++v) {
+            float* const o = out + v * outDim;
+            float const* const in = scratch.data() + v * inDim;
+            for (size_t c = 0; c < outDim; ++c) {
+                o[c] = c < copied ? in[c] : (c == 3 ? 1.0f : 0.0f);
+            }
+        }
+    }
+}
+
 template<typename T>
 void unpack(cgltf_accessor const* accessor, size_t const vertexCount, T out,
         bool isMorphTarget = false) {
@@ -286,6 +316,10 @@ void unpack(cgltf_accessor const* accessor, size_t const vertexCount, T out,
             }
         }
     } else {
+        if constexpr (data::componentType<T>() == FLOAT_TYPE) {
+            unpackIntegerToFloat(accessor, vertexCount, (float*) out, outDim);
+            return;
+        }
         assert_invariant(outDim == inDim);
         if (componentType == cgltf_component_type_r_8u) {
             if (inDim == 2) {
