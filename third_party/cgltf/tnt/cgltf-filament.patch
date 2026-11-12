@@ -1,5 +1,5 @@
 diff --git a/third_party/cgltf/cgltf.h b/third_party/cgltf/cgltf.h
-index 78ea905f0..14e516e7f 100644
+index 78ea905f0..ac8b016c6 100644
 --- a/third_party/cgltf/cgltf.h
 +++ b/third_party/cgltf/cgltf.h
 @@ -536,6 +536,12 @@ typedef struct cgltf_dispersion
@@ -102,7 +102,29 @@ index 78ea905f0..14e516e7f 100644
  			{
  				cgltf_size index_bound = cgltf_calc_index_bound(indices->buffer_view, indices->offset, indices->component_type, indices->count);
  
-@@ -2433,9 +2465,14 @@ cgltf_size cgltf_accessor_unpack_floats(const cgltf_accessor* accessor, cgltf_fl
+@@ -2255,12 +2287,19 @@ static cgltf_float cgltf_component_read_float(const void* in, cgltf_component_ty
+ 		switch (component_type)
+ 		{
+ 			// note: glTF spec doesn't currently define normalized conversions for 32-bit integers
++			// note: glTF spec clamps signed normalized values to -1
+ 			case cgltf_component_type_r_16:
+-				return *((const int16_t*) in) / (cgltf_float)32767;
++			{
++				cgltf_float value = *((const int16_t*) in) / (cgltf_float)32767;
++				return value < -1 ? -1 : value;
++			}
+ 			case cgltf_component_type_r_16u:
+ 				return *((const uint16_t*) in) / (cgltf_float)65535;
+ 			case cgltf_component_type_r_8:
+-				return *((const int8_t*) in) / (cgltf_float)127;
++			{
++				cgltf_float value = *((const int8_t*) in) / (cgltf_float)127;
++				return value < -1 ? -1 : value;
++			}
+ 			case cgltf_component_type_r_8u:
+ 				return *((const uint8_t*) in) / (cgltf_float)255;
+ 			default:
+@@ -2433,9 +2472,14 @@ cgltf_size cgltf_accessor_unpack_floats(const cgltf_accessor* accessor, cgltf_fl
  		reader_head += sparse->values_byte_offset;
  
  		cgltf_size index_stride = cgltf_component_size(sparse->indices_component_type);
@@ -118,7 +140,7 @@ index 78ea905f0..14e516e7f 100644
  			float* writer_head = out + writer_index * floats_per_element;
  
  			if (!cgltf_element_read_float(reader_head, accessor->type, accessor->component_type, accessor->normalized, writer_head, floats_per_element))
-@@ -2512,7 +2549,7 @@ cgltf_bool cgltf_accessor_read_uint(const cgltf_accessor* accessor, cgltf_size i
+@@ -2512,7 +2556,7 @@ cgltf_bool cgltf_accessor_read_uint(const cgltf_accessor* accessor, cgltf_size i
  	{
  		return 0;
  	}
@@ -127,7 +149,7 @@ index 78ea905f0..14e516e7f 100644
  	return cgltf_element_read_uint(element, accessor->type, accessor->component_type, out, element_size);
  }
  
-@@ -2531,7 +2568,7 @@ cgltf_size cgltf_accessor_read_index(const cgltf_accessor* accessor, cgltf_size
+@@ -2531,7 +2575,7 @@ cgltf_size cgltf_accessor_read_index(const cgltf_accessor* accessor, cgltf_size
  	{
  		return 0; // This is an error case, but we can't communicate the error with existing interface.
  	}
@@ -136,7 +158,7 @@ index 78ea905f0..14e516e7f 100644
  	return cgltf_component_read_index(element, accessor->component_type);
  }
  
-@@ -4436,6 +4473,41 @@ static int cgltf_parse_json_dispersion(jsmntok_t const* tokens, int i, const uin
+@@ -4436,6 +4480,41 @@ static int cgltf_parse_json_dispersion(jsmntok_t const* tokens, int i, const uin
  	return i;
  }
  
@@ -178,7 +200,7 @@ index 78ea905f0..14e516e7f 100644
  static int cgltf_parse_json_image(cgltf_options* options, jsmntok_t const* tokens, int i, const uint8_t* json_chunk, cgltf_image* out_image)
  {
  	CGLTF_CHECK_TOKTYPE(tokens[i], JSMN_OBJECT);
-@@ -4867,6 +4939,11 @@ static int cgltf_parse_json_material(cgltf_options* options, jsmntok_t const* to
+@@ -4867,6 +4946,11 @@ static int cgltf_parse_json_material(cgltf_options* options, jsmntok_t const* to
  					out_material->has_dispersion = 1;
  					i = cgltf_parse_json_dispersion(tokens, i + 1, json_chunk, &out_material->dispersion);
  				}
@@ -190,7 +212,7 @@ index 78ea905f0..14e516e7f 100644
  				else
  				{
  					i = cgltf_parse_json_unprocessed_extension(options, tokens, i, json_chunk, &(out_material->extensions[out_material->extensions_count++]));
-@@ -6724,6 +6801,8 @@ static int cgltf_fixup_pointers(cgltf_data* data)
+@@ -6724,6 +6808,8 @@ static int cgltf_fixup_pointers(cgltf_data* data)
  		CGLTF_PTRFIXUP(data->materials[i].diffuse_transmission.diffuse_transmission_color_texture.texture, data->textures, data->textures_count);
  
  		CGLTF_PTRFIXUP(data->materials[i].anisotropy.anisotropy_texture.texture, data->textures, data->textures_count);

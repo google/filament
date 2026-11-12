@@ -1182,6 +1182,30 @@ TEST_F(glTFIOTest, QuantizedPositionBoundsAreDecoded) {
     }
 }
 
+// glTF clamps signed normalized values to -1, including the most negative integer.
+TEST(glTFIOCgltf, SignedNormalizedValuesAreClamped) {
+    auto unpack = [](void* data, size_t size, cgltf_component_type type, size_t count) {
+        cgltf_buffer buffer{ .size = size, .data = data };
+        cgltf_buffer_view view{ .buffer = &buffer, .size = size };
+        cgltf_accessor accessor{ .component_type = type, .normalized = true,
+                .type = cgltf_type_scalar, .count = count, .stride = size / count,
+                .buffer_view = &view };
+        std::vector<float> out(count);
+        EXPECT_EQ(cgltf_accessor_unpack_floats(&accessor, out.data(), count), count);
+        return out;
+    };
+
+    int16_t shorts[] = { -32768, -32767, 32767 };
+    std::vector<float> const s =
+            unpack(shorts, sizeof(shorts), cgltf_component_type_r_16, std::size(shorts));
+    EXPECT_EQ(s, (std::vector<float>{ -1.0f, -1.0f, 1.0f }));
+
+    int8_t bytes[] = { -128, -127, 127 };
+    std::vector<float> const b =
+            unpack(bytes, sizeof(bytes), cgltf_component_type_r_8, std::size(bytes));
+    EXPECT_EQ(b, (std::vector<float>{ -1.0f, -1.0f, 1.0f }));
+}
+
 TEST_F(glTFIOTest, EmptyImageDoesNotCrash) {
     AssetLoader* assetLoader = AssetLoader::create({ mEngine, mMaterialProvider, mNameManager });
     ASSERT_NE(assetLoader, nullptr);
