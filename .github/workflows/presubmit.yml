@@ -227,6 +227,172 @@ jobs:
                 return;
               }
 
+              // Metal backend & Apple-only Metal tests
+              if (
+                file.startsWith('filament/backend/src/metal/') ||
+                file === 'filament/backend/include/backend/platforms/PlatformMetal.h' ||
+                file === 'filament/backend/include/backend/platforms/PlatformMetal-ObjC.h' ||
+                file === 'filament/backend/test/test_MetalAsyncJobs.mm' ||
+                file === 'filament/backend/test/test_MetalBlitter.mm' ||
+                file === 'filament/backend/test/MetalTest.mm' ||
+                file.startsWith('test/check-metal-shaders/')
+              ) {
+                jobs['build-mac'] = true;
+                jobs['build-ios'] = true;
+                jobs['test-backend-metal'] = true;
+                return;
+              }
+
+              // OS-specific WebGPU platform bridges
+              if (
+                file === 'filament/backend/include/backend/platforms/WebGPUPlatformAndroid.h' ||
+                file === 'filament/backend/src/webgpu/platform/WebGPUPlatformAndroid.cpp' ||
+                file === 'libs/filamentapp/src/backend_platforms/WebGPUPlatformHelperAndroid.cpp'
+              ) {
+                jobs['build-android'] = true;
+                return;
+              }
+              if (
+                file === 'filament/backend/include/backend/platforms/WebGPUPlatformWindows.h' ||
+                file === 'filament/backend/src/webgpu/platform/WebGPUPlatformWindows.cpp' ||
+                file === 'libs/filamentapp/src/backend_platforms/WebGPUPlatformHelperWindows.cpp'
+              ) {
+                jobs['build-windows'] = true;
+                return;
+              }
+              if (
+                file === 'filament/backend/include/backend/platforms/WebGPUPlatformApple.h' ||
+                file === 'filament/backend/src/webgpu/platform/WebGPUPlatformApple.mm' ||
+                file === 'libs/filamentapp/src/backend_platforms/WebGPUPlatformHelperApple.mm'
+              ) {
+                jobs['build-mac'] = true;
+                jobs['build-ios'] = true;
+                return;
+              }
+              if (
+                file === 'filament/backend/include/backend/platforms/WebGPUPlatformWasm.h' ||
+                file === 'filament/backend/include/backend/platforms/WebGPUWasmPolyfill.h' ||
+                file === 'filament/backend/src/webgpu/platform/WebGPUPlatformWasm.cpp' ||
+                file === 'libs/filamentapp/src/backend_platforms/WebGPUPlatformHelperWasm.cpp'
+              ) {
+                jobs['build-web'] = true;
+                jobs['renderdiff-config'] = true;
+                jobs['renderdiff-web'] = true;
+                return;
+              }
+              if (
+                file === 'filament/backend/include/backend/platforms/WebGPUPlatformLinux.h' ||
+                file === 'filament/backend/src/webgpu/platform/WebGPUPlatformLinux.cpp' ||
+                file === 'libs/filamentapp/src/backend_platforms/WebGPUPlatformHelperLinux.cpp'
+              ) {
+                jobs['build-linux'] = true;
+                jobs['renderdiff-config'] = true;
+                jobs['renderdiff-desktop'] = true;
+                jobs['code-correctness'] = true;
+                jobs['test-backend'] = true;
+                return;
+              }
+
+              // Shared WebGPU backend & Dawn (only compiled where -W is passed in presubmit)
+              if (
+                file.startsWith('filament/backend/src/webgpu/') ||
+                file === 'filament/backend/include/backend/platforms/WebGPUPlatform.h' ||
+                file.startsWith('filament/backend/test/test_WebGPU') ||
+                file.startsWith('third_party/dawn/')
+              ) {
+                jobs['build-linux'] = true;
+                jobs['build-web'] = true;
+                jobs['renderdiff-config'] = true;
+                jobs['renderdiff-desktop'] = true;
+                jobs['renderdiff-web'] = true;
+                jobs['code-correctness'] = true;
+                jobs['test-backend'] = true;
+                return;
+              }
+
+              // Android-only C++ sources in filament/backend and libs
+              if (
+                file.startsWith('filament/backend/src/Android') ||
+                file === 'filament/backend/src/BackendUtilsAndroid.cpp' ||
+                file === 'filament/backend/include/private/backend/BackendUtilsAndroid.h' ||
+                file === 'filament/backend/src/VirtualMachineEnv.cpp' ||
+                file === 'filament/backend/include/private/backend/VirtualMachineEnv.h' ||
+                file === 'filament/backend/include/backend/platforms/AndroidNdk.h' ||
+                file === 'filament/backend/include/backend/platforms/PlatformEGLAndroid.h' ||
+                file === 'filament/backend/include/backend/platforms/VulkanPlatformAndroid.h' ||
+                file.startsWith('filament/backend/src/opengl/platforms/ExternalStreamManagerAndroid.') ||
+                file === 'filament/backend/src/opengl/platforms/PlatformEGLAndroid.cpp' ||
+                file === 'filament/backend/src/vulkan/platform/VulkanPlatformAndroid.cpp' ||
+                file.startsWith('libs/utils/src/android/') ||
+                file === 'libs/filamentapp/src/backend_platforms/VulkanPlatformHelperAndroid.cpp'
+              ) {
+                jobs['build-android'] = true;
+                return;
+              }
+
+              // Windows-only C++/ASM sources in filament/backend and libs
+              if (
+                file === 'filament/backend/include/backend/platforms/PlatformWGL.h' ||
+                file === 'filament/backend/src/opengl/platforms/PlatformWGL.cpp' ||
+                file === 'filament/backend/include/backend/platforms/VulkanPlatformWindows.h' ||
+                file === 'filament/backend/src/vulkan/platform/VulkanPlatformWindows.cpp' ||
+                file.startsWith('libs/utils/src/win32/') ||
+                file === 'libs/filamentapp/src/display_managers/NativeWindowHelperWindows.cpp' ||
+                file === 'libs/filamentapp/src/backend_platforms/VulkanPlatformHelperWindows.cpp' ||
+                file === 'libs/bluegl/src/BlueGLWindows.cpp' ||
+                file === 'libs/bluegl/src/BlueGLCoreWindowsImpl.S' ||
+                file === 'libs/bluegl/src/BlueGLCoreWindows32Impl.cpp' ||
+                file === 'libs/bluevk/src/BlueVKWindows.cpp'
+              ) {
+                jobs['build-windows'] = true;
+                return;
+              }
+
+              // iOS-only ObjC++ sources in filament/backend
+              if (
+                file === 'filament/backend/include/backend/platforms/PlatformCocoaTouchGL.h' ||
+                file === 'filament/backend/src/opengl/platforms/PlatformCocoaTouchGL.mm' ||
+                file.startsWith('filament/backend/src/opengl/platforms/CocoaTouchExternalImage.')
+              ) {
+                jobs['build-ios'] = true;
+                return;
+              }
+
+              // Apple-only (macOS + iOS) C++/ObjC++/ASM sources in filament/backend and libs
+              if (
+                file === 'filament/backend/include/backend/platforms/PlatformCocoaGL.h' ||
+                file === 'filament/backend/src/opengl/platforms/PlatformCocoaGL.mm' ||
+                file.startsWith('filament/backend/src/opengl/platforms/CocoaExternalImage.') ||
+                file === 'filament/backend/include/backend/platforms/VulkanPlatformApple.h' ||
+                file === 'filament/backend/src/vulkan/platform/VulkanPlatformApple.mm' ||
+                file.startsWith('libs/utils/src/darwin/') ||
+                file === 'libs/filamentapp/src/display_managers/NativeWindowHelperCocoa.mm' ||
+                file === 'libs/filamentapp/src/backend_platforms/VulkanPlatformHelperApple.mm' ||
+                file === 'libs/bluegl/src/BlueGLDarwin.cpp' ||
+                file === 'libs/bluegl/src/BlueGLCoreDarwinUniversalImpl.S' ||
+                file === 'libs/bluevk/src/BlueVKDarwin.cpp'
+              ) {
+                jobs['build-mac'] = true;
+                jobs['build-ios'] = true;
+                jobs['test-backend-metal'] = true;
+                return;
+              }
+
+              // Web/WASM-only C++/JS/HTML sources in filament/backend and libs
+              if (
+                file === 'filament/backend/include/backend/platforms/PlatformWebGL.h' ||
+                file === 'filament/backend/src/opengl/platforms/PlatformWebGL.cpp' ||
+                file.startsWith('libs/utils/src/web/') ||
+                file === 'libs/filamentapp/src/display_managers/EmscriptenDisplayManager.cpp' ||
+                file === 'libs/filamentapp/src/display_managers/HtmlDisplayManager.cpp' ||
+                file.startsWith('libs/filamentapp/src/display_managers/web/')
+              ) {
+                jobs['build-web'] = true;
+                jobs['renderdiff-config'] = true;
+                jobs['renderdiff-web'] = true;
+                return;
+              }
+
               enableAll();
             }
 
