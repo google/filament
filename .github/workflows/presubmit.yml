@@ -393,6 +393,148 @@ jobs:
                 return;
               }
 
+              // Renderdiff suite & glTF asset helpers
+              if (
+                file === 'test/renderdiff/src/test_schema.py' ||
+                file === 'test/renderdiff/tests/sample.json'
+              ) {
+                jobs['renderdiff-config'] = true;
+                return;
+              }
+              if (
+                file.startsWith('test/renderdiff/') ||
+                file.startsWith('test/render-validation/') ||
+                file.startsWith('.github/actions/renderdiff/') ||
+                file.startsWith('.github/actions/get-gltf-assets/') ||
+                file === 'build/common/get-gltf-sample-assets.sh'
+              ) {
+                jobs['renderdiff-config'] = true;
+                jobs['renderdiff-desktop'] = true;
+                jobs['renderdiff-web'] = true;
+                return;
+              }
+              if (file.startsWith('tools/diffimg/')) {
+                jobs['build-mac'] = true;
+                jobs['build-linux'] = true;
+                jobs['build-windows'] = true;
+                jobs['code-correctness'] = true;
+                jobs['renderdiff-config'] = true;
+                jobs['renderdiff-desktop'] = true;
+                jobs['renderdiff-web'] = true;
+                return;
+              }
+
+              // Mesa & Vulkan SDK CI actions (used only by Linux backend tests and desktop renderdiff)
+              if (
+                file.startsWith('.github/actions/get-mesa/') ||
+                file === 'build/common/get-mesa.sh' ||
+                file.startsWith('.github/actions/get-vulkan-sdk/') ||
+                file === 'build/common/get-vulkan-sdk.sh'
+              ) {
+                jobs['test-backend'] = true;
+                jobs['renderdiff-config'] = true;
+                jobs['renderdiff-desktop'] = true;
+                return;
+              }
+
+              // Backend test harness & sources
+              if (file.startsWith('test/backend/')) {
+                jobs['test-backend'] = true;
+                jobs['test-backend-metal'] = true;
+                return;
+              }
+              if (
+                file === 'filament/backend/test/mac_runner.mm' ||
+                file === 'filament/backend/test/test_RenderExternalImage.cpp'
+              ) {
+                jobs['build-mac'] = true;
+                jobs['test-backend-metal'] = true;
+                return;
+              }
+              if (file === 'filament/backend/test/linux_runner.cpp') {
+                jobs['build-linux'] = true;
+                jobs['code-correctness'] = true;
+                jobs['test-backend'] = true;
+                return;
+              }
+              if (file.startsWith('filament/backend/test/')) {
+                jobs['build-mac'] = true;
+                jobs['build-linux'] = true;
+                jobs['code-correctness'] = true;
+                jobs['test-backend'] = true;
+                jobs['test-backend-metal'] = true;
+                if (file === 'filament/backend/test/test_ThreadPriorityOverride.cpp') {
+                  jobs['build-android'] = true;
+                }
+                return;
+              }
+
+              // Code correctness, header organization, and unit test suites
+              if (
+                file === 'test/code-correctness/check-headers.sh' ||
+                file.startsWith('tools/reorganize-headers/')
+              ) {
+                jobs['check-headers'] = true;
+                return;
+              }
+              if (
+                file.startsWith('test/code-correctness/') ||
+                file.startsWith('test/filament-unit-test/')
+              ) {
+                jobs['code-correctness'] = true;
+                return;
+              }
+              if (
+                file.startsWith('filament/test/') ||
+                /^libs\/[^/]+\/tests?\//.test(file) ||
+                /^tools\/[^/]+\/tests?\//.test(file)
+              ) {
+                jobs['build-mac'] = true;
+                jobs['build-linux'] = true;
+                jobs['build-windows'] = true;
+                jobs['code-correctness'] = true;
+                return;
+              }
+
+              // Desktop/Android samples and sample assets (excluded from default iOS, WASM, and backend test builds)
+              if (file.startsWith('samples/') || file.startsWith('assets/')) {
+                jobs['build-mac'] = true;
+                jobs['build-linux'] = true;
+                jobs['build-windows'] = true;
+                jobs['build-android'] = true;
+                jobs['code-correctness'] = true;
+                jobs['renderdiff-config'] = true;
+                jobs['renderdiff-desktop'] = true;
+                jobs['renderdiff-web'] = true;
+                return;
+              }
+
+              // Host-only tools not built as prebuilts by Android, iOS, WASM, renderdiff, or backend tests
+              if (
+                file.startsWith('tools/ai/') ||
+                file.startsWith('tools/apigen/') ||
+                file.startsWith('tools/beamsplitter/') ||
+                file.startsWith('tools/cso-lut/') ||
+                file.startsWith('tools/frame_pipeline_visualizer/') ||
+                file.startsWith('tools/matedit/') ||
+                file.startsWith('tools/matinfo/') ||
+                file.startsWith('tools/normal-blending/') ||
+                file.startsWith('tools/rgb-to-lmsr/') ||
+                file.startsWith('tools/roughness-prefilter/') ||
+                file.startsWith('tools/specgen/') ||
+                file.startsWith('tools/specular-color/') ||
+                file.startsWith('tools/taa/') ||
+                file.startsWith('tools/zbloat/')
+              ) {
+                jobs['build-mac'] = true;
+                jobs['build-linux'] = true;
+                if (!file.startsWith('tools/matedit/')) {
+                  jobs['build-windows'] = true;
+                }
+                jobs['code-correctness'] = true;
+                return;
+              }
+
               enableAll();
             }
 
