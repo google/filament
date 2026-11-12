@@ -13,46 +13,182 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
-# The conditional 'if' on each job is meant to skip presubmit jobs when a commit is pushed to main
-# and that commit is cryptographically "verified". Typically, a verified commit (like a GitHub UI
-# squash-and-merge) has already passed through presubmit during the Pull Request phase.
-# The conditional explicitly checks:
-# 1. always() && !cancelled(): Ensures the job runs even if 'check-verification' is skipped
-#    (which happens normally on PRs), but aborts if the workflow was manually cancelled.
-# 2. !needs.check-verification.outputs.skip: Evaluates to true when the 'skip' output is empty.
-#    The 'skip' output is only set to 'true' if it's a push to main AND the commit is verified.
-#    In all other cases (including PRs where the job is skipped), it defaults to empty.
+# The conditional 'if' on each job skips presubmit jobs when:
+# 1. A commit is pushed to main and is cryptographically "verified" (e.g., a GitHub UI
+#    squash-and-merge that already passed presubmit during the Pull Request phase), or
+# 2. The PR / commit only modifies files that do not affect that specific job, as classified by
+#    the 'check-verification' gate job.
+#
+# Skipping individual jobs via job-level 'if' conditions (rather than workflow-level 'paths'
+# filters) ensures GitHub reports each skipped job as 'skipped', which satisfies branch protection
+# required status checks instead of leaving them pending.
 
 permissions:
   contents: read
 
 jobs:
   check-verification:
-    if: github.event_name == 'push'
     runs-on: ubuntu-latest
     outputs:
       skip: ${{ steps.check.outputs.skip }}
+      build-mac: ${{ steps.check.outputs.build-mac }}
+      build-linux: ${{ steps.check.outputs.build-linux }}
+      build-windows: ${{ steps.check.outputs.build-windows }}
+      build-android: ${{ steps.check.outputs.build-android }}
+      build-ios: ${{ steps.check.outputs.build-ios }}
+      build-web: ${{ steps.check.outputs.build-web }}
+      renderdiff-config: ${{ steps.check.outputs.renderdiff-config }}
+      renderdiff-run: ${{ steps.check.outputs.renderdiff-run }}
+      renderdiff-platforms: ${{ steps.check.outputs.renderdiff-platforms }}
+      code-correctness: ${{ steps.check.outputs.code-correctness }}
+      check-headers: ${{ steps.check.outputs.check-headers }}
+      test-backend: ${{ steps.check.outputs.test-backend }}
+      test-backend-metal: ${{ steps.check.outputs.test-backend-metal }}
     steps:
-      - name: Check commit verification
+      - name: Check commit verification and classify changed paths
         id: check
         uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8.0.0
         with:
           script: |
-            const { data } = await github.rest.repos.getCommit({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              ref: context.sha
-            });
-            if (data.commit.verification.verified) {
-              core.setOutput('skip', 'true');
+            const { owner, repo } = context.repo;
+            let changedFiles = null;
+
+            if (context.eventName === 'push') {
+              const { data } = await github.rest.repos.getCommit({
+                owner,
+                repo,
+                ref: context.sha,
+              });
+              if (data.commit.verification.verified) {
+                core.setOutput('skip', 'true');
+                core.setOutput('renderdiff-platforms', JSON.stringify(['desktop', 'web']));
+                return;
+              }
+              // GitHub's getCommit API caps the files list at 300 entries. If the commit
+              // touches fewer than 300 files and is not a file-less merge, we can classify
+              // its exact path list; otherwise fall back to running all jobs.
+              if (Array.isArray(data.files) && data.files.length > 0 && data.files.length < 300) {
+                changedFiles = data.files.map(f => f.filename);
+              }
+            } else if (context.eventName === 'pull_request') {
+              const files = await github.paginate(github.rest.pulls.listFiles, {
+                owner,
+                repo,
+                pull_number: context.payload.pull_request.number,
+                per_page: 100,
+              });
+              changedFiles = files.map(f => f.filename);
             }
+
+            // Inert files that never affect any presubmit build or test job.
+            // Stripping these first ensures that required edits like NEW_RELEASE_NOTES.md
+            // or documentation updates do not force unrelated platform builds to run.
+            const INERT_EXACT = new Set([
+              '.clang-format',
+              '.cursorrules',
+              '.dir-locals.el',
+              '.editorconfig',
+              '.gitignore',
+              'AGENTS.md',
+              'BUILDING.md',
+              'CODE_STYLE.md',
+              'CONTRIBUTING.md',
+              'GEMINI.md',
+              'LICENSE',
+              'NEW_RELEASE_NOTES.md',
+              'README.md',
+              'RELEASE_NOTES.md',
+              'SECURITY.md',
+              '.github/workflows/auto-close-restricted-paths.yml',
+              '.github/workflows/cocopods-deploy.yml',
+              '.github/workflows/codeql.yml',
+              '.github/workflows/npm-deploy.yml',
+              '.github/workflows/postsubmit-main.yml',
+              '.github/workflows/postsubmit.yml',
+              '.github/workflows/release.yml',
+              '.github/workflows/renderdiff-goldens.yml',
+              '.github/workflows/status-android.yml',
+              '.github/workflows/status-ios.yml',
+              '.github/workflows/status-linux.yml',
+              '.github/workflows/status-macos.yml',
+              '.github/workflows/status-web.yml',
+              '.github/workflows/status-windows.yml',
+              '.github/workflows/verify-release-notes.yml',
+            ]);
+
+            const INERT_PREFIXES = [
+              'art/',
+              'docs/',
+              'docs_src/',
+              'ide/',
+              'skills/',
+              '.github/actions/android-continuous/',
+              '.github/actions/ubuntu-apt-add-src/',
+              '.github/actions/verify-release-notes/',
+            ];
+
+            function isInertFile(file) {
+              if (INERT_EXACT.has(file)) return true;
+              if (file.endsWith('.md')) return true;
+              return INERT_PREFIXES.some(prefix => file.startsWith(prefix));
+            }
+
+            const jobs = {
+              'build-mac': false,
+              'build-linux': false,
+              'build-windows': false,
+              'build-android': false,
+              'build-ios': false,
+              'build-web': false,
+              'renderdiff-config': false,
+              'renderdiff-desktop': false,
+              'renderdiff-web': false,
+              'code-correctness': false,
+              'check-headers': false,
+              'test-backend': false,
+              'test-backend-metal': false,
+            };
+
+            function enableAll() {
+              for (const key of Object.keys(jobs)) {
+                jobs[key] = true;
+              }
+            }
+
+            if (changedFiles === null) {
+              enableAll();
+            } else {
+              const activeFiles = changedFiles.filter(f => !isInertFile(f));
+              if (activeFiles.length > 0) {
+                enableAll();
+              }
+            }
+
+            const renderdiffPlatforms = [];
+            if (jobs['renderdiff-desktop']) renderdiffPlatforms.push('desktop');
+            if (jobs['renderdiff-web']) renderdiffPlatforms.push('web');
+            const renderdiffRun = renderdiffPlatforms.length > 0;
+
+            for (const [key, val] of Object.entries(jobs)) {
+              if (key === 'renderdiff-desktop' || key === 'renderdiff-web') continue;
+              core.setOutput(key, val ? 'true' : 'false');
+            }
+            core.setOutput('renderdiff-run', renderdiffRun ? 'true' : 'false');
+            // Always emit a non-empty JSON array so GitHub Actions matrix evaluation
+            // never fails on an empty vector when test-renderdiff-platform is skipped.
+            core.setOutput(
+              'renderdiff-platforms',
+              JSON.stringify(renderdiffRun ? renderdiffPlatforms : ['desktop', 'web'])
+            );
 
   build-desktop-mac:
     name: build-mac
     runs-on: 'macos-15-xlarge'
     timeout-minutes: 45
     needs: [check-verification]
-    if: always() && !cancelled() && !needs.check-verification.outputs.skip
+    if: >
+      always() && !cancelled() && !needs.check-verification.outputs.skip
+      && needs.check-verification.outputs.build-mac == 'true'
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
@@ -73,7 +209,9 @@ jobs:
     runs-on: 'arm-ubuntu-24.04-16core'
     timeout-minutes: 45
     needs: [check-verification]
-    if: always() && !cancelled() && !needs.check-verification.outputs.skip
+    if: >
+      always() && !cancelled() && !needs.check-verification.outputs.skip
+      && needs.check-verification.outputs.build-linux == 'true'
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
@@ -100,7 +238,9 @@ jobs:
     name: build-windows
     runs-on: 'windows-2022'
     needs: [check-verification]
-    if: always() && !cancelled() && !needs.check-verification.outputs.skip
+    if: >
+      always() && !cancelled() && !needs.check-verification.outputs.skip
+      && needs.check-verification.outputs.build-windows == 'true'
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
@@ -121,7 +261,9 @@ jobs:
     runs-on: 'ubuntu-24.04-8core'
     timeout-minutes: 45
     needs: [check-verification]
-    if: always() && !cancelled() && !needs.check-verification.outputs.skip
+    if: >
+      always() && !cancelled() && !needs.check-verification.outputs.skip
+      && needs.check-verification.outputs.build-android == 'true'
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
@@ -169,7 +311,9 @@ jobs:
     runs-on: 'macos-15-xlarge'
     timeout-minutes: 45
     needs: [check-verification]
-    if: always() && !cancelled() && !needs.check-verification.outputs.skip
+    if: >
+      always() && !cancelled() && !needs.check-verification.outputs.skip
+      && needs.check-verification.outputs.build-ios == 'true'
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
@@ -199,7 +343,9 @@ jobs:
     runs-on: 'arm-ubuntu-24.04-16core'
     timeout-minutes: 45
     needs: [check-verification]
-    if: always() && !cancelled() && !needs.check-verification.outputs.skip
+    if: >
+      always() && !cancelled() && !needs.check-verification.outputs.skip
+      && needs.check-verification.outputs.build-web == 'true'
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
@@ -238,7 +384,9 @@ jobs:
     name: renderdiff-config
     runs-on: 'ubuntu-24.04'
     needs: [check-verification]
-    if: always() && !cancelled() && !needs.check-verification.outputs.skip
+    if: >
+      always() && !cancelled() && !needs.check-verification.outputs.skip
+      && needs.check-verification.outputs.renderdiff-config == 'true'
     outputs:
       accept: ${{ steps.check_accept.outputs.accept }}
       golden-branch: ${{ steps.check_accept.outputs.branch }}
@@ -300,7 +448,7 @@ jobs:
       # A desktop regression should not hide a web regression, or vice versa.
       fail-fast: false
       matrix:
-        platform: [desktop, web]
+        platform: ${{ fromJson(needs.check-verification.outputs.renderdiff-platforms) }}
     runs-on: 'arm-ubuntu-24.04-16core'
     # The web leg additionally builds wasm and renders through a software rasterizer in a browser,
     # which is substantially slower than rendering natively.
@@ -311,6 +459,7 @@ jobs:
     # no branch name to offer, and rendering against the wrong goldens is worse than not rendering.
     if: >
       always() && !cancelled() && !needs.check-verification.outputs.skip
+      && needs.check-verification.outputs.renderdiff-run == 'true'
       && needs.renderdiff-config.result == 'success'
       && needs.renderdiff-config.outputs.accept != 'true'
     steps:
@@ -353,7 +502,9 @@ jobs:
     name: test-renderdiff
     runs-on: 'ubuntu-24.04'
     needs: [check-verification, renderdiff-config, test-renderdiff-platform]
-    if: always() && !cancelled() && !needs.check-verification.outputs.skip
+    if: >
+      always() && !cancelled() && !needs.check-verification.outputs.skip
+      && needs.check-verification.outputs.renderdiff-config == 'true'
     steps:
       - name: Merge renderdiff output
         if: needs.test-renderdiff-platform.result != 'skipped'
@@ -368,10 +519,15 @@ jobs:
         env:
           CONFIG: ${{ needs.renderdiff-config.result }}
           ACCEPT: ${{ needs.renderdiff-config.outputs.accept }}
+          RENDER_RUN: ${{ needs.check-verification.outputs.renderdiff-run }}
           LEGS: ${{ needs.test-renderdiff-platform.result }}
         run: |
           if [[ "${CONFIG}" == success && "${ACCEPT}" == true ]]; then
             echo "RDIFF_ACCEPT_NEW_GOLDENS is set; rendering was skipped."
+            exit 0
+          fi
+          if [[ "${CONFIG}" == success && "${RENDER_RUN}" != true ]]; then
+            echo "Only renderdiff schema validation was required; rendering was skipped."
             exit 0
           fi
           echo "renderdiff-config: ${CONFIG}, test-renderdiff-platform: ${LEGS}"
@@ -383,7 +539,9 @@ jobs:
     runs-on: 'arm-ubuntu-24.04-16core'
     timeout-minutes: 60
     needs: [check-verification]
-    if: always() && !cancelled() && !needs.check-verification.outputs.skip
+    if: >
+      always() && !cancelled() && !needs.check-verification.outputs.skip
+      && needs.check-verification.outputs.code-correctness == 'true'
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
@@ -452,7 +610,9 @@ jobs:
     runs-on: 'arm-ubuntu-24.04-16core'
     timeout-minutes: 45
     needs: [check-verification]
-    if: always() && !cancelled() && !needs.check-verification.outputs.skip
+    if: >
+      always() && !cancelled() && !needs.check-verification.outputs.skip
+      && needs.check-verification.outputs.test-backend == 'true'
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
@@ -483,7 +643,9 @@ jobs:
     runs-on: 'macos-15'
     timeout-minutes: 60
     needs: [check-verification]
-    if: always() && !cancelled() && !needs.check-verification.outputs.skip
+    if: >
+      always() && !cancelled() && !needs.check-verification.outputs.skip
+      && needs.check-verification.outputs.test-backend-metal == 'true'
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
@@ -511,8 +673,11 @@ jobs:
   test-backend-all:
     name: test-backend-all
     runs-on: 'ubuntu-24.04'
-    needs: [test-backend, test-backend-metal]
-    if: always() && !cancelled()
+    needs: [check-verification, test-backend, test-backend-metal]
+    if: >
+      always() && !cancelled() && !needs.check-verification.outputs.skip
+      && (needs.check-verification.outputs.test-backend == 'true'
+          || needs.check-verification.outputs.test-backend-metal == 'true')
     steps:
       - name: Check the backend job results
         shell: bash
