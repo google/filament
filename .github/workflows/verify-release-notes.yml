@@ -6,6 +6,10 @@ on:
       - main
     types: [opened, synchronize, reopened, labeled]
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
   pull-requests: read
@@ -15,15 +19,62 @@ jobs:
     name: Verify Release Notes
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-        with:
-          fetch-depth: 0
-          persist-credentials: false
-          sparse-checkout: |
-            .github
       - name: Verify release notes
-        uses: ./.github/actions/verify-release-notes
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8.0.0
+        env:
+          BYPASS_LABEL: 'internal'
+          RELEASE_NOTES_FILE: 'NEW_RELEASE_NOTES.md'
         with:
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
-          pull-request-number: ${{ github.event.pull_request.number }}
-          release-notes-file: 'NEW_RELEASE_NOTES.md'
+          script: |
+            const { owner, repo } = context.repo;
+            const pr = context.payload.pull_request;
+            const pull_number = pr.number;
+            const bypassLabel = process.env.BYPASS_LABEL;
+            const releaseNotesFile = process.env.RELEASE_NOTES_FILE;
+
+            const labels = (pr.labels || []).map(l => l.name);
+            if (labels.includes(bypassLabel)) {
+              console.log(`PR #${pull_number} contains the '${bypassLabel}' label. Exiting with success.`);
+              return;
+            }
+
+            const files = await github.paginate(github.rest.pulls.listFiles, {
+              owner,
+              repo,
+              pull_number,
+              per_page: 100,
+            });
+
+            if (files.some(f => f.filename === releaseNotesFile)) {
+              console.log(`PR #${pull_number} modifies '${releaseNotesFile}'. Exiting with success.`);
+              return;
+            }
+
+            const headRepo = pr.head.repo ? pr.head.repo.full_name : `${owner}/${repo}`;
+            const headRef = pr.head.ref;
+            const editUrl = `https://github.com/${headRepo}/edit/${headRef}/${releaseNotesFile}`;
+            const comment =
+              `Please add a release note line to [${releaseNotesFile}](${editUrl}). ` +
+              `If this PR does not warrant a release note, add the '${bypassLabel}' label to this PR.`;
+
+            const commentTag = '<!-- verify_release_notes -->\n';
+            try {
+              const comments = await github.paginate(github.rest.issues.listComments, {
+                owner,
+                repo,
+                issue_number: pull_number,
+                per_page: 100,
+              });
+              if (!comments.some(c => c.body && c.body.includes(commentTag))) {
+                await github.rest.issues.createComment({
+                  owner,
+                  repo,
+                  issue_number: pull_number,
+                  body: `${commentTag}${comment}`,
+                });
+              }
+            } catch (e) {
+              console.log('Unable to leave comment (expected for read-only token). Continuing.');
+            }
+
+            core.setFailed(comment);
