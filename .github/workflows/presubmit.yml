@@ -155,12 +155,87 @@ jobs:
               }
             }
 
+            function classifyFile(file) {
+              if (/\.(c|cpp|h|hpp)$/.test(file)) {
+                jobs['check-headers'] = true;
+              }
+
+              // Android-isolated files (plus renderdiff schema validation for default_test.json)
+              if (file === 'android/samples/sample-render-validation/src/main/assets/default_test.json') {
+                jobs['build-android'] = true;
+                jobs['renderdiff-config'] = true;
+                return;
+              }
+              if (
+                file.startsWith('android/') ||
+                file.startsWith('build/android/') ||
+                /^build\/toolchain-.*-linux-android\.cmake$/.test(file) ||
+                file.startsWith('test/sizeguard/')
+              ) {
+                jobs['build-android'] = true;
+                return;
+              }
+
+              // iOS-isolated files
+              if (
+                file.startsWith('ios/') ||
+                file.startsWith('build/ios/') ||
+                file === 'third_party/clang/iOS.cmake' ||
+                /^third_party\/clang\/usage_ios_.*\.cmake$/.test(file)
+              ) {
+                jobs['build-ios'] = true;
+                return;
+              }
+
+              // Web/WASM-isolated files
+              if (
+                file.startsWith('web/') ||
+                file.startsWith('build/web/') ||
+                file === 'build/common/get-emscripten.sh' ||
+                file.startsWith('.github/actions/web-prereq/')
+              ) {
+                jobs['build-web'] = true;
+                jobs['renderdiff-config'] = true;
+                jobs['renderdiff-web'] = true;
+                return;
+              }
+
+              // Windows-isolated build scripts
+              if (file.startsWith('build/windows/')) {
+                jobs['build-windows'] = true;
+                return;
+              }
+
+              // macOS-isolated build scripts and Apple CI prerequisites
+              if (file.startsWith('build/mac/')) {
+                jobs['build-mac'] = true;
+                return;
+              }
+              if (
+                file.startsWith('.github/actions/mac-prereq/') ||
+                file === 'build/common/get-ninja.sh'
+              ) {
+                jobs['build-mac'] = true;
+                jobs['build-ios'] = true;
+                jobs['test-backend-metal'] = true;
+                return;
+              }
+
+              // Linux-isolated build scripts (note: combine-static-libs.sh is shared across Unix)
+              if (file === 'build/linux/build.sh' || file === 'build/linux/ci-common.sh') {
+                jobs['build-linux'] = true;
+                return;
+              }
+
+              enableAll();
+            }
+
             if (changedFiles === null) {
               enableAll();
             } else {
               const activeFiles = changedFiles.filter(f => !isInertFile(f));
-              if (activeFiles.length > 0) {
-                enableAll();
+              for (const file of activeFiles) {
+                classifyFile(file);
               }
             }
 
