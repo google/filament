@@ -536,6 +536,37 @@ std::vector<uint8_t> makeColorSeamMorphGlb(MorphMaterial material) {
     return assembleGlb(std::move(json), std::move(bin));
 }
 
+std::vector<uint8_t> makeStridedVec4MorphGlb(uint32_t byteStride) {
+    // The morph target bufferView holds three elements: the last one needs all of its 16 bytes.
+    uint32_t const morphByteLength = byteStride * 2u + 16u;
+    uint32_t const bufferByteLength = 36u + morphByteLength;
+
+    std::string const primitive =
+            R"({"attributes":{"POSITION":0},"mode":4,"targets":[{"POSITION":1}]})";
+    std::string json =
+            R"({"asset":{"version":"2.0"},"scene":0,"scenes":[{"nodes":[0]}],)"
+            R"("nodes":[{"mesh":0}],)"
+            R"("meshes":[{"primitives":[)" + primitive + "," + primitive + R"(]}],)"
+            R"("accessors":[)"
+            R"({"bufferView":0,"componentType":5126,"count":3,"type":"VEC3",)"
+            R"("min":[0,0,0],"max":[1,1,0]},)"
+            R"({"bufferView":1,"componentType":5126,"count":3,"type":"VEC4",)"
+            R"("min":[0,0,0,0],"max":[0,0,0,0]}],)"
+            R"("bufferViews":[{"buffer":0,"byteOffset":0,"byteLength":36},)"
+            R"({"buffer":0,"byteOffset":36,"byteLength":)" + std::to_string(morphByteLength) +
+            R"(,"byteStride":)" + std::to_string(byteStride) + R"(}],)"
+            R"("buffers":[{"byteLength":)" + std::to_string(bufferByteLength) + R"(}]})";
+
+    std::vector<uint8_t> bin(bufferByteLength, 0);
+    float* fbin = reinterpret_cast<float*>(bin.data());
+    // Base positions (3 x vec3) at float offset 0: (0,0,0), (1,0,0), (0,1,0).
+    fbin[3] = 1.0f;
+    fbin[7] = 1.0f;
+    // The morph position deltas are left at zero.
+
+    return assembleGlb(std::move(json), std::move(bin));
+}
+
 std::vector<uint8_t> makePositionlessPrimitiveGlb(bool includeValidSiblingPrimitive) {
     std::string primitives = R"({"attributes":{"TEXCOORD_0":0}})";
     if (includeValidSiblingPrimitive) {

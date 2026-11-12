@@ -631,6 +631,31 @@ TEST_F(glTFIOTest, MorphTargetWeightAnimationExceedingMaxDoesNotPanic) {
     AssetLoader::destroy(&assetLoader);
 }
 
+// Issue #10796: a VEC4 morph target POSITION accessor whose bufferView has a byteStride is
+// unpacked into a tightly packed array, but ResourceLoader used to upload the raw bytes of the
+// bufferView instead, and as many vertices as the whole MorphTargetBuffer holds rather than those
+// of the primitive. With a stride below 16 the bufferView is smaller than a packed array, so the
+// upload read past its end, which is the end of the GLB here (validated under ASan). With several
+// primitives it also overflowed the MorphTargetBuffer, which fails a precondition in all builds.
+TEST_F(glTFIOTest, StridedVec4MorphTargetPositions) {
+    AssetLoader* assetLoader = AssetLoader::create({ mEngine, mMaterialProvider, mNameManager });
+    ASSERT_NE(assetLoader, nullptr);
+
+    // Strides of 4, 8 and 12 make the 16-byte elements overlap, and 20 leaves padding in between.
+    for (uint32_t const byteStride : { 4u, 8u, 12u, 20u }) {
+        std::vector<uint8_t> const glb = makeStridedVec4MorphGlb(byteStride);
+        FilamentAsset* const asset = assetLoader->createAsset(glb.data(), uint32_t(glb.size()));
+        ASSERT_NE(asset, nullptr);
+
+        ResourceLoader resourceLoader({ mEngine, ".", false });
+        EXPECT_TRUE(resourceLoader.loadResources(asset));
+
+        assetLoader->destroyAsset(asset);
+    }
+
+    AssetLoader::destroy(&assetLoader);
+}
+
 // Loads `glb` through the extended loader, uploads its resources, and checks that the single
 // renderable exposes `expectedMorphTargets` morph targets. Out-of-bounds accesses are caught under
 // ASan, and the slot bookkeeping invariants are checked by assert_invariant in debug builds.
