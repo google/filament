@@ -21,6 +21,8 @@
 #include "CompilerThreadPool.h"
 #include "VulkanCommands.h"
 
+#include "vulkan/memory/ResourcePointer.h"
+
 #include <backend/DriverEnums.h>
 #include <backend/TargetBufferInfo.h>
 
@@ -38,6 +40,7 @@
 
 namespace filament::backend {
 
+struct VulkanPipeline;
 struct VulkanProgram;
 struct VulkanBufferObject;
 struct VulkanTexture;
@@ -105,9 +108,11 @@ public:
      *                 terminate().
      * @param context Information about the current instance of Vulkan, such as supported extensions,
      *                and enabled features.
+     * @param resourceManager Allocates the VulkanPipeline resources that own the cached
+     *                        VkPipeline objects.
      */
     VulkanPipelineCache(DriverBase& driver, VulkanPlatform& platform,
-            VulkanContext const& context);
+            VulkanContext const& context, fvkmemory::ResourceManager* resourceManager);
 
     // Loads a fake pipeline into memory on a separate thread, with the intent of
     // preloading the Vulkan cache with enough information to have a cache hit when
@@ -234,15 +239,15 @@ private:
     #pragma clang diagnostic pop
 #endif
 
-    // The timestamp associated with a given cache entry represents time as a count of flush
-    // events since the cache was constructed. If any cache entry was most recently used over
-    // FVK_MAX_PIPELINE_AGE flushes in the past, then we can be sure that it is no longer
-    // being used by the GPU, and is therefore safe to destroy or reclaim.
+    // The timestamp associated with a given cache entry represents time as a count of gc() calls
+    // since the cache was constructed. Entries unused for FVK_MAX_PIPELINE_AGE ticks are evicted
+    // from the cache. Eviction only drops the cache's reference: every command buffer that binds a
+    // pipeline also holds a reference, so the VkPipeline is destroyed once the GPU is done with it.
     using Timestamp = uint64_t;
     Timestamp mCurrentTime = 0;
 
     struct PipelineCacheEntry {
-        VkPipeline handle;
+        fvkmemory::resource_ptr<VulkanPipeline> pipeline;
         Timestamp lastUsed;
     };
 
@@ -273,6 +278,7 @@ private:
 
     // Immutable state.
     VkDevice mDevice = VK_NULL_HANDLE;
+    fvkmemory::ResourceManager* const mResourceManager;
 
     // Vuklan Driver pipeline cache handle. In the cases a pipeline has been  evicted by the `gc`,
     // recreating the same pipeline is cheaper, helping with frame stalling.

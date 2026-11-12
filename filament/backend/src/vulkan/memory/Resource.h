@@ -59,7 +59,8 @@ enum class ResourceType : uint8_t {
     STREAM = 20,
     FRAMEBUFFER = 21,
     RENDER_PASS = 22,
-    UNDEFINED_TYPE = 23,    // Must be the last enum because we use it for iterating over the enums.
+    PIPELINE = 23,
+    UNDEFINED_TYPE = 24,    // Must be the last enum because we use it for iterating over the enums.
 };
 
 template<typename D>

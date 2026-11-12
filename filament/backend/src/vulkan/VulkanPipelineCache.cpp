@@ -33,6 +33,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
+#include <utility>
 #include <vector>
 
 #if defined(__clang__)
@@ -170,8 +171,9 @@ void printPipelineFeedbackInfo(VkPipelineCreationFeedbackCreateInfo const& feedb
 } // namespace
 
 VulkanPipelineCache::VulkanPipelineCache(DriverBase& driver, VulkanPlatform& platform,
-        VulkanContext const& context)
+        VulkanContext const& context, fvkmemory::ResourceManager* resourceManager)
         : mDevice(platform.getDevice()),
+          mResourceManager(resourceManager),
           mPlatform(platform),
           mCallbackManager(driver),
           mHasVertexInputDynamicState(context.isVertexInputDynamicStateSupported() && context.isPipelineDynamicStateEnabled()),
@@ -254,12 +256,14 @@ VulkanPipelineCache::PipelineCacheEntry* VulkanPipelineCache::getOrCreatePipelin
     }
     FILAMENT_TRACING_EVENT(FILAMENT_TRACING_CATEGORY_FILAMENT,
             "Pipeline(Miss)", "program", mBoundProgram.c_str_safe());
+    VkPipeline const pipeline = createPipeline(mStaticPipelineKey);
+    assert_invariant(pipeline != VK_NULL_HANDLE && "Pipeline handle is VK_NULL_HANDLE");
     PipelineCacheEntry cacheEntry {
-        .handle = createPipeline(mStaticPipelineKey),
+        .pipeline = fvkmemory::resource_ptr<VulkanPipeline>::construct(mResourceManager, mDevice,
+                pipeline),
         .lastUsed = mCurrentTime,
     };
-    assert_invariant(cacheEntry.handle != VK_NULL_HANDLE && "Pipeline handle is VK_NULL_HANDLE");
-    return &mPipelines.emplace(mStaticPipelineKey, cacheEntry).first.value();
+    return &mPipelines.emplace(mStaticPipelineKey, std::move(cacheEntry)).first.value();
 }
 
 void VulkanPipelineCache::bindPipeline(VulkanCommandBuffer* commands) {
@@ -281,7 +285,11 @@ void VulkanPipelineCache::bindPipeline(VulkanCommandBuffer* commands) {
         PipelineCacheEntry* cacheEntry = getOrCreatePipeline();
         assert_invariant(cacheEntry != nullptr && "Failed to create/find pipeline");
         mBoundPipeline = mStaticPipelineKey;
-        vkCmdBindPipeline(cmdbuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, cacheEntry->handle);
+        // The command buffer keeps the pipeline alive until it has completed on the GPU, even if
+        // gc() evicts it from the cache in the meantime.
+        commands->acquire(cacheEntry->pipeline);
+        vkCmdBindPipeline(cmdbuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
+                cacheEntry->pipeline->getVkPipeline());
     }
 
     uint16_t const dirtyMask = computeDirtyDynamicState();
@@ -781,9 +789,7 @@ void VulkanPipelineCache::resetBoundPipeline() {
 }
 
 void VulkanPipelineCache::terminate() noexcept {
-    for (auto& iter : mPipelines) {
-        vkDestroyPipeline(mDevice, iter.second.handle, VKALLOC);
-    }
+    // Drops the cache's references. The VkPipelines are destroyed by ResourceManager::terminate().
     mPipelines.clear();
     resetBoundPipeline();
 
@@ -822,10 +828,9 @@ bool VulkanPipelineCache::savePipelineCache() noexcept {
 }
 
 void VulkanPipelineCache::gc() noexcept {
-    // The timestamp associated with a given cache entry represents "time" as a count of flush
-    // events since the cache was constructed. If any cache entry was most recently used over
-    // FVK_MAX_PIPELINE_AGE flush events in the past, then we can be sure that it is no longer
-    // being used by the GPU, and is therefore safe to destroy or reclaim.
+    // The timestamp associated with a given cache entry represents "time" as a count of gc()
+    // calls since the cache was constructed. Evicting an entry only drops the cache's reference to
+    // its VulkanPipeline; command buffers that still use it hold their own references.
     ++mCurrentTime;
 
     if (mContext.isPipelineCachePersistenceEnabled()) {
@@ -888,7 +893,6 @@ void VulkanPipelineCache::gc() noexcept {
 
         for (size_t i = 0; i < evictCount; ++i) {
             PipeIterator iter = expiredCandidates[i];
-            vkDestroyPipeline(mDevice, iter.value().handle, VKALLOC);
             mPipelines.erase(iter);
         }
     } else {
@@ -897,7 +901,6 @@ void VulkanPipelineCache::gc() noexcept {
         for (ConstPipeIterator iter = mPipelines.begin(); iter != mPipelines.end();) {
             const PipelineCacheEntry& cacheEntry = iter.value();
             if (cacheEntry.lastUsed + FVK_MAX_PIPELINE_AGE < mCurrentTime) {
-                vkDestroyPipeline(mDevice, iter->second.handle, VKALLOC);
                 iter = mPipelines.erase(iter);
             } else {
                 ++iter;

@@ -606,4 +606,11 @@ VulkanRenderPass::~VulkanRenderPass() {
     vkDestroyRenderPass(mDevice, mRenderPass, VKALLOC);
 }
 
+VulkanPipeline::VulkanPipeline(VkDevice device, VkPipeline pipeline)
+    : mDevice(device), mPipeline(pipeline) {}
+
+VulkanPipeline::~VulkanPipeline() {
+    vkDestroyPipeline(mDevice, mPipeline, VKALLOC);
+}
+
 } // namespace filament::backend

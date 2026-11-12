@@ -531,6 +531,22 @@ private:
     VkRenderPass mRenderPass;
 };
 
+// Owns a VkPipeline created by VulkanPipelineCache. Each command buffer that binds the pipeline
+// acquires a reference, so the VkPipeline is destroyed only after the cache has evicted it and
+// every command buffer that used it has completed on the GPU.
+struct VulkanPipeline : public fvkmemory::Resource {
+    VulkanPipeline(VkDevice device, VkPipeline pipeline);
+    ~VulkanPipeline();
+
+    inline VkPipeline getVkPipeline() const noexcept {
+        return mPipeline;
+    }
+
+private:
+    VkDevice mDevice;
+    VkPipeline mPipeline;
+};
+
 } // namespace filament::backend
 
 #endif // TNT_FILAMENT_BACKEND_VULKANHANDLES_H
