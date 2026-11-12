@@ -718,6 +718,9 @@ endif()
 # Target system.
 if (IS_MOBILE_TARGET)
     set(MATC_TARGET mobile)
+elseif (FILAMENT_SUPPORTS_EGL_ON_LINUX)
+    # EGL on Linux runs the GLES backend: needs the mobile shaders too
+    set(MATC_TARGET all)
 else()
     set(MATC_TARGET desktop)
 endif()
