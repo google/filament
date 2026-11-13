@@ -197,6 +197,13 @@ std::vector<uint8_t> makeSkinnedMeshAfterInvalidSkinGlb(bool wrongType);
 std::vector<uint8_t> makeMorphCountMismatchGlb(char const* morphType, uint32_t morphCount,
         bool withBufferView, uint32_t morphByteStride = 0);
 
+// Builds a 6-vertex (2-triangle) GLB whose morph target POSITION accessor has `morphType`,
+// `componentType`, and optional `withBufferView` / `withMinMax`. When `withBufferView` is true, the
+// morph bufferView is tightly packed (no byteStride) at the exact end of the GLB BIN chunk with
+// zero trailing padding. Reproduces issues #10794, #10797, and #10792.
+std::vector<uint8_t> makeTypedMorphPositionGlb(char const* morphType, int componentType,
+        bool withBufferView = true, bool withMinMax = true);
+
 } // namespace test
 
 #endif // TNT_GLTFIO_TEST_GLBBUILDERS_H

@@ -2973,6 +2973,44 @@ TEST_F(glTFIOTest, MorphAccessorCountMismatchDoesNotOverRead) {
     }
 }
 
+// Issue #10794: tight non-float morph target POSITION accessors (e.g. VEC3 SHORT and VEC4
+// BYTE/UBYTE/SHORT/USHORT) do not require conversion for VertexBuffer, so utility::requiresPacking()
+// returns false; uploadBuffers() must still unpack them to floats rather than copying 12/16 bytes
+// per vertex past the end of the bufferView.
+TEST_F(glTFIOTest, NonFloatTightMorphPositionsAreUnpacked) {
+    struct MorphTypeCase {
+        char const* type;
+        int componentType;
+    };
+    constexpr MorphTypeCase kCases[] = {
+        { "VEC3", 5122 }, // SHORT3 (6 bytes/vertex; 36 bytes at GLB tail vs 72-byte float3 copy)
+        { "VEC4", 5120 }, // BYTE4 (4 bytes/vertex; 24 bytes at GLB tail vs 96-byte float4 copy)
+        { "VEC4", 5121 }, // UBYTE4 (4 bytes/vertex; 24 bytes at GLB tail vs 96-byte float4 copy)
+        { "VEC4", 5122 }, // SHORT4 (8 bytes/vertex; 48 bytes at GLB tail vs 96-byte float4 copy)
+        { "VEC4", 5123 }, // USHORT4 (8 bytes/vertex; 48 bytes at GLB tail vs 96-byte float4 copy)
+        { "VEC3", 5126 }, // FLOAT3 control
+        { "VEC4", 5126 }, // FLOAT4 control
+    };
+
+    AssetLoader* assetLoader = AssetLoader::create({ mEngine, mMaterialProvider, mNameManager });
+    ASSERT_NE(assetLoader, nullptr);
+
+    for (MorphTypeCase const& c : kCases) {
+        SCOPED_TRACE(testing::Message() << c.type << " componentType=" << c.componentType);
+        std::vector<uint8_t> const glb =
+                makeTypedMorphPositionGlb(c.type, c.componentType, /* withBufferView = */ true);
+        FilamentAsset* const asset = assetLoader->createAsset(glb.data(), uint32_t(glb.size()));
+        ASSERT_NE(asset, nullptr);
+
+        ResourceLoader resourceLoader({ mEngine, ".", false });
+        EXPECT_TRUE(resourceLoader.loadResources(asset));
+
+        assetLoader->destroyAsset(asset);
+    }
+
+    AssetLoader::destroy(&assetLoader);
+}
+
 #undef EXPECT_FLOAT3_EQ
 
 int main(int argc, char** argv) {

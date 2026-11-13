@@ -631,7 +631,11 @@ inline bool uploadBuffers(FFilamentAsset* asset, Engine& engine,
             continue;
         }
 
-        if (utility::requiresPacking(accessor)) {
+        // MorphTargetBuffer stores float positions, so non-float accessors (such as tight SHORT3
+        // or BYTE4/UBYTE4/SHORT4/USHORT4) must also be unpacked to floats even when
+        // utility::requiresPacking() is false for VertexBuffer uploads.
+        if (accessor->component_type != cgltf_component_type_r_32f ||
+                utility::requiresPacking(accessor)) {
             const size_t components = cgltf_num_components(accessor->type);
             if (components == 0 || uploadCount > std::numeric_limits<size_t>::max() / components) {
                 continue;
