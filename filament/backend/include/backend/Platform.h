@@ -134,12 +134,14 @@ public:
          * backend. Calling this method again replaces any previously registered
          * callback without invoking it.
          *
+         * When not using a handler, the callback is invoked synchronously on
+         * the thread releasing the last reference (likely the backend thread),
+         * so it must be thread-safe and should not block for a long time.
+         * A typical use case would be to return an Image to an ImageReader on
+		 * Android.
+         *
          * @param handler   An optional handler used to dispatch the callback.
-         * If nullptr, the callback is invoked synchronously on the thread
-         * releasing the last reference (typically the backend thread), so it
-         * must be thread-safe and should not block.
-         * @param callback  The function called upon this ExternalImage's
-         * destruction.
+         * @param callback  The function called upon this object's destruction.
          * @param userData  An optional opaque pointer passed to the callback.
          */
         void setReleaseCallback(CallbackHandler* UTILS_NULLABLE handler,

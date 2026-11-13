@@ -55,8 +55,6 @@ public:
     ImageData createVkImageFromExternal(ExternalImageHandleRef image,
             uint32_t logicalWidth, uint32_t logicalHeight) const override;
 
-    void const* getExternalImageBufferKey(ExternalImageHandleRef image) const override;
-
     /**
      * Converts a sync to an external file descriptor, if possible. Accepts an
      * opaque handle to a sync, as well as a pointer to where the fd should be

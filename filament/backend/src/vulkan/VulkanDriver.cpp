@@ -964,9 +964,7 @@ void VulkanDriver::createTextureExternalImage2R(Handle<HwTexture> th, backend::S
 
     // Software-decoded YUV images are copied from the native buffer
     // every time they are bound, so their imports are not shared.
-    void const* const bufferKey = metadata.isStagingRequired
-                                          ? nullptr
-                                          : mPlatform->getExternalImageBufferKey(externalImage);
+    void const* const bufferKey = metadata.isStagingRequired ? nullptr : externalImage.get();
 
     VkSamplerYcbcrConversion const conversion =
             mExternalImageManager.getVkSamplerYcbcrConversion(metadata);
