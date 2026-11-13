@@ -412,6 +412,10 @@ inline bool uploadBuffers(FFilamentAsset* asset, Engine& engine,
 
         // For morph targets without buffer_view, use cgltf_accessor_unpack_floats to unpack data directly
         if (!accessor->buffer_view && isMorphTarget) {
+            if (accessor->type != cgltf_type_vec3 && accessor->type != cgltf_type_vec4) {
+                LOG(WARNING) << "Unsupported morph target position type, skipping.";
+                continue;
+            }
             const size_t uploadCount = std::min<size_t>(accessor->count, slot.morphTargetCount);
             const size_t components = cgltf_num_components(accessor->type);
             if (components == 0 || uploadCount == 0 ||
@@ -434,8 +438,7 @@ inline bool uploadBuffers(FFilamentAsset* asset, Engine& engine,
                 if (accessor->type == cgltf_type_vec3) {
                     slot.morphTargetBuffer->setPositionsAt(engine, slot.bufferIndex,
                             (const float3*) floatsData, uploadCount, slot.morphTargetOffset);
-                } else {
-                    assert_invariant(accessor->type == cgltf_type_vec4);
+                } else if (accessor->type == cgltf_type_vec4) {
                     slot.morphTargetBuffer->setPositionsAt(engine, slot.bufferIndex,
                             (const float4*) floatsData, uploadCount, slot.morphTargetOffset);
                 }

@@ -3011,6 +3011,43 @@ TEST_F(glTFIOTest, NonFloatTightMorphPositionsAreUnpacked) {
     AssetLoader::destroy(&assetLoader);
 }
 
+// Issue #10797: the bufferView-less morph arm in uploadBuffers() must check for VEC3/VEC4 instead
+// of treating VEC2/SCALAR as float4 and over-reading the malloc'd unpack buffer.
+TEST_F(glTFIOTest, BufferlessMorphPositionDimensionMismatchDoesNotOverRead) {
+    AssetLoader* assetLoader = AssetLoader::create({ mEngine, mMaterialProvider, mNameManager });
+    ASSERT_NE(assetLoader, nullptr);
+
+    // Valid VEC3 and VEC4 bufferView-less controls load cleanly.
+    for (char const* const validType : { "VEC3", "VEC4" }) {
+        std::vector<uint8_t> const glb = makeTypedMorphPositionGlb(validType, 5126,
+                /* withBufferView = */ false, /* withMinMax = */ false);
+        FilamentAsset* const asset = assetLoader->createAsset(glb.data(), uint32_t(glb.size()));
+        ASSERT_NE(asset, nullptr);
+        ResourceLoader resourceLoader({ mEngine, ".", false });
+        EXPECT_TRUE(resourceLoader.loadResources(asset));
+        assetLoader->destroyAsset(asset);
+    }
+
+    // Directly exercise uploadBuffers()'s bufferView-less morph arm with VEC2 and SCALAR accessors.
+    for (cgltf_type const badType : { cgltf_type_vec2, cgltf_type_scalar }) {
+        std::vector<uint8_t> const glb = makeTypedMorphPositionGlb("VEC3", 5126,
+                /* withBufferView = */ false, /* withMinMax = */ false);
+        FilamentAsset* const asset = assetLoader->createAsset(glb.data(), uint32_t(glb.size()));
+        ASSERT_NE(asset, nullptr);
+
+        gltfio::FFilamentAsset* const fasset = downcast(asset);
+        // Set material to unlit on the morph accessor's primitive or mutate the morph accessor type
+        // directly so uploadBuffers()'s no-buffer_view arm sees VEC2 / SCALAR.
+        fasset->mSourceAsset->hierarchy->accessors[1].type = badType;
+
+        ResourceLoader resourceLoader({ mEngine, ".", false });
+        EXPECT_TRUE(resourceLoader.loadResources(asset));
+        assetLoader->destroyAsset(asset);
+    }
+
+    AssetLoader::destroy(&assetLoader);
+}
+
 #undef EXPECT_FLOAT3_EQ
 
 int main(int argc, char** argv) {
