@@ -461,10 +461,15 @@ void VulkanDriver::tick(int) {
     // If the Renderer is skipping a lot of frames, it's possible for
     // commands to accumulate, since we only flush command buffers if
     // driver.flush() is called, or in endFrame(). This ensures that
-    // flush and gc run regularly, even during skipped frames.
+    // flush and fence-gated handle reclamation run regularly during
+    // skipped frames without advancing the frame-count eviction timers
+    // in mPipelineCache, mFramebufferCache, mBufferCache, and mStagePool
+    // while in-flight frames are still executing on the GPU.
     if (++mTicksSinceLastGc == MAX_TICKS_BETWEEN_GC) {
         flush();
-        collectGarbage(); // Resets mTicksSinceLastGc to 0.
+        mCommands.gc();
+        mResourceManager.gc();
+        mTicksSinceLastGc = 0;
     }
 }
 
