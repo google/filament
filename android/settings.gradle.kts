@@ -41,6 +41,7 @@ if (!providers.gradleProperty("com.google.android.filament.skip-samples").isPres
     include(":samples:sample-transparent-view")
     include(":samples:sample-render-validation")
     include(":samples:sample-cpp-viewer")
+    include(":samples:sample-taa-harness")
 }
 
 rootProject.name = "filament"
