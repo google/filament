@@ -2743,6 +2743,62 @@ TEST_F(glTFIOTest, DenseStrideOverflowInTangentsJobIsRejected) {
     }
 }
 
+// Issue #10192: createMaterialVariants() runs during createAsset() before cgltf_validate(), so an
+// out-of-bounds variant index in KHR_materials_variants must be skipped without indexing
+// instance->mVariants out of bounds.
+TEST_F(glTFIOTest, OutOfBoundsMaterialVariantMappingIsSkipped) {
+    for (int const badVariant : { 1, 1000 }) {
+        SCOPED_TRACE(badVariant);
+        std::vector<uint8_t> const glb = makeMaterialVariantsMappingGlb(badVariant);
+
+        AssetLoader* assetLoader =
+                AssetLoader::create({ mEngine, mMaterialProvider, mNameManager });
+        ASSERT_NE(assetLoader, nullptr);
+
+        FilamentAsset* const asset = assetLoader->createAsset(glb.data(), uint32_t(glb.size()));
+        ASSERT_NE(asset, nullptr);
+
+        FilamentInstance* const instance = asset->getInstance();
+        ASSERT_NE(instance, nullptr);
+        ASSERT_EQ(instance->getMaterialVariantCount(), 1u);
+        EXPECT_STREQ(instance->getMaterialVariantName(0), "v0");
+        instance->applyMaterialVariant(0);
+
+        // ResourceLoader::loadResources() later rejects the malformed variant index via
+        // cgltf_validate().
+        ResourceLoader resourceLoader({ mEngine, ".", false });
+        EXPECT_FALSE(resourceLoader.loadResources(asset));
+
+        assetLoader->destroyAsset(asset);
+        AssetLoader::destroy(&assetLoader);
+    }
+
+    // Negative variant index is rejected at JSON parse time.
+    {
+        std::vector<uint8_t> const glb = makeMaterialVariantsMappingGlb(-1);
+        AssetLoader* assetLoader =
+                AssetLoader::create({ mEngine, mMaterialProvider, mNameManager });
+        ASSERT_NE(assetLoader, nullptr);
+        EXPECT_EQ(assetLoader->createAsset(glb.data(), uint32_t(glb.size())), nullptr);
+        AssetLoader::destroy(&assetLoader);
+    }
+
+    // Valid control (both mappings target variant 0) loads and applies cleanly.
+    {
+        std::vector<uint8_t> const glb = makeMaterialVariantsMappingGlb(0);
+        AssetLoader* assetLoader =
+                AssetLoader::create({ mEngine, mMaterialProvider, mNameManager });
+        ASSERT_NE(assetLoader, nullptr);
+        FilamentAsset* const asset = assetLoader->createAsset(glb.data(), uint32_t(glb.size()));
+        ASSERT_NE(asset, nullptr);
+        ResourceLoader resourceLoader({ mEngine, ".", false });
+        EXPECT_TRUE(resourceLoader.loadResources(asset));
+        asset->getInstance()->applyMaterialVariant(0);
+        assetLoader->destroyAsset(asset);
+        AssetLoader::destroy(&assetLoader);
+    }
+}
+
 #undef EXPECT_FLOAT3_EQ
 
 int main(int argc, char** argv) {

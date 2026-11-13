@@ -1116,4 +1116,28 @@ std::vector<uint8_t> makeDenseStrideOverflowGlb(uint64_t byteStride, bool stride
     return assembleGlb(std::move(json), std::move(bin));
 }
 
+std::vector<uint8_t> makeMaterialVariantsMappingGlb(int extraVariantIndex) {
+    std::string json =
+            R"({"asset":{"version":"2.0"},)"
+            R"("extensionsUsed":["KHR_materials_variants"],)"
+            R"("extensions":{"KHR_materials_variants":{"variants":[{"name":"v0"}]}},)"
+            R"("scene":0,"scenes":[{"nodes":[0]}],"nodes":[{"mesh":0}],)"
+            R"("materials":[{"name":"mat0"},{"name":"mat1"}],)"
+            R"("meshes":[{"primitives":[{"attributes":{"POSITION":0},"material":0,)"
+            R"("extensions":{"KHR_materials_variants":{"mappings":[)"
+            R"({"material":0,"variants":[0]},)"
+            R"({"material":1,"variants":[)" + std::to_string(extraVariantIndex) + R"(]}]}}}]}],)"
+            R"("accessors":[{"bufferView":0,"componentType":5126,"count":3,"type":"VEC3",)"
+            R"("min":[0,0,0],"max":[1,1,0]}],)"
+            R"("bufferViews":[{"buffer":0,"byteOffset":0,"byteLength":36}],)"
+            R"("buffers":[{"byteLength":36}]})";
+
+    std::vector<uint8_t> bin(36, 0);
+    float* fbin = reinterpret_cast<float*>(bin.data());
+    fbin[3] = 1.0f;
+    fbin[7] = 1.0f;
+
+    return assembleGlb(std::move(json), std::move(bin));
+}
+
 } // namespace test

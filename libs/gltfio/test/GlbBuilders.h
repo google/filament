@@ -171,6 +171,11 @@ std::vector<uint8_t> makeUnusableInverseBindMatricesGlb();
 // `stride * (count - 1) + 12` wraps modulo 2^64 to 0, reproducing issue #10793.
 std::vector<uint8_t> makeDenseStrideOverflowGlb(uint64_t byteStride, bool strideOnNormal = true);
 
+// Builds a single-triangle GLB using KHR_materials_variants with one top-level variant ("v0") and
+// two primitive mappings: one valid mapping to variant 0, and one mapping to `extraVariantIndex`
+// (e.g. 1000 or -1 to reproduce issue #10192).
+std::vector<uint8_t> makeMaterialVariantsMappingGlb(int extraVariantIndex);
+
 } // namespace test
 
 #endif // TNT_GLTFIO_TEST_GLBBUILDERS_H
