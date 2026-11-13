@@ -3119,6 +3119,95 @@ TEST_F(glTFIOTest, InvalidMorphTargetDimensionsAreRejectedAndGuarded) {
     AssetLoader::destroy(&assetLoader);
 }
 
+// Issue #10798 (and #10674): TangentsJobExtended::data::unpack must route dimension-mismatched
+// float accessors (morph POSITION/NORMAL/TANGENT and base attributes) through unpackFloats()
+// rather than reading sizeof(float3)/sizeof(float4) per vertex past the end of the bufferView.
+TEST(glTFIOTangentsJobExtended, DimensionMismatchedMorphAndBaseAttributesDoNotOverRead) {
+    auto runOnGlb = [](std::vector<uint8_t> const& glb, int morphTargetIndex,
+                            math::float3 expectedFirstPos) {
+        cgltf_options options{};
+        cgltf_data* data = nullptr;
+        ASSERT_EQ(cgltf_parse(&options, glb.data(), glb.size(), &data), cgltf_result_success);
+        ASSERT_EQ(cgltf_load_buffers(&options, data, "."), cgltf_result_success);
+        ASSERT_EQ(cgltf_validate(data), cgltf_result_success);
+        cgltf_primitive const* prim = &data->meshes[0].primitives[0];
+
+        TangentsJobExtended::Params params{
+            .in = { .prim = prim, .morphTargetIndex = morphTargetIndex }
+        };
+        TangentsJobExtended::run(&params);
+        auto& out = params.out;
+        ASSERT_GT(out.vertexCount, 0u);
+        ASSERT_NE(out.positions, nullptr);
+        if (morphTargetIndex != TangentsJobExtended::kMorphTargetUnused) {
+            for (size_t v = 0; v < out.vertexCount; ++v) {
+                EXPECT_FLOAT_EQ(out.positions[v].x, expectedFirstPos.x);
+                EXPECT_FLOAT_EQ(out.positions[v].y, expectedFirstPos.y);
+                EXPECT_FLOAT_EQ(out.positions[v].z, expectedFirstPos.z);
+            }
+        }
+        free(out.positions);
+        free(out.tbn);
+        free(out.triangles);
+        cgltf_free(data);
+    };
+
+    // Morph POSITION with SCALAR, VEC2, VEC3 (control), and VEC4 at the exact GLB tail.
+    runOnGlb(makeExtendedDimensionMismatchGlb("POSITION", "SCALAR"), 0, { 1.0f, 0.0f, 0.0f });
+    runOnGlb(makeExtendedDimensionMismatchGlb("POSITION", "VEC2"), 0, { 1.0f, 2.0f, 0.0f });
+    runOnGlb(makeExtendedDimensionMismatchGlb("POSITION", "VEC3"), 0, { 1.0f, 2.0f, 3.0f });
+    runOnGlb(makeExtendedDimensionMismatchGlb("POSITION", "VEC4"), 0, { 1.0f, 2.0f, 3.0f });
+
+    // Morph NORMAL and TANGENT with SCALAR, VEC2, and VEC3 (control) at the exact GLB tail.
+    for (char const* const attr : { "NORMAL", "TANGENT" }) {
+        for (char const* const type : { "SCALAR", "VEC2", "VEC3" }) {
+            SCOPED_TRACE(testing::Message() << attr << " " << type);
+            runOnGlb(makeExtendedDimensionMismatchGlb(attr, type), 0, { 0.0f, 0.0f, 0.0f });
+        }
+    }
+
+    // Base POSITION with SCALAR and VEC2 at the exact GLB tail (#10674).
+    for (char const* const baseType : { "SCALAR", "VEC2" }) {
+        SCOPED_TRACE(baseType);
+        runOnGlb(makeExtendedDimensionMismatchGlb(nullptr, "VEC3", baseType),
+                TangentsJobExtended::kMorphTargetUnused, {});
+    }
+}
+
+TEST_F(glTFIOTest, ExtendedLoaderDimensionMismatchedMorphsAndBaseAttributes) {
+    if (!AssetConfigurationExtended::isSupported()) {
+        GTEST_SKIP() << "The extended asset loader is not supported on this platform.";
+    }
+
+    for (char const* const attr : { "POSITION", "NORMAL", "TANGENT" }) {
+        for (char const* const type : { "SCALAR", "VEC2", "VEC3", "VEC4" }) {
+            SCOPED_TRACE(testing::Message() << attr << " " << type);
+            loadExtendedMorphAsset(mEngine, mMaterialProvider, mNameManager,
+                    makeExtendedDimensionMismatchGlb(attr, type), 1u);
+        }
+    }
+
+    for (char const* const baseType : { "SCALAR", "VEC2" }) {
+        SCOPED_TRACE(baseType);
+        std::vector<uint8_t> const glb =
+                makeExtendedDimensionMismatchGlb(nullptr, "VEC3", baseType);
+        AssetConfigurationExtended ext{ .gltfPath = "." };
+        AssetLoader* assetLoader = AssetLoader::create({
+                .engine = mEngine,
+                .materials = mMaterialProvider,
+                .names = mNameManager,
+                .ext = &ext,
+        });
+        ASSERT_NE(assetLoader, nullptr);
+        FilamentAsset* const asset = assetLoader->createAsset(glb.data(), uint32_t(glb.size()));
+        ASSERT_NE(asset, nullptr);
+        ResourceLoader resourceLoader({ mEngine, ".", false });
+        EXPECT_TRUE(resourceLoader.loadResources(asset));
+        assetLoader->destroyAsset(asset);
+        AssetLoader::destroy(&assetLoader);
+    }
+}
+
 #undef EXPECT_FLOAT3_EQ
 
 int main(int argc, char** argv) {

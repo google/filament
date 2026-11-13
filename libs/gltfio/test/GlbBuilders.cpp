@@ -1349,4 +1349,140 @@ std::vector<uint8_t> makeTypedMorphPositionGlb(char const* morphType, int compon
     return assembleGlb(std::move(json), std::move(bin));
 }
 
+std::vector<uint8_t> makeExtendedDimensionMismatchGlb(char const* morphAttr, char const* morphType,
+        char const* basePosType) {
+    constexpr uint32_t kVertexCount = 6u;
+    auto const numComps = [](std::string_view type) -> uint32_t {
+        if (type == "SCALAR") return 1u;
+        if (type == "VEC2") return 2u;
+        if (type == "VEC4") return 4u;
+        return 3u;
+    };
+
+    uint32_t const basePosComps = numComps(basePosType);
+    uint32_t const basePosBytes = kVertexCount * basePosComps * sizeof(float);
+    uint32_t const normBytes = kVertexCount * 3u * sizeof(float); // 72
+    uint32_t const tangBytes = kVertexCount * 4u * sizeof(float); // 96
+
+    if (!morphAttr) {
+        // Place base POSITION at the exact tail of the BIN chunk so any over-read faults under ASan.
+        uint32_t const posOffset = normBytes + tangBytes;
+        uint32_t const totalBytes = posOffset + basePosBytes;
+        std::vector<uint8_t> bin(totalBytes, 0);
+        {
+            float* norms = reinterpret_cast<float*>(bin.data());
+            float* tangs = reinterpret_cast<float*>(bin.data() + normBytes);
+            float* pos = reinterpret_cast<float*>(bin.data() + posOffset);
+            for (uint32_t v = 0; v < kVertexCount; ++v) {
+                norms[v * 3 + 2] = 1.0f;
+                tangs[v * 4] = 1.0f;
+                tangs[v * 4 + 3] = 1.0f;
+                pos[v * basePosComps] = float(v % 3 == 1);
+                if (basePosComps >= 2u) {
+                    pos[v * basePosComps + 1] = float(v % 3 == 2);
+                }
+            }
+        }
+
+        std::string json =
+                R"({"asset":{"version":"2.0"},"scene":0,"scenes":[{"nodes":[0]}],)"
+                R"("nodes":[{"mesh":0}],)"
+                R"("meshes":[{"primitives":[{"attributes":{)"
+                R"("POSITION":2,"NORMAL":0,"TANGENT":1},"mode":4}]}],)"
+                R"("accessors":[)"
+                R"({"bufferView":0,"componentType":5126,"count":6,"type":"VEC3"},)"
+                R"({"bufferView":1,"componentType":5126,"count":6,"type":"VEC4"},)"
+                R"({"bufferView":2,"componentType":5126,"count":6,"type":")" +
+                std::string(basePosType) + R"("}],)"
+                R"("bufferViews":[)"
+                R"({"buffer":0,"byteOffset":0,"byteLength":72},)"
+                R"({"buffer":0,"byteOffset":72,"byteLength":96},)"
+                R"({"buffer":0,"byteOffset":168,"byteLength":)" + std::to_string(basePosBytes) +
+                R"(}],"buffers":[{"byteLength":)" + std::to_string(totalBytes) + R"(}]})";
+        return assembleGlb(std::move(json), std::move(bin));
+    }
+
+    std::string_view const mAttr(morphAttr);
+    uint32_t const morphComps = numComps(morphType);
+    uint32_t const morphBytes = kVertexCount * morphComps * sizeof(float);
+    bool const morphIsPos = (mAttr == "POSITION");
+    // If morphAttr is NORMAL or TANGENT, also include a valid VEC3 morph POSITION before it so
+    // AssetLoaderExtended creates a morph target job AND places `morphAttr` at the exact BIN tail.
+    uint32_t const auxMorphPosBytes = morphIsPos ? 0u : (kVertexCount * 3u * sizeof(float));
+
+    uint32_t offset = 0;
+    uint32_t const posOffset = offset;
+    offset += basePosBytes;
+    uint32_t const normOffset = offset;
+    offset += normBytes;
+    uint32_t const tangOffset = offset;
+    offset += tangBytes;
+    uint32_t const auxMorphPosOffset = offset;
+    offset += auxMorphPosBytes;
+    uint32_t const tailMorphOffset = offset;
+    offset += morphBytes;
+    uint32_t const totalBytes = offset;
+
+    std::vector<uint8_t> bin(totalBytes, 0);
+    {
+        float* pos = reinterpret_cast<float*>(bin.data() + posOffset);
+        float* norms = reinterpret_cast<float*>(bin.data() + normOffset);
+        float* tangs = reinterpret_cast<float*>(bin.data() + tangOffset);
+        for (uint32_t v = 0; v < kVertexCount; ++v) {
+            pos[v * basePosComps] = float(v);
+            if (basePosComps >= 2u) {
+                pos[v * basePosComps + 1] = float(v % 3);
+            }
+            norms[v * 3 + 2] = 1.0f;
+            tangs[v * 4] = 1.0f;
+            tangs[v * 4 + 3] = 1.0f;
+        }
+        float* tail = reinterpret_cast<float*>(bin.data() + tailMorphOffset);
+        for (uint32_t v = 0; v < kVertexCount; ++v) {
+            for (uint32_t c = 0; c < morphComps; ++c) {
+                tail[v * morphComps + c] = float(c + 1);
+            }
+        }
+    }
+
+    std::string accessors =
+            R"({"bufferView":0,"componentType":5126,"count":6,"type":")" +
+            std::string(basePosType) + R"("},)"
+            R"({"bufferView":1,"componentType":5126,"count":6,"type":"VEC3"},)"
+            R"({"bufferView":2,"componentType":5126,"count":6,"type":"VEC4"})";
+    std::string bufferViews =
+            R"({"buffer":0,"byteOffset":)" + std::to_string(posOffset) + R"(,"byteLength":)" +
+            std::to_string(basePosBytes) + R"(},)"
+            R"({"buffer":0,"byteOffset":)" + std::to_string(normOffset) + R"(,"byteLength":72},)"
+            R"({"buffer":0,"byteOffset":)" + std::to_string(tangOffset) + R"(,"byteLength":96})";
+    std::string targetJson;
+    if (morphIsPos) {
+        accessors += R"(,{"bufferView":3,"componentType":5126,"count":6,"type":")" +
+                std::string(morphType) + R"("})";
+        bufferViews += R"(,{"buffer":0,"byteOffset":)" + std::to_string(tailMorphOffset) +
+                R"(,"byteLength":)" + std::to_string(morphBytes) + "}";
+        targetJson = R"({"POSITION":3})";
+    } else {
+        accessors += R"(,{"bufferView":3,"componentType":5126,"count":6,"type":"VEC3"},)"
+                     R"({"bufferView":4,"componentType":5126,"count":6,"type":")" +
+                std::string(morphType) + R"("})";
+        bufferViews += R"(,{"buffer":0,"byteOffset":)" + std::to_string(auxMorphPosOffset) +
+                R"(,"byteLength":72},)"
+                R"({"buffer":0,"byteOffset":)" + std::to_string(tailMorphOffset) +
+                R"(,"byteLength":)" + std::to_string(morphBytes) + "}";
+        targetJson = R"({"POSITION":3,")" + std::string(morphAttr) + R"(":4})";
+    }
+
+    std::string json =
+            R"({"asset":{"version":"2.0"},"scene":0,"scenes":[{"nodes":[0]}],)"
+            R"("nodes":[{"mesh":0}],)"
+            R"("meshes":[{"weights":[1],"primitives":[{"attributes":{)"
+            R"("POSITION":0,"NORMAL":1,"TANGENT":2},"mode":4,"targets":[)" + targetJson + R"(]}]}],)"
+            R"("accessors":[)" + accessors + R"(],)"
+            R"("bufferViews":[)" + bufferViews + R"(],)"
+            R"("buffers":[{"byteLength":)" + std::to_string(totalBytes) + R"(}]})";
+
+    return assembleGlb(std::move(json), std::move(bin));
+}
+
 } // namespace test

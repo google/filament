@@ -204,6 +204,15 @@ std::vector<uint8_t> makeMorphCountMismatchGlb(char const* morphType, uint32_t m
 std::vector<uint8_t> makeTypedMorphPositionGlb(char const* morphType, int componentType,
         bool withBufferView = true, bool withMinMax = true);
 
+// Builds a 6-vertex (2-triangle) lit GLB with POSITION (of `basePosType`), NORMAL, and TANGENT
+// base attributes, and optionally a morph target carrying POSITION + `morphAttr` ("POSITION",
+// "NORMAL", or "TANGENT") whose `morphAttr` accessor has `morphType` ("SCALAR", "VEC2", "VEC3",
+// or "VEC4") placed tightly at the exact end of the GLB BIN chunk. When `morphAttr` is null, no
+// morph target is added and the base POSITION bufferView sits at the exact end of the GLB BIN
+// chunk. Reproduces issue #10798 (and #10674).
+std::vector<uint8_t> makeExtendedDimensionMismatchGlb(char const* morphAttr, char const* morphType,
+        char const* basePosType = "VEC3");
+
 } // namespace test
 
 #endif // TNT_GLTFIO_TEST_GLBBUILDERS_H
