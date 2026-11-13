@@ -189,6 +189,14 @@ std::vector<uint8_t> makeSkinnedJointIndexGlb(uint16_t jointIndex);
 // recomputeBoundingBoxes(), and getSkinNameAt().
 std::vector<uint8_t> makeSkinnedMeshAfterInvalidSkinGlb(bool wrongType);
 
+// Builds a two-primitive GLB (3 vertices per primitive, 6 total in MorphTargetBuffer) where each
+// primitive has one morph target POSITION accessor of `morphType` ("VEC3" or "VEC4") and count
+// `morphCount`. When `withBufferView` is false, the morph accessor omits bufferView; otherwise its
+// bufferView sits at the exact end of the GLB BIN chunk with `morphByteStride` (0 for tight).
+// Reproduces issue #10197 across all three uploadBuffers() morph arms.
+std::vector<uint8_t> makeMorphCountMismatchGlb(char const* morphType, uint32_t morphCount,
+        bool withBufferView, uint32_t morphByteStride = 0);
+
 } // namespace test
 
 #endif // TNT_GLTFIO_TEST_GLBBUILDERS_H

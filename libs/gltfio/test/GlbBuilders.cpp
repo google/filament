@@ -27,6 +27,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <string>
+#include <string_view>
 #include <utility>
 #include <vector>
 
@@ -1251,6 +1252,48 @@ std::vector<uint8_t> makeSkinnedMeshAfterInvalidSkinGlb(bool wrongType) {
             R"({"buffer":0,"byteOffset":108,"byteLength":64},)"
             R"({"buffer":0,"byteOffset":172,"byteLength":64}],)"
             R"("buffers":[{"byteLength":236}]})";
+
+    return assembleGlb(std::move(json), std::move(bin));
+}
+
+std::vector<uint8_t> makeMorphCountMismatchGlb(char const* morphType, uint32_t morphCount,
+        bool withBufferView, uint32_t morphByteStride) {
+    uint32_t const components = std::string_view(morphType) == "VEC4" ? 4u : 3u;
+    uint32_t const elementBytes = components * sizeof(float);
+    uint32_t const stride = morphByteStride > 0 ? morphByteStride : elementBytes;
+    uint32_t const morphBytes =
+            withBufferView && morphCount > 0 ? stride * (morphCount - 1u) + elementBytes : 0u;
+    uint32_t const totalBytes = 36u + morphBytes;
+
+    std::string const minMax = components == 4u
+            ? R"(,"min":[0,0,0,0],"max":[0,0,0,0])"
+            : R"(,"min":[0,0,0],"max":[0,0,0])";
+    std::string const morphBvField = withBufferView ? R"("bufferView":1,)" : "";
+    std::string morphViewJson;
+    if (withBufferView) {
+        std::string const strideField =
+                morphByteStride > 0 ? (R"(,"byteStride":)" + std::to_string(morphByteStride)) : "";
+        morphViewJson = R"(,{"buffer":0,"byteOffset":36,"byteLength":)" +
+                std::to_string(morphBytes) + strideField + "}";
+    }
+
+    std::string const prim = R"({"attributes":{"POSITION":0},"mode":4,"targets":[{"POSITION":1}]})";
+    std::string json =
+            R"({"asset":{"version":"2.0"},"scene":0,"scenes":[{"nodes":[0]}],)"
+            R"("nodes":[{"mesh":0}],)"
+            R"("meshes":[{"primitives":[)" + prim + "," + prim + R"(]}],)"
+            R"("accessors":[)"
+            R"({"bufferView":0,"componentType":5126,"count":3,"type":"VEC3",)"
+            R"("min":[0,0,0],"max":[1,1,0]},)"
+            R"({)" + morphBvField + R"("componentType":5126,"count":)" +
+            std::to_string(morphCount) + R"(,"type":")" + morphType + R"(")" + minMax + R"(}],)"
+            R"("bufferViews":[{"buffer":0,"byteOffset":0,"byteLength":36})" + morphViewJson +
+            R"(],"buffers":[{"byteLength":)" + std::to_string(totalBytes) + R"(}]})";
+
+    std::vector<uint8_t> bin(totalBytes, 0);
+    float* fbin = reinterpret_cast<float*>(bin.data());
+    fbin[3] = 1.0f;
+    fbin[7] = 1.0f;
 
     return assembleGlb(std::move(json), std::move(bin));
 }

@@ -66,6 +66,7 @@
 #include <fstream>
 #include <limits>
 #include <string>
+#include <string_view>
 #include <tuple>
 #include <unordered_map>
 #include <vector>
@@ -2887,6 +2888,85 @@ TEST_F(glTFIOTest, SkinnedMeshAfterInvalidSkinInverseBindMatrices) {
         gltfio::FFilamentAsset* const fasset = downcast(asset);
         fasset->mSkins = FixedCapacityVector<gltfio::FFilamentAsset::Skin>(1);
         instance->getAnimator()->updateBoneMatrices();
+
+        assetLoader->destroyAsset(asset);
+        AssetLoader::destroy(&assetLoader);
+    }
+}
+
+// Issue #10197: uploadBuffers() must never read past the morph accessor's element count (across the
+// bufferView-less, requiresPacking, and non-packing arms) nor write past slot.morphTargetCount.
+TEST_F(glTFIOTest, MorphAccessorCountMismatchDoesNotOverRead) {
+    // 1. End-to-end load where morph accessor count (2) < mesh vertex count (3): rejected by
+    // cgltf_validate() during loadResources() without reading out of bounds.
+    for (bool const withBufferView : { false, true }) {
+        for (uint32_t const stride : { 0u, 20u }) {
+            if (!withBufferView && stride != 0u) continue;
+            std::vector<uint8_t> const glb =
+                    makeMorphCountMismatchGlb("VEC3", /* morphCount = */ 2u, withBufferView, stride);
+            AssetLoader* assetLoader =
+                    AssetLoader::create({ mEngine, mMaterialProvider, mNameManager });
+            ASSERT_NE(assetLoader, nullptr);
+            FilamentAsset* const asset = assetLoader->createAsset(glb.data(), uint32_t(glb.size()));
+            ASSERT_NE(asset, nullptr);
+            ResourceLoader resourceLoader({ mEngine, ".", false });
+            EXPECT_FALSE(resourceLoader.loadResources(asset));
+            assetLoader->destroyAsset(asset);
+            AssetLoader::destroy(&assetLoader);
+        }
+    }
+
+    // 2. Direct defense-in-depth exercise of all three uploadBuffers() morph arms when
+    // cgltf_validate() passes (morphCount == 3) while slot.morphTargetCount (6, fitting within the
+    // 6-vertex two-primitive MorphTargetBuffer) exceeds the 3-element source buffer at the GLB tail,
+    // and conversely when accessor->count exceeds slot.morphTargetCount at a non-zero offset.
+    struct ArmCase {
+        char const* morphType;
+        bool withBufferView;
+        uint32_t stride;
+    };
+    constexpr ArmCase kArms[] = {
+        { "VEC3", false, 0u },  // no-buffer_view vec3
+        { "VEC4", false, 0u },  // no-buffer_view vec4
+        { "VEC3", true, 16u },  // requiresPacking vec3
+        { "VEC4", true, 20u },  // requiresPacking vec4
+        { "VEC3", true, 0u },   // non-packing tight vec3 (36 bytes, 0 GLB tail padding)
+        { "VEC4", true, 0u },   // non-packing tight vec4 (48 bytes, 0 GLB tail padding)
+    };
+    for (ArmCase const& arm : kArms) {
+        SCOPED_TRACE(testing::Message() << arm.morphType << " bv=" << arm.withBufferView
+                                        << " stride=" << arm.stride);
+        std::vector<uint8_t> const glb =
+                makeMorphCountMismatchGlb(arm.morphType, 3u, arm.withBufferView, arm.stride);
+        AssetLoader* assetLoader =
+                AssetLoader::create({ mEngine, mMaterialProvider, mNameManager });
+        ASSERT_NE(assetLoader, nullptr);
+        FilamentAsset* const asset = assetLoader->createAsset(glb.data(), uint32_t(glb.size()));
+        ASSERT_NE(asset, nullptr);
+
+        gltfio::FFilamentAsset* const fasset = downcast(asset);
+        auto& slots =
+                std::get<gltfio::FFilamentAsset::ResourceInfo>(fasset->mResourceInfo).mBufferSlots;
+        // Inflate the first morph slot's morphTargetCount from 3 to 6 (offset 0, so 0 + 6 <= 6 in
+        // MorphTargetBuffer, while the backing morph buffer only has 3 elements) and shrink the
+        // second morph slot's morphTargetCount from 3 to 2 at offset 3 (where accessor->count = 3).
+        size_t morphSlotsSeen = 0;
+        for (auto& slot : slots) {
+            if (slot.morphTargetBuffer) {
+                if (morphSlotsSeen == 0) {
+                    slot.morphTargetOffset = 0;
+                    slot.morphTargetCount = 6;
+                } else {
+                    slot.morphTargetOffset = 3;
+                    slot.morphTargetCount = 2;
+                }
+                ++morphSlotsSeen;
+            }
+        }
+        ASSERT_EQ(morphSlotsSeen, 2u);
+
+        ResourceLoader resourceLoader({ mEngine, ".", false });
+        EXPECT_TRUE(resourceLoader.loadResources(asset));
 
         assetLoader->destroyAsset(asset);
         AssetLoader::destroy(&assetLoader);
