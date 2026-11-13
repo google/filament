@@ -16,6 +16,7 @@
 
 #include "downcast.h"
 #include "DracoCache.h"
+#include "FFilamentAsset.h"
 #include "FFilamentInstance.h"
 #include "GlbBuilders.h"
 #include "Utility.h"
@@ -2842,6 +2843,50 @@ TEST_F(glTFIOTest, OutOfBoundsJointIndexInRecomputeBoundingBoxes) {
         Aabb const bounds = instance->getBoundingBox();
         EXPECT_FLOAT3_EQ(bounds.min, (math::float3{ 0.0f, 0.0f, 0.0f }));
         EXPECT_FLOAT3_EQ(bounds.max, (math::float3{ 0.0f, 0.0f, 0.0f }));
+
+        assetLoader->destroyAsset(asset);
+        AssetLoader::destroy(&assetLoader);
+    }
+}
+
+// Issue #10198: when an earlier skin's inverseBindMatrices accessor fails validation (wrong type or
+// count < joints_count), a skinned renderable attached to a later skin must still align across
+// updateBoneMatrices(), recomputeBoundingBoxes(), and getSkinNameAt(), and updateBoneMatrices()
+// must also remain bounds-safe if asset->mSkins or inverseBindMatrices are ever shorter.
+TEST_F(glTFIOTest, SkinnedMeshAfterInvalidSkinInverseBindMatrices) {
+    for (bool const wrongType : { true, false }) {
+        SCOPED_TRACE(wrongType);
+        std::vector<uint8_t> const glb = makeSkinnedMeshAfterInvalidSkinGlb(wrongType);
+
+        AssetLoader* assetLoader =
+                AssetLoader::create({ mEngine, mMaterialProvider, mNameManager });
+        ASSERT_NE(assetLoader, nullptr);
+        FilamentAsset* const asset = assetLoader->createAsset(glb.data(), uint32_t(glb.size()));
+        ASSERT_NE(asset, nullptr);
+
+        ResourceLoader resourceLoader({ mEngine, ".", false });
+        ASSERT_TRUE(resourceLoader.loadResources(asset));
+
+        FilamentInstance* const instance = asset->getInstance();
+        ASSERT_NE(instance, nullptr);
+        ASSERT_EQ(instance->getSkinCount(), 2u);
+        EXPECT_STREQ(instance->getSkinNameAt(0), "skin0");
+        EXPECT_STREQ(instance->getSkinNameAt(1), "skin1");
+
+        // Exercise Animator::updateBoneMatrices() with a non-empty skin.targets renderable.
+        instance->getAnimator()->updateBoneMatrices();
+
+        // Exercise recomputeBoundingBoxes() on the skinned primitive bound to skin 1.
+        instance->recomputeBoundingBoxes();
+        Aabb const bounds = instance->getBoundingBox();
+        EXPECT_FLOAT3_EQ(bounds.min, kSkinInverseBindTranslation);
+        EXPECT_FLOAT3_EQ(bounds.max, (kSkinInverseBindTranslation + math::float3{ 1.0f, 1.0f, 0.0f }));
+
+        // Defense in depth: directly shorten FFilamentAsset::mSkins and verify updateBoneMatrices()
+        // breaks cleanly without reading past asset->mSkins.
+        gltfio::FFilamentAsset* const fasset = downcast(asset);
+        fasset->mSkins = FixedCapacityVector<gltfio::FFilamentAsset::Skin>(1);
+        instance->getAnimator()->updateBoneMatrices();
 
         assetLoader->destroyAsset(asset);
         AssetLoader::destroy(&assetLoader);

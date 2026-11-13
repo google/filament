@@ -1198,4 +1198,61 @@ std::vector<uint8_t> makeSkinnedJointIndexGlb(uint16_t jointIndex) {
     return assembleGlb(std::move(json), std::move(bin));
 }
 
+std::vector<uint8_t> makeSkinnedMeshAfterInvalidSkinGlb(bool wrongType) {
+    // Binary layout (236 bytes):
+    //   [0..36):    3 x float3 POSITION: (0,0,0), (1,0,0), (0,1,0)
+    //   [36..60):   3 x ushort4 JOINTS_0: (0,0,0,0)
+    //   [60..108):  3 x float4 WEIGHTS_0: (1,0,0,0)
+    //   [108..172): skin 0 unusable IBM buffer (64 zero bytes)
+    //   [172..236): skin 1 valid MAT4 IBM (translation by kSkinInverseBindTranslation)
+    constexpr size_t kTotalBytes = 236;
+    std::vector<uint8_t> bin(kTotalBytes, 0);
+    {
+        float* pos = reinterpret_cast<float*>(bin.data());
+        pos[3] = 1.0f;
+        pos[7] = 1.0f;
+
+        float* weights = reinterpret_cast<float*>(bin.data() + 60);
+        for (size_t v = 0; v < 3; ++v) {
+            weights[v * 4] = 1.0f;
+        }
+
+        float* ibm1 = reinterpret_cast<float*>(bin.data() + 172);
+        ibm1[0] = ibm1[5] = ibm1[10] = ibm1[15] = 1.0f;
+        ibm1[12] = kSkinInverseBindTranslation.x;
+        ibm1[13] = kSkinInverseBindTranslation.y;
+        ibm1[14] = kSkinInverseBindTranslation.z;
+    }
+
+    std::string const skin0IbmAccessor = wrongType
+            ? R"({"bufferView":3,"componentType":5126,"count":2,"type":"VEC3"})"
+            : R"({"bufferView":3,"componentType":5126,"count":1,"type":"MAT4"})";
+
+    std::string json =
+            R"({"asset":{"version":"2.0"},"scene":0,"scenes":[{"nodes":[0]}],)"
+            R"("nodes":[{"name":"root","mesh":0,"skin":1,"children":[1,2,3]},)"
+            R"({"name":"j0a"},{"name":"j0b"},{"name":"j1"}],)"
+            R"("skins":[)"
+            R"({"name":"skin0","joints":[1,2],"inverseBindMatrices":3},)"
+            R"({"name":"skin1","joints":[3],"inverseBindMatrices":4}],)"
+            R"("meshes":[{"primitives":[{"attributes":{)"
+            R"("POSITION":0,"JOINTS_0":1,"WEIGHTS_0":2},"mode":4}]}],)"
+            R"("accessors":[)"
+            R"({"bufferView":0,"componentType":5126,"count":3,"type":"VEC3",)"
+            R"("min":[0,0,0],"max":[1,1,0]},)"
+            R"({"bufferView":1,"componentType":5123,"count":3,"type":"VEC4"},)"
+            R"({"bufferView":2,"componentType":5126,"count":3,"type":"VEC4"},)"
+            + skin0IbmAccessor + ","
+            R"({"bufferView":4,"componentType":5126,"count":1,"type":"MAT4"}],)"
+            R"("bufferViews":[)"
+            R"({"buffer":0,"byteOffset":0,"byteLength":36},)"
+            R"({"buffer":0,"byteOffset":36,"byteLength":24},)"
+            R"({"buffer":0,"byteOffset":60,"byteLength":48},)"
+            R"({"buffer":0,"byteOffset":108,"byteLength":64},)"
+            R"({"buffer":0,"byteOffset":172,"byteLength":64}],)"
+            R"("buffers":[{"byteLength":236}]})";
+
+    return assembleGlb(std::move(json), std::move(bin));
+}
+
 } // namespace test

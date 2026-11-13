@@ -182,6 +182,13 @@ std::vector<uint8_t> makeMaterialVariantsMappingGlb(int extraVariantIndex);
 // recomputeBoundingBoxes() is called.
 std::vector<uint8_t> makeSkinnedJointIndexGlb(uint16_t jointIndex);
 
+// Builds a 2-skin GLB whose mesh node is bound to skin 1 while skin 0 has an unusable
+// inverseBindMatrices accessor (either VEC3 float when `wrongType` is true, or MAT4 float with
+// count 1 < joints_count 2 when false). Skin 1 has 1 joint with translation
+// kSkinInverseBindTranslation. Reproduces issue #10198 across updateBoneMatrices(),
+// recomputeBoundingBoxes(), and getSkinNameAt().
+std::vector<uint8_t> makeSkinnedMeshAfterInvalidSkinGlb(bool wrongType);
+
 } // namespace test
 
 #endif // TNT_GLTFIO_TEST_GLBBUILDERS_H
