@@ -222,9 +222,12 @@ def consumeXML(spec):
     # "VK_API_VERSION_1_1" or "VK_NV_external_memory_win32".
     command_groups = OrderedDict()
     for feature in spec.findall('feature'):
-        key = feature.get('name')
+        if feature.get('apitype') == 'internal':
+            key = 'VK_VERSION_' + feature.get('number').replace('.', '_')
+        else:
+            key = feature.get('name')
         cmdrefs = feature.findall('require/command')
-        command_groups[key] = [cmdref.get('name') for cmdref in cmdrefs]
+        command_groups.setdefault(key, []).extend([cmdref.get('name') for cmdref in cmdrefs])
     for ext in sorted(spec.findall('extensions/extension'), key=lambda ext: ext.get('name')):
         name = ext.get('name')
         for req in ext.findall('require'):
