@@ -2624,6 +2624,125 @@ TEST_F(glTFIOTest, DiffuseTransmissionMaterial) {
     AssetLoader::destroy(&loader);
 }
 
+// Issue #10793: cgltf_validate() must reject dense accessors and bufferViews whose extent
+// computation wraps SIZE_MAX (and zero-count accessors whose count - 1 underflows SIZE_MAX).
+TEST(glTFIOCgltf, DenseAccessorAndBufferViewOverflowIsRejected) {
+    uint8_t dummy[64] = {};
+    cgltf_buffer buffer{ .size = sizeof(dummy), .data = dummy };
+    cgltf_buffer_view view{ .buffer = &buffer, .offset = 0, .size = sizeof(dummy), .stride = 12 };
+    cgltf_accessor accessor{
+        .component_type = cgltf_component_type_r_32f,
+        .type = cgltf_type_vec3,
+        .offset = 0,
+        .count = 5,
+        .stride = 12,
+        .buffer_view = &view,
+    };
+    cgltf_data data{
+        .accessors = &accessor,
+        .accessors_count = 1,
+        .buffer_views = &view,
+        .buffer_views_count = 1,
+        .buffers = &buffer,
+        .buffers_count = 1,
+    };
+
+    // Valid control.
+    ASSERT_EQ(cgltf_validate(&data), cgltf_result_success);
+
+    // Zero count: (count - 1) would underflow to SIZE_MAX and 12 * SIZE_MAX + 12 wraps to 0.
+    accessor.count = 0;
+    EXPECT_EQ(cgltf_validate(&data), cgltf_result_invalid_gltf);
+    accessor.count = 5;
+
+    // Accessor offset + element_size wraps SIZE_MAX.
+    accessor.offset = std::numeric_limits<cgltf_size>::max() - 8;
+    EXPECT_EQ(cgltf_validate(&data), cgltf_result_data_too_short);
+    accessor.offset = 0;
+
+    // Dense stride * (count - 1) + element_size wraps to 0 mod 2^64 (on 64-bit) or 2^32 (on 32-bit).
+    cgltf_size const wrappingStride = (std::numeric_limits<cgltf_size>::max() - 11u) / 4u;
+    accessor.stride = wrappingStride;
+    view.stride = wrappingStride;
+    EXPECT_EQ(cgltf_validate(&data), cgltf_result_data_too_short);
+    accessor.stride = 12;
+    view.stride = 12;
+
+    // bufferView offset + size wraps SIZE_MAX.
+    view.offset = std::numeric_limits<cgltf_size>::max() - 15u;
+    view.size = 16u;
+    EXPECT_EQ(cgltf_validate(&data), cgltf_result_data_too_short);
+}
+
+// Issue #10793: end-to-end load with a wrapping byteStride on POSITION + NORMAL must fail
+// validation instead of launching TangentsJob and reading from a wild address.
+TEST_F(glTFIOTest, DenseStrideOverflowInTangentsJobIsRejected) {
+    // Control with tight stride (12) succeeds.
+    {
+        std::vector<uint8_t> const glb = makeDenseStrideOverflowGlb(12u);
+        AssetLoader* assetLoader =
+                AssetLoader::create({ mEngine, mMaterialProvider, mNameManager });
+        ASSERT_NE(assetLoader, nullptr);
+        FilamentAsset* const asset = assetLoader->createAsset(glb.data(), uint32_t(glb.size()));
+        ASSERT_NE(asset, nullptr);
+        ResourceLoader resourceLoader({ mEngine, ".", false });
+        EXPECT_TRUE(resourceLoader.loadResources(asset));
+        assetLoader->destroyAsset(asset);
+        AssetLoader::destroy(&assetLoader);
+    }
+
+    // Wrapping strides from #10793 (2^62 - 3 and 2^63 - 3, both below LLONG_MAX so JSON parses).
+    if constexpr (sizeof(cgltf_size) >= 8) {
+        for (uint64_t const badStride : { 4611686018427387901ULL, 9223372036854775805ULL }) {
+            SCOPED_TRACE(badStride);
+
+            // 1. Stride on NORMAL: AssetLoader re-purposes the NORMAL slot to SHORT4 tangents, so
+            // createAsset() succeeds on the standard loader and ResourceLoader::loadResources()
+            // relies on cgltf_validate() to block TangentsJob from reading at buffer + badStride.
+            {
+                std::vector<uint8_t> const glb =
+                        makeDenseStrideOverflowGlb(badStride, /* strideOnNormal = */ true);
+
+                AssetLoader* assetLoader =
+                        AssetLoader::create({ mEngine, mMaterialProvider, mNameManager });
+                ASSERT_NE(assetLoader, nullptr);
+                FilamentAsset* const asset =
+                        assetLoader->createAsset(glb.data(), uint32_t(glb.size()));
+                ASSERT_NE(asset, nullptr);
+                ResourceLoader resourceLoader({ mEngine, ".", false });
+                EXPECT_FALSE(resourceLoader.loadResources(asset));
+                assetLoader->destroyAsset(asset);
+                AssetLoader::destroy(&assetLoader);
+
+                if (AssetConfigurationExtended::isSupported()) {
+                    AssetConfigurationExtended ext{ .gltfPath = "." };
+                    AssetLoader* extLoader = AssetLoader::create({
+                            .engine = mEngine,
+                            .materials = mMaterialProvider,
+                            .names = mNameManager,
+                            .ext = &ext,
+                    });
+                    ASSERT_NE(extLoader, nullptr);
+                    EXPECT_EQ(extLoader->createAsset(glb.data(), uint32_t(glb.size())), nullptr);
+                    AssetLoader::destroy(&extLoader);
+                }
+            }
+
+            // 2. Stride on POSITION: AssetLoader rejects oversized / unaligned VertexBuffer strides
+            // cleanly (returning nullptr) instead of truncating to uint8_t or panicking.
+            {
+                std::vector<uint8_t> const glb =
+                        makeDenseStrideOverflowGlb(badStride, /* strideOnNormal = */ false);
+                AssetLoader* assetLoader =
+                        AssetLoader::create({ mEngine, mMaterialProvider, mNameManager });
+                ASSERT_NE(assetLoader, nullptr);
+                EXPECT_EQ(assetLoader->createAsset(glb.data(), uint32_t(glb.size())), nullptr);
+                AssetLoader::destroy(&assetLoader);
+            }
+        }
+    }
+}
+
 #undef EXPECT_FLOAT3_EQ
 
 int main(int argc, char** argv) {

@@ -46,6 +46,7 @@
 #include <utils/EntityManager.h>
 #include <utils/FixedCapacityVector.h>
 #include <utils/Log.h>
+#include <utils/Logger.h>
 #include <utils/NameComponentManager.h>
 #include <utils/Panic.h>
 
@@ -1239,7 +1240,14 @@ bool FAssetLoader::createPrimitive(const cgltf_primitive& inPrim, const char* na
             slog.e << "Unsupported accessor type in " << name << io::endl;
             return false;
         }
-        const int stride = (fatype == actualType) ? innerAccessor->stride : 0;
+        if (fatype == actualType &&
+                (innerAccessor->stride > std::numeric_limits<uint8_t>::max() ||
+                        (innerAccessor->stride & 0x3u) != 0)) {
+            LOG(ERROR) << "Invalid vertex attribute stride (" << innerAccessor->stride << ") in "
+                       << name;
+            return false;
+        }
+        const uint8_t stride = (fatype == actualType) ? uint8_t(innerAccessor->stride) : 0;
 
         // The cgltf library provides a stride value for all accessors, even though they do not
         // exist in the glTF file. It is computed from the type and the stride of the buffer view.

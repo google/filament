@@ -164,6 +164,13 @@ constexpr filament::math::float3 kSkinInverseBindTranslation = { 1.0f, 2.0f, 3.0
 // kSkinInverseBindTranslation. Reproduces issue #10795.
 std::vector<uint8_t> makeUnusableInverseBindMatricesGlb();
 
+// Builds a non-indexed 5-vertex TRIANGLES GLB with POSITION and NORMAL attributes where either the
+// NORMAL bufferView (`strideOnNormal = true`, reaching ResourceLoader/TangentsJob) or the POSITION
+// bufferView (`strideOnNormal = false`, reaching AssetLoader's VertexBuffer setup) declares
+// `byteStride` on a 60-byte view. When `byteStride` is e.g. 2^62 - 3 (4611686018427387901),
+// `stride * (count - 1) + 12` wraps modulo 2^64 to 0, reproducing issue #10793.
+std::vector<uint8_t> makeDenseStrideOverflowGlb(uint64_t byteStride, bool strideOnNormal = true);
+
 } // namespace test
 
 #endif // TNT_GLTFIO_TEST_GLBBUILDERS_H

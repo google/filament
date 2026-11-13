@@ -1081,4 +1081,39 @@ std::vector<uint8_t> makeUnusableInverseBindMatricesGlb() {
     return assembleGlb(std::move(json), std::move(bin));
 }
 
+std::vector<uint8_t> makeDenseStrideOverflowGlb(uint64_t byteStride, bool strideOnNormal) {
+    constexpr uint32_t kVertexCount = 5u;
+    constexpr uint32_t kViewBytes = kVertexCount * sizeof(float3);
+    constexpr uint32_t kBufferBytes = kViewBytes * 2u;
+
+    std::string const strideField =
+            byteStride > 0 ? (R"(,"byteStride":)" + std::to_string(byteStride)) : "";
+    std::string const posStride = strideOnNormal ? "" : strideField;
+    std::string const normStride = strideOnNormal ? strideField : "";
+
+    std::string json =
+            R"({"asset":{"version":"2.0"},"scene":0,"scenes":[{"nodes":[0]}],)"
+            R"("nodes":[{"mesh":0}],)"
+            R"("meshes":[{"primitives":[{"attributes":{"POSITION":0,"NORMAL":1},"mode":4}]}],)"
+            R"("accessors":[)"
+            R"({"bufferView":0,"componentType":5126,"count":5,"type":"VEC3",)"
+            R"("min":[0,0,0],"max":[1,1,0]},)"
+            R"({"bufferView":1,"componentType":5126,"count":5,"type":"VEC3"}],)"
+            R"("bufferViews":[)"
+            R"({"buffer":0,"byteOffset":0,"byteLength":60)" + posStride + R"(},)"
+            R"({"buffer":0,"byteOffset":60,"byteLength":60)" + normStride + R"(}],)"
+            R"("buffers":[{"byteLength":)" + std::to_string(kBufferBytes) + R"(}]})";
+
+    std::vector<uint8_t> bin(kBufferBytes, 0);
+    float* fbin = reinterpret_cast<float*>(bin.data());
+    // First 3 vertices form a valid triangle; normals point along +Z.
+    fbin[3] = 1.0f;
+    fbin[7] = 1.0f;
+    for (uint32_t v = 0; v < kVertexCount; ++v) {
+        fbin[15 + v * 3 + 2] = 1.0f;
+    }
+
+    return assembleGlb(std::move(json), std::move(bin));
+}
+
 } // namespace test
