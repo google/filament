@@ -17,6 +17,7 @@
 #define TNT_FILAMENT_MATERIALDEFINITION_H
 
 #include "DynamicSpecConstKey.h"
+#include "ProgramSlotMap.h"
 #include "ProgramSpecialization.h"
 
 #include "ds/DescriptorSetLayout.h"
@@ -97,6 +98,12 @@ struct MaterialDefinition {
 
     utils::Slice<const Variant> getVariants() const noexcept;
     utils::Slice<const Variant> getDepthVariants() const noexcept;
+
+    static utils::Slice<const Variant> getVariantsFor(MaterialDomain materialDomain,
+            bool isVariantLit) noexcept;
+    static utils::Slice<const Variant> getDepthVariantsFor(MaterialDomain materialDomain) noexcept;
+
+    ProgramSlotMap const& getProgramSlotMap() const noexcept { return mProgramSlotMap; }
 
     // Checks whether a given combination of Variant and DynamicSpecConstKey produces a valid and
     // compiled shader program for this material under the specified shader model and platform
@@ -300,6 +307,7 @@ private:
             Variant fragmentVariant) const;
 
     std::unique_ptr<MaterialParser> mMaterialParser;
+    ProgramSlotMap mProgramSlotMap;
 };
 
 } // namespace filament
