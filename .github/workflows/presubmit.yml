@@ -25,6 +25,7 @@ concurrency:
 
 permissions:
   contents: read
+  pull-requests: read
 
 jobs:
   check-verification:
@@ -50,6 +51,7 @@ jobs:
         uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8.0.0
         with:
           script: |
+            const RUN_ALL_LABEL = 'run all presubmits';
             const { owner, repo } = context.repo;
             let changedFiles = null;
 
@@ -71,66 +73,95 @@ jobs:
                 changedFiles = data.files.map(f => f.filename);
               }
             } else if (context.eventName === 'pull_request') {
-              const files = await github.paginate(github.rest.pulls.listFiles, {
-                owner,
-                repo,
-                pull_number: context.payload.pull_request.number,
-                per_page: 100,
-              });
-              changedFiles = files.map(f => f.filename);
+              const pull_number = context.payload.pull_request.number;
+              const payloadLabels = (context.payload.pull_request.labels || []).map(l => l.name);
+              let runAll = payloadLabels.includes(RUN_ALL_LABEL);
+              if (!runAll) {
+                const { data: liveLabels } = await github.rest.issues.listLabelsOnIssue({
+                  owner,
+                  repo,
+                  issue_number: pull_number,
+                });
+                runAll = liveLabels.some(l => l.name === RUN_ALL_LABEL);
+              }
+              if (runAll) {
+                console.log(
+                  `PR #${pull_number} has the '${RUN_ALL_LABEL}' label. Enabling all presubmit jobs.`
+                );
+              } else {
+                const files = await github.paginate(github.rest.pulls.listFiles, {
+                  owner,
+                  repo,
+                  pull_number,
+                  per_page: 100,
+                });
+                changedFiles = files.map(f => f.filename);
+              }
+            }
+
+            const globCache = new Map();
+            function globToRegExp(glob) {
+              let cached = globCache.get(glob);
+              if (cached) return cached;
+              let re = '^';
+              let inBraces = 0;
+              for (let i = 0; i < glob.length; i++) {
+                const c = glob[i];
+                if (c === '*') {
+                  if (glob[i + 1] === '*') {
+                    if (glob[i + 2] === '/') {
+                      re += '(?:.+/)?';
+                      i += 2;
+                    } else {
+                      re += '.*';
+                      i += 1;
+                    }
+                  } else {
+                    re += '[^/]*';
+                  }
+                } else if (c === '?') {
+                  re += '[^/]';
+                } else if (c === '{') {
+                  inBraces++;
+                  re += '(?:';
+                } else if (c === '}' && inBraces > 0) {
+                  inBraces--;
+                  re += ')';
+                } else if (c === ',' && inBraces > 0) {
+                  re += '|';
+                } else if ('\\.+$^()[]|'.includes(c)) {
+                  re += '\\' + c;
+                } else {
+                  re += c;
+                }
+              }
+              re += '$';
+              cached = new RegExp(re);
+              globCache.set(glob, cached);
+              return cached;
+            }
+
+            function matchesGlob(file, patterns) {
+              return patterns.some(p => globToRegExp(p).test(file));
             }
 
             // Inert files that never affect any presubmit build or test job.
             // Stripping these first ensures that required edits like NEW_RELEASE_NOTES.md
             // or documentation updates do not force unrelated platform builds to run.
-            const INERT_EXACT = new Set([
+            const INERT_GLOBS = [
+              '**/*.md',
               '.clang-format',
               '.cursorrules',
               '.dir-locals.el',
               '.editorconfig',
               '.gitignore',
-              'AGENTS.md',
-              'BUILDING.md',
-              'CODE_STYLE.md',
-              'CONTRIBUTING.md',
-              'GEMINI.md',
               'LICENSE',
-              'NEW_RELEASE_NOTES.md',
-              'README.md',
-              'RELEASE_NOTES.md',
-              'SECURITY.md',
-              '.github/workflows/auto-close-restricted-paths.yml',
-              '.github/workflows/cocopods-deploy.yml',
-              '.github/workflows/codeql.yml',
-              '.github/workflows/npm-deploy.yml',
-              '.github/workflows/postsubmit-main.yml',
-              '.github/workflows/postsubmit.yml',
-              '.github/workflows/release.yml',
-              '.github/workflows/renderdiff-goldens.yml',
-              '.github/workflows/status-android.yml',
-              '.github/workflows/status-ios.yml',
-              '.github/workflows/status-linux.yml',
-              '.github/workflows/status-macos.yml',
-              '.github/workflows/status-web.yml',
-              '.github/workflows/status-windows.yml',
-              '.github/workflows/verify-release-notes.yml',
-            ]);
-
-            const INERT_PREFIXES = [
-              'art/',
-              'docs/',
-              'docs_src/',
-              'ide/',
-              'skills/',
-              '.github/actions/android-continuous/',
-              '.github/actions/ubuntu-apt-add-src/',
-              '.github/actions/verify-release-notes/',
+              '{art,docs,docs_src,ide,skills}/**',
+              '.github/workflows/{auto-close-restricted-paths,cocopods-deploy,codeql,npm-deploy,postsubmit*,release,renderdiff-goldens,status-*}.yml',
             ];
 
             function isInertFile(file) {
-              if (INERT_EXACT.has(file)) return true;
-              if (file.endsWith('.md')) return true;
-              return INERT_PREFIXES.some(prefix => file.startsWith(prefix));
+              return matchesGlob(file, INERT_GLOBS);
             }
 
             const jobs = {
@@ -156,7 +187,7 @@ jobs:
             }
 
             function classifyFile(file) {
-              if (/\.(c|cpp|h|hpp)$/.test(file)) {
+              if (matchesGlob(file, ['**/*.{c,cpp,h,hpp}'])) {
                 jobs['check-headers'] = true;
               }
 
@@ -166,125 +197,89 @@ jobs:
                 jobs['renderdiff-config'] = true;
                 return;
               }
-              if (
-                file.startsWith('android/') ||
-                file.startsWith('build/android/') ||
-                /^build\/toolchain-.*-linux-android\.cmake$/.test(file) ||
-                file.startsWith('test/sizeguard/')
-              ) {
+              if (matchesGlob(file, [
+                'android/**',
+                'build/android/**',
+                'build/toolchain-*-linux-android.cmake',
+                'filament/backend/**/*Android*',
+                'filament/backend/**/VirtualMachineEnv.*',
+                'libs/utils/**/android/**',
+                'libs/filamentapp/**/*Android*',
+              ])) {
                 jobs['build-android'] = true;
                 return;
               }
 
-              // iOS-isolated files
-              if (
-                file.startsWith('ios/') ||
-                file.startsWith('build/ios/') ||
-                file === 'third_party/clang/iOS.cmake' ||
-                /^third_party\/clang\/usage_ios_.*\.cmake$/.test(file)
-              ) {
+              // iOS-isolated files (checked before Apple-shared *Cocoa* globs)
+              if (matchesGlob(file, [
+                'ios/**',
+                'build/ios/**',
+                'third_party/clang/{iOS,usage_ios_*}.cmake',
+                'filament/backend/**/*CocoaTouch*',
+              ])) {
                 jobs['build-ios'] = true;
+                return;
+              }
+
+              // macOS-only build scripts and backend test files
+              if (matchesGlob(file, ['build/mac/**'])) {
+                jobs['build-mac'] = true;
+                return;
+              }
+
+              // Apple-isolated files (macOS + iOS + Metal backend)
+              if (matchesGlob(file, [
+                '.github/actions/mac-prereq/**',
+                'build/common/get-ninja.sh',
+                'test/check-metal-shaders/**',
+                'filament/backend/src/metal/**',
+                'filament/backend/**/*{Metal,Apple,Cocoa}*',
+                'libs/utils/**/darwin/**',
+                'libs/{bluegl,bluevk,filamentapp}/**/*{Apple,Cocoa,Darwin}*',
+              ])) {
+                jobs['build-mac'] = true;
+                jobs['build-ios'] = true;
+                jobs['test-backend-metal'] = true;
+                return;
+              }
+
+              // Windows-isolated files
+              if (matchesGlob(file, [
+                'build/windows/**',
+                'filament/backend/**/*{Windows,WGL}*',
+                'libs/utils/**/win32/**',
+                'libs/{bluegl,bluevk,filamentapp}/**/*{Windows,win32}*',
+              ])) {
+                jobs['build-windows'] = true;
                 return;
               }
 
               // Web/WASM-isolated files
-              if (
-                file.startsWith('web/') ||
-                file.startsWith('build/web/') ||
-                file === 'build/common/get-emscripten.sh' ||
-                file.startsWith('.github/actions/web-prereq/')
-              ) {
+              if (matchesGlob(file, [
+                'web/**',
+                'build/web/**',
+                'build/common/get-emscripten.sh',
+                '.github/actions/web-prereq/**',
+                'filament/backend/**/*{WebGL,Wasm}*',
+                'libs/utils/**/web/**',
+                'libs/filamentapp/**/*{Wasm,Emscripten,Html}*',
+                'libs/filamentapp/src/display_managers/web/**',
+              ])) {
                 jobs['build-web'] = true;
                 jobs['renderdiff-config'] = true;
                 jobs['renderdiff-web'] = true;
                 return;
               }
 
-              // Windows-isolated build scripts
-              if (file.startsWith('build/windows/')) {
-                jobs['build-windows'] = true;
-                return;
-              }
-
-              // macOS-isolated build scripts and Apple CI prerequisites
-              if (file.startsWith('build/mac/')) {
-                jobs['build-mac'] = true;
-                return;
-              }
-              if (
-                file.startsWith('.github/actions/mac-prereq/') ||
-                file === 'build/common/get-ninja.sh'
-              ) {
-                jobs['build-mac'] = true;
-                jobs['build-ios'] = true;
-                jobs['test-backend-metal'] = true;
-                return;
-              }
-
-              // Linux-isolated build scripts (note: combine-static-libs.sh is shared across Unix)
-              if (file === 'build/linux/build.sh' || file === 'build/linux/ci-common.sh') {
+              // Linux-isolated build scripts and platform sources
+              if (matchesGlob(file, ['build/linux/{build,ci-common}.sh'])) {
                 jobs['build-linux'] = true;
                 return;
               }
-
-              // Metal backend & Apple-only Metal tests
-              if (
-                file.startsWith('filament/backend/src/metal/') ||
-                file === 'filament/backend/include/backend/platforms/PlatformMetal.h' ||
-                file === 'filament/backend/include/backend/platforms/PlatformMetal-ObjC.h' ||
-                file === 'filament/backend/test/test_MetalAsyncJobs.mm' ||
-                file === 'filament/backend/test/test_MetalBlitter.mm' ||
-                file === 'filament/backend/test/MetalTest.mm' ||
-                file.startsWith('test/check-metal-shaders/')
-              ) {
-                jobs['build-mac'] = true;
-                jobs['build-ios'] = true;
-                jobs['test-backend-metal'] = true;
-                return;
-              }
-
-              // OS-specific WebGPU platform bridges
-              if (
-                file === 'filament/backend/include/backend/platforms/WebGPUPlatformAndroid.h' ||
-                file === 'filament/backend/src/webgpu/platform/WebGPUPlatformAndroid.cpp' ||
-                file === 'libs/filamentapp/src/backend_platforms/WebGPUPlatformHelperAndroid.cpp'
-              ) {
-                jobs['build-android'] = true;
-                return;
-              }
-              if (
-                file === 'filament/backend/include/backend/platforms/WebGPUPlatformWindows.h' ||
-                file === 'filament/backend/src/webgpu/platform/WebGPUPlatformWindows.cpp' ||
-                file === 'libs/filamentapp/src/backend_platforms/WebGPUPlatformHelperWindows.cpp'
-              ) {
-                jobs['build-windows'] = true;
-                return;
-              }
-              if (
-                file === 'filament/backend/include/backend/platforms/WebGPUPlatformApple.h' ||
-                file === 'filament/backend/src/webgpu/platform/WebGPUPlatformApple.mm' ||
-                file === 'libs/filamentapp/src/backend_platforms/WebGPUPlatformHelperApple.mm'
-              ) {
-                jobs['build-mac'] = true;
-                jobs['build-ios'] = true;
-                return;
-              }
-              if (
-                file === 'filament/backend/include/backend/platforms/WebGPUPlatformWasm.h' ||
-                file === 'filament/backend/include/backend/platforms/WebGPUWasmPolyfill.h' ||
-                file === 'filament/backend/src/webgpu/platform/WebGPUPlatformWasm.cpp' ||
-                file === 'libs/filamentapp/src/backend_platforms/WebGPUPlatformHelperWasm.cpp'
-              ) {
-                jobs['build-web'] = true;
-                jobs['renderdiff-config'] = true;
-                jobs['renderdiff-web'] = true;
-                return;
-              }
-              if (
-                file === 'filament/backend/include/backend/platforms/WebGPUPlatformLinux.h' ||
-                file === 'filament/backend/src/webgpu/platform/WebGPUPlatformLinux.cpp' ||
-                file === 'libs/filamentapp/src/backend_platforms/WebGPUPlatformHelperLinux.cpp'
-              ) {
+              if (matchesGlob(file, [
+                'filament/backend/**/*Linux*',
+                'libs/{bluegl,filamentapp}/**/*Linux*',
+              ])) {
                 jobs['build-linux'] = true;
                 jobs['renderdiff-config'] = true;
                 jobs['renderdiff-desktop'] = true;
@@ -294,12 +289,11 @@ jobs:
               }
 
               // Shared WebGPU backend & Dawn (only compiled where -W is passed in presubmit)
-              if (
-                file.startsWith('filament/backend/src/webgpu/') ||
-                file === 'filament/backend/include/backend/platforms/WebGPUPlatform.h' ||
-                file.startsWith('filament/backend/test/test_WebGPU') ||
-                file.startsWith('third_party/dawn/')
-              ) {
+              if (matchesGlob(file, [
+                'filament/backend/src/webgpu/**',
+                'filament/backend/**/*WebGPU*',
+                'third_party/dawn/**',
+              ])) {
                 jobs['build-linux'] = true;
                 jobs['build-web'] = true;
                 jobs['renderdiff-config'] = true;
@@ -310,110 +304,21 @@ jobs:
                 return;
               }
 
-              // Android-only C++ sources in filament/backend and libs
-              if (
-                file.startsWith('filament/backend/src/Android') ||
-                file === 'filament/backend/src/BackendUtilsAndroid.cpp' ||
-                file === 'filament/backend/include/private/backend/BackendUtilsAndroid.h' ||
-                file === 'filament/backend/src/VirtualMachineEnv.cpp' ||
-                file === 'filament/backend/include/private/backend/VirtualMachineEnv.h' ||
-                file === 'filament/backend/include/backend/platforms/AndroidNdk.h' ||
-                file === 'filament/backend/include/backend/platforms/PlatformEGLAndroid.h' ||
-                file === 'filament/backend/include/backend/platforms/VulkanPlatformAndroid.h' ||
-                file.startsWith('filament/backend/src/opengl/platforms/ExternalStreamManagerAndroid.') ||
-                file === 'filament/backend/src/opengl/platforms/PlatformEGLAndroid.cpp' ||
-                file === 'filament/backend/src/vulkan/platform/VulkanPlatformAndroid.cpp' ||
-                file.startsWith('libs/utils/src/android/') ||
-                file === 'libs/filamentapp/src/backend_platforms/VulkanPlatformHelperAndroid.cpp'
-              ) {
-                jobs['build-android'] = true;
-                return;
-              }
-
-              // Windows-only C++/ASM sources in filament/backend and libs
-              if (
-                file === 'filament/backend/include/backend/platforms/PlatformWGL.h' ||
-                file === 'filament/backend/src/opengl/platforms/PlatformWGL.cpp' ||
-                file === 'filament/backend/include/backend/platforms/VulkanPlatformWindows.h' ||
-                file === 'filament/backend/src/vulkan/platform/VulkanPlatformWindows.cpp' ||
-                file.startsWith('libs/utils/src/win32/') ||
-                file === 'libs/filamentapp/src/display_managers/NativeWindowHelperWindows.cpp' ||
-                file === 'libs/filamentapp/src/backend_platforms/VulkanPlatformHelperWindows.cpp' ||
-                file === 'libs/bluegl/src/BlueGLWindows.cpp' ||
-                file === 'libs/bluegl/src/BlueGLCoreWindowsImpl.S' ||
-                file === 'libs/bluegl/src/BlueGLCoreWindows32Impl.cpp' ||
-                file === 'libs/bluevk/src/BlueVKWindows.cpp'
-              ) {
-                jobs['build-windows'] = true;
-                return;
-              }
-
-              // iOS-only ObjC++ sources in filament/backend
-              if (
-                file === 'filament/backend/include/backend/platforms/PlatformCocoaTouchGL.h' ||
-                file === 'filament/backend/src/opengl/platforms/PlatformCocoaTouchGL.mm' ||
-                file.startsWith('filament/backend/src/opengl/platforms/CocoaTouchExternalImage.')
-              ) {
-                jobs['build-ios'] = true;
-                return;
-              }
-
-              // Apple-only (macOS + iOS) C++/ObjC++/ASM sources in filament/backend and libs
-              if (
-                file === 'filament/backend/include/backend/platforms/PlatformCocoaGL.h' ||
-                file === 'filament/backend/src/opengl/platforms/PlatformCocoaGL.mm' ||
-                file.startsWith('filament/backend/src/opengl/platforms/CocoaExternalImage.') ||
-                file === 'filament/backend/include/backend/platforms/VulkanPlatformApple.h' ||
-                file === 'filament/backend/src/vulkan/platform/VulkanPlatformApple.mm' ||
-                file.startsWith('libs/utils/src/darwin/') ||
-                file === 'libs/filamentapp/src/display_managers/NativeWindowHelperCocoa.mm' ||
-                file === 'libs/filamentapp/src/backend_platforms/VulkanPlatformHelperApple.mm' ||
-                file === 'libs/bluegl/src/BlueGLDarwin.cpp' ||
-                file === 'libs/bluegl/src/BlueGLCoreDarwinUniversalImpl.S' ||
-                file === 'libs/bluevk/src/BlueVKDarwin.cpp'
-              ) {
-                jobs['build-mac'] = true;
-                jobs['build-ios'] = true;
-                jobs['test-backend-metal'] = true;
-                return;
-              }
-
-              // Web/WASM-only C++/JS/HTML sources in filament/backend and libs
-              if (
-                file === 'filament/backend/include/backend/platforms/PlatformWebGL.h' ||
-                file === 'filament/backend/src/opengl/platforms/PlatformWebGL.cpp' ||
-                file.startsWith('libs/utils/src/web/') ||
-                file === 'libs/filamentapp/src/display_managers/EmscriptenDisplayManager.cpp' ||
-                file === 'libs/filamentapp/src/display_managers/HtmlDisplayManager.cpp' ||
-                file.startsWith('libs/filamentapp/src/display_managers/web/')
-              ) {
-                jobs['build-web'] = true;
-                jobs['renderdiff-config'] = true;
-                jobs['renderdiff-web'] = true;
-                return;
-              }
-
               // Renderdiff suite & glTF asset helpers
-              if (
-                file === 'test/renderdiff/src/test_schema.py' ||
-                file === 'test/renderdiff/tests/sample.json'
-              ) {
+              if (matchesGlob(file, ['test/renderdiff/{src/test_schema.py,tests/sample.json}'])) {
                 jobs['renderdiff-config'] = true;
                 return;
               }
-              if (
-                file.startsWith('test/renderdiff/') ||
-                file.startsWith('test/render-validation/') ||
-                file.startsWith('.github/actions/renderdiff/') ||
-                file.startsWith('.github/actions/get-gltf-assets/') ||
-                file === 'build/common/get-gltf-sample-assets.sh'
-              ) {
+              if (matchesGlob(file, [
+                '{test/renderdiff,test/render-validation,.github/actions/renderdiff,.github/actions/get-gltf-assets}/**',
+                'build/common/get-gltf-sample-assets.sh',
+              ])) {
                 jobs['renderdiff-config'] = true;
                 jobs['renderdiff-desktop'] = true;
                 jobs['renderdiff-web'] = true;
                 return;
               }
-              if (file.startsWith('tools/diffimg/')) {
+              if (matchesGlob(file, ['tools/diffimg/**'])) {
                 jobs['build-mac'] = true;
                 jobs['build-linux'] = true;
                 jobs['build-windows'] = true;
@@ -425,12 +330,10 @@ jobs:
               }
 
               // Mesa & Vulkan SDK CI actions (used only by Linux backend tests and desktop renderdiff)
-              if (
-                file.startsWith('.github/actions/get-mesa/') ||
-                file === 'build/common/get-mesa.sh' ||
-                file.startsWith('.github/actions/get-vulkan-sdk/') ||
-                file === 'build/common/get-vulkan-sdk.sh'
-              ) {
+              if (matchesGlob(file, [
+                '.github/actions/get-{mesa,vulkan-sdk}/**',
+                'build/common/get-{mesa,vulkan-sdk}.sh',
+              ])) {
                 jobs['test-backend'] = true;
                 jobs['renderdiff-config'] = true;
                 jobs['renderdiff-desktop'] = true;
@@ -438,26 +341,12 @@ jobs:
               }
 
               // Backend test harness & sources
-              if (file.startsWith('test/backend/')) {
+              if (matchesGlob(file, ['test/backend/**'])) {
                 jobs['test-backend'] = true;
                 jobs['test-backend-metal'] = true;
                 return;
               }
-              if (
-                file === 'filament/backend/test/mac_runner.mm' ||
-                file === 'filament/backend/test/test_RenderExternalImage.cpp'
-              ) {
-                jobs['build-mac'] = true;
-                jobs['test-backend-metal'] = true;
-                return;
-              }
-              if (file === 'filament/backend/test/linux_runner.cpp') {
-                jobs['build-linux'] = true;
-                jobs['code-correctness'] = true;
-                jobs['test-backend'] = true;
-                return;
-              }
-              if (file.startsWith('filament/backend/test/')) {
+              if (matchesGlob(file, ['filament/backend/test/**'])) {
                 jobs['build-mac'] = true;
                 jobs['build-linux'] = true;
                 jobs['code-correctness'] = true;
@@ -470,25 +359,22 @@ jobs:
               }
 
               // Code correctness, header organization, and unit test suites
-              if (
-                file === 'test/code-correctness/check-headers.sh' ||
-                file.startsWith('tools/reorganize-headers/')
-              ) {
+              if (matchesGlob(file, [
+                'test/code-correctness/check-headers.sh',
+                'tools/reorganize-headers/**',
+              ])) {
                 jobs['check-headers'] = true;
                 return;
               }
-              if (
-                file.startsWith('test/code-correctness/') ||
-                file.startsWith('test/filament-unit-test/')
-              ) {
+              if (matchesGlob(file, ['test/{code-correctness,filament-unit-test}/**'])) {
                 jobs['code-correctness'] = true;
                 return;
               }
-              if (
-                file.startsWith('filament/test/') ||
-                /^libs\/[^/]+\/tests?\//.test(file) ||
-                /^tools\/[^/]+\/tests?\//.test(file)
-              ) {
+              if (matchesGlob(file, [
+                'filament/test/**',
+                '{libs,tools}/*/test/**',
+                '{libs,tools}/*/tests/**',
+              ])) {
                 jobs['build-mac'] = true;
                 jobs['build-linux'] = true;
                 jobs['build-windows'] = true;
@@ -497,7 +383,7 @@ jobs:
               }
 
               // Desktop/Android samples and sample assets (excluded from default iOS, WASM, and backend test builds)
-              if (file.startsWith('samples/') || file.startsWith('assets/')) {
+              if (matchesGlob(file, ['{samples,assets}/**'])) {
                 jobs['build-mac'] = true;
                 jobs['build-linux'] = true;
                 jobs['build-windows'] = true;
@@ -510,27 +396,12 @@ jobs:
               }
 
               // Host-only tools not built as prebuilts by Android, iOS, WASM, renderdiff, or backend tests
-              if (
-                file.startsWith('tools/ai/') ||
-                file.startsWith('tools/apigen/') ||
-                file.startsWith('tools/beamsplitter/') ||
-                file.startsWith('tools/cso-lut/') ||
-                file.startsWith('tools/frame_pipeline_visualizer/') ||
-                file.startsWith('tools/matedit/') ||
-                file.startsWith('tools/matinfo/') ||
-                file.startsWith('tools/normal-blending/') ||
-                file.startsWith('tools/rgb-to-lmsr/') ||
-                file.startsWith('tools/roughness-prefilter/') ||
-                file.startsWith('tools/specgen/') ||
-                file.startsWith('tools/specular-color/') ||
-                file.startsWith('tools/taa/') ||
-                file.startsWith('tools/zbloat/')
-              ) {
+              if (matchesGlob(file, [
+                'tools/**',
+              ])) {
                 jobs['build-mac'] = true;
                 jobs['build-linux'] = true;
-                if (!file.startsWith('tools/matedit/')) {
-                  jobs['build-windows'] = true;
-                }
+                jobs['build-windows'] = true;
                 jobs['code-correctness'] = true;
                 return;
               }
