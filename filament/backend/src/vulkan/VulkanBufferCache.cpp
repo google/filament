@@ -140,10 +140,14 @@ VulkanGpuBuffer const* VulkanBufferCache::allocate(VulkanBufferBinding binding,
     };
 
     VmaAllocationCreateFlags vmaFlags = 0;
-    // In the case of UMA, the buffers will always be mappable
+    VkMemoryPropertyFlags vkFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+    // In the case of UMA, the buffers will always be mappable.
+    // On some devices, neglecting the VK_MEMORY_PROPERTY_HOST_COHERENT_BIT causes the cache-flush
+    // on every update.
     if (mContext.isUnifiedMemoryArchitecture()) {
         vmaFlags |= VMA_ALLOCATION_CREATE_MAPPED_BIT |
-                    VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
+                VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
+        vkFlags |= VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
     }
 
     VulkanGpuBuffer* gpuBuffer = new VulkanGpuBuffer{
@@ -153,7 +157,7 @@ VulkanGpuBuffer const* VulkanBufferCache::allocate(VulkanBufferBinding binding,
     VmaAllocationCreateInfo const allocInfo{
         .flags = vmaFlags,
         .usage = VMA_MEMORY_USAGE_AUTO,
-        .requiredFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+        .requiredFlags = vkFlags,
     };
     UTILS_UNUSED_IN_RELEASE VkResult result = vmaCreateBuffer(mAllocator, &bufferInfo, &allocInfo,
             &gpuBuffer->vkbuffer, &gpuBuffer->vmaAllocation, &gpuBuffer->allocationInfo);

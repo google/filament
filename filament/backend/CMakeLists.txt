@@ -264,6 +264,7 @@ if (FILAMENT_SUPPORTS_VULKAN)
             src/vulkan/platform/VulkanPlatform.cpp
             src/vulkan/platform/VulkanPlatformSwapChainImpl.cpp
             src/vulkan/platform/VulkanPlatformSwapChainImpl.h
+            src/vulkan/utils/CommandBufferAgeCounter.h
             src/vulkan/utils/Conversion.cpp
             src/vulkan/utils/Conversion.h
             src/vulkan/utils/Definitions.h

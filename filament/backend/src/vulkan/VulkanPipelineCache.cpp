@@ -265,6 +265,15 @@ VulkanPipelineCache::PipelineCacheEntry* VulkanPipelineCache::getOrCreatePipelin
 void VulkanPipelineCache::bindPipeline(VulkanCommandBuffer* commands) {
     VkCommandBuffer const cmdbuffer = commands->buffer();
 
+    // "When a command buffer begins recording, all state in that command buffer is undefined."
+    // Callers do not reliably reset the bound state when switching command buffers (e.g. between
+    // the regular and the protected one, or after a flush), so detect the switch here. Ages are
+    // unique across both command buffer pools.
+    if (UTILS_UNLIKELY(commands->age() != mBoundAge)) {
+        resetBoundPipeline();
+        mBoundAge = commands->age();
+    }
+
     // Pipelines that are restricted to protected (or unprotected) access can only be bound to
     // protected (or unprotected) command buffers, so the protection is part of the key.
     if (mHasPipelineProtectedAccess) {

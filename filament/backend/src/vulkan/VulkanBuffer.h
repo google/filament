@@ -17,11 +17,18 @@
 #ifndef TNT_FILAMENT_BACKEND_VULKANBUFFER_H
 #define TNT_FILAMENT_BACKEND_VULKANBUFFER_H
 
+#include "VulkanConstants.h"
 #include "VulkanMemory.h"
 
 #include "memory/Resource.h"
 
+#include "vulkan/utils/CommandBufferAgeCounter.h"
+
+#include <utils/debug.h>
+
+#include <cstdint>
 #include <functional>
+#include <utility>
 
 namespace filament::backend {
 
@@ -33,7 +40,7 @@ public:
 
     VulkanBuffer(VulkanGpuBuffer const* gpuBuffer, OnRecycle&& onRecycleFn)
         : mGpuBuffer(gpuBuffer),
-          mOnRecycleFn(onRecycleFn) {}
+          mOnRecycleFn(std::move(onRecycleFn)) {}
 
     ~VulkanBuffer() {
         if (mOnRecycleFn) {
@@ -43,9 +50,29 @@ public:
 
     VulkanGpuBuffer const* getGpuBuffer() const { return mGpuBuffer; }
 
+    // Records that the command buffer of age `age`, which must still be recording, reads from or
+    // writes into this buffer (e.g. a draw that reads it, or a vkCmdCopyBuffer into it).
+    void markInFlight(fvkutils::CommandBufferAgeCounter const& ageCounter, uint64_t age) {
+        ageCounter.markInFlight(mAges, age);
+    }
+
+    // Returns the ages of the command buffers that read from or wrote into this buffer. Some of
+    // them may have completed since; use CommandBufferAgeCounter::isInFlight() to
+    // find the ones that are still in flight.
+    fvkutils::AgeSet const& getAges() const {
+        return mAges;
+    }
+
+    bool isMemcopyable() const {
+        assert_invariant(mGpuBuffer);
+        return mGpuBuffer->allocationInfo.pMappedData != nullptr;
+    }
+
 private:
     VulkanGpuBuffer const* mGpuBuffer;
     OnRecycle mOnRecycleFn;
+
+    fvkutils::AgeSet mAges;
 };
 
 }// namespace filament::backend
