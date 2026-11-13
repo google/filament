@@ -79,6 +79,12 @@ std::vector<uint8_t> makeSparseTangentMorphGlb(int morphTargetCount, int tangent
 // with the base vertex buffer.
 std::vector<uint8_t> makeColorSeamMorphGlb(MorphMaterial material);
 
+// Builds a GLB whose mesh has two single-triangle primitives that share their accessors, each with
+// one morph target. The morph target POSITION accessor is a VEC4 of floats, and its bufferView,
+// which is the last thing in the buffer, declares `byteStride`. A stride below 16 makes the
+// elements overlap, which cgltf_validate() accepts. Reproduces issue #10796.
+std::vector<uint8_t> makeStridedVec4MorphGlb(uint32_t byteStride);
+
 // Builds a GLB whose first primitive has only a TEXCOORD_0 attribute (no POSITION) and uses the
 // default lit material, reproducing issue #10638. When `includeValidSiblingPrimitive` is true, the
 // mesh also contains a second primitive with a valid POSITION attribute.
@@ -147,6 +153,16 @@ struct TranslationAnimationOptions {
 // (kTranslationAnimationEnd). See TranslationAnimationOptions for the ways in which the asset can
 // be made invalid or unreadable.
 std::vector<uint8_t> makeTranslationAnimationGlb(TranslationAnimationOptions const& options = {});
+
+// The translation of the inverse bind matrix that makeUnusableInverseBindMatricesGlb() stores for
+// its second skin.
+constexpr filament::math::float3 kSkinInverseBindTranslation = { 1.0f, 2.0f, 3.0f };
+
+// Builds a GLB with no meshes and two skins, "skin0" and "skin1", of one joint each. The inverse
+// bind matrices accessor of "skin0" is made of UNSIGNED_SHORT components, which cgltf_validate()
+// accepts but which cannot be used. The one of "skin1" is valid, and holds a translation by
+// kSkinInverseBindTranslation. Reproduces issue #10795.
+std::vector<uint8_t> makeUnusableInverseBindMatricesGlb();
 
 } // namespace test
 

@@ -239,7 +239,14 @@ inline void createSkins(cgltf_data const* gltf, bool normalize,
             name = CString(srcSkin.name);
         }
         const cgltf_accessor* srcMatrices = srcSkin.inverse_bind_matrices;
-        FixedCapacityVector<mat4f> inverseBindMatrices(srcSkin.joints_count);
+
+        // This list is indexed with the glTF skin index, just like FFilamentInstance::mSkins, so
+        // every skin gets an entry. A skin whose matrices are absent, or rejected below, keeps
+        // identity matrices, which is what glTF prescribes when inverseBindMatrices is undefined.
+        FFilamentAsset::Skin& skin = skins.emplace_back(FFilamentAsset::Skin{
+                .name = std::move(name),
+                .inverseBindMatrices = FixedCapacityVector<mat4f>(srcSkin.joints_count),
+        });
         if (srcMatrices) {
             if (srcMatrices->type != cgltf_type_mat4 ||
                     srcMatrices->component_type != cgltf_component_type_r_32f) {
@@ -283,13 +290,9 @@ inline void createSkins(cgltf_data const* gltf, bool normalize,
                 srcBuffer = (uint8_t*) srcMatrices->buffer_view->buffer->data + totalOffset;
             }
 
-            memcpy((uint8_t*) inverseBindMatrices.data(), (const void*) srcBuffer, requiredBytes);
+            memcpy((uint8_t*) skin.inverseBindMatrices.data(), (const void*) srcBuffer,
+                    requiredBytes);
         }
-        FFilamentAsset::Skin skin{
-                .name = std::move(name),
-                .inverseBindMatrices = std::move(inverseBindMatrices),
-        };
-        skins.emplace_back(std::move(skin));
     }
 }
 
@@ -636,15 +639,21 @@ inline bool uploadBuffers(FFilamentAsset* asset, Engine& engine,
                 continue;
             }
             cgltf_accessor_unpack_floats(accessor, floatsData, floatsCount);
+
+            // Always upload the unpacked floats: unlike the raw bytes of the bufferView, they are
+            // tightly packed and take the accessor's byteStride and sparse data into account.
             if (accessor->type == cgltf_type_vec3) {
                 slot.morphTargetBuffer->setPositionsAt(engine, slot.bufferIndex,
                         (const float3*) floatsData,
                         slot.morphTargetCount,
                         slot.morphTargetOffset);
-            } else {
+            } else if (accessor->type == cgltf_type_vec4) {
                 slot.morphTargetBuffer->setPositionsAt(engine, slot.bufferIndex,
-                        (const float4*) data, slot.morphTargetBuffer->getVertexCount(),
+                        (const float4*) floatsData,
+                        slot.morphTargetCount,
                         slot.morphTargetOffset);
+            } else {
+                LOG(WARNING) << "Unsupported morph target position type, skipping.";
             }
             free(floatsData);
             continue;
