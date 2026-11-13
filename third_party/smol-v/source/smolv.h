@@ -93,6 +93,11 @@ namespace smolv
 	bool Decode(const void* smolvData, size_t smolvSize, void* spirvOutputBuffer, size_t spirvOutputBufferSize);
 
 
+	// Validate a SMOL-V program by dry-running the full decoder without writing output or
+	// allocating memory. Returns false on malformed or truncated input.
+	bool Validate(const void* smolvData, size_t smolvSize);
+
+
 	// Given a SMOL-V program, get size of the decoded SPIR-V program.
 	// This is the buffer size that Decode expects.
 	//

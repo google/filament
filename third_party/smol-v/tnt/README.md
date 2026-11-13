@@ -14,6 +14,7 @@ patch files in this directory; re-applying the recipe above drops them, so apply
 the third_party directory:
 
 patch -p2 < smol-v/tnt/0001-decode-output-bounds-checks.patch
+patch -p2 < smol-v/tnt/0002-add-validate.patch
 
 - 0001-decode-output-bounds-checks.patch
   Output bounds checks in smolv::Decode (b/557280759). The decoder wrote decoded SPIR-V words
@@ -21,3 +22,7 @@ patch -p2 < smol-v/tnt/0001-decode-output-bounds-checks.patch
   size smaller than it actually decodes to overflowed the heap allocation.
   Hand-ported from the unmerged upstream PR https://github.com/aras-p/smol-v/pull/16.
   Drop this patch once that PR is merged and smol-v is updated past it.
+
+- 0002-add-validate.patch
+  Adds smolv::Validate(smolvData, smolvSize), sharing smolv_DecodeImpl with smolv::Decode so
+  callers can validate an encoded SMOL-V stream at load time with zero allocations or writes.
