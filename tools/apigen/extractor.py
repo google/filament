@@ -1595,15 +1595,20 @@ class Extractor:
                 enum_obj["is_flags"] = True
             enum_obj["underlying_type"] = get_type_info(decl.enum_type).get("cpp_name", "int")
             enum_obj["entries"] = []
+            skip_attrs = ("filament:apigen:skip", "filament:skip", "apigen:skip", "no_apigen", "noapigen", "skip_generation", "binding:skip")
             for child in decl.get_children():
                 if child.kind == CursorKind.ENUM_CONSTANT_DECL:
+                    if self._is_in_cond_never(child):
+                        continue
+                    child_attrs = extract_attributes(child)
+                    if any(a in skip_attrs or a.startswith("no_apigen") or a.startswith("skip_generation") for a in child_attrs):
+                        continue
                     entry = {
                         "name": child.spelling,
                         "value": child.enum_value,
                         "doc": parse_doxygen(child.raw_comment)
                     }
                     enum_obj["entries"].append(entry)
-            skip_attrs = ("filament:apigen:skip", "filament:skip", "apigen:skip", "no_apigen", "noapigen", "skip_generation", "binding:skip")
             is_skipped_enum = any(a in skip_attrs or a.startswith("no_apigen") or a.startswith("skip_generation") for a in enum_obj.get("attributes", []))
             if enum_obj["entries"] and not is_skipped_enum:
                 cls.setdefault("enums", []).append(enum_obj)
@@ -1864,9 +1869,15 @@ class Extractor:
             enum_obj["is_flags"] = True
         enum_obj["underlying_type"] = get_type_info(cursor.enum_type).get("cpp_name", "int")
         enum_obj["entries"] = []
+        skip_attrs = ("filament:apigen:skip", "filament:skip", "apigen:skip", "no_apigen", "noapigen", "skip_generation", "binding:skip")
         
         for child in cursor.get_children():
             if child.kind == CursorKind.ENUM_CONSTANT_DECL:
+                if self._is_in_cond_never(child):
+                    continue
+                child_attrs = extract_attributes(child)
+                if any(a in skip_attrs or a.startswith("no_apigen") or a.startswith("skip_generation") for a in child_attrs):
+                    continue
                 entry = {
                     "name": child.spelling,
                     "value": child.enum_value,
