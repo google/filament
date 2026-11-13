@@ -1125,6 +1125,14 @@ static bool smolv_Write4Safe(uint8_t*& buf, const uint8_t* bufEnd, uint32_t v)
 	return true;
 }
 
+static bool smolv_Write4Safe(size_t& outBytes, size_t outCapacity, uint32_t)
+{
+	if (outCapacity - outBytes < 4)
+		return false;
+	outBytes += 4;
+	return true;
+}
+
 
 static bool smolv_Read4(const uint8_t*& data, const uint8_t* dataEnd, uint32_t& outv)
 {
@@ -1465,22 +1473,11 @@ size_t smolv::GetDecodedBufferSize(const void* smolvData, size_t smolvSize)
 }
 
 
-bool smolv::Decode(const void* smolvData, size_t smolvSize, void* spirvOutputBuffer, size_t spirvOutputBufferSize)
+template<typename OutCursor, typename OutEnd>
+static bool smolv_DecodeImpl(const void* smolvData, size_t smolvSize, OutCursor& outSpirv, OutEnd outSpirvEnd)
 {
-	// check header, and whether we have enough output buffer space
-	const size_t neededBufferSize = GetDecodedBufferSize(smolvData, smolvSize);
-	if (neededBufferSize == 0)
-		return false; // invalid SMOL-V
-	if (spirvOutputBufferSize < neededBufferSize)
-		return false; // not enough space in output buffer
-	if (spirvOutputBuffer == NULL)
-		return false; // output buffer is null
-
 	const uint8_t* bytes = (const uint8_t*)smolvData;
 	const uint8_t* bytesEnd = bytes + smolvSize;
-
-	uint8_t* outSpirv = (uint8_t*)spirvOutputBuffer;
-	const uint8_t* outSpirvEnd = (const uint8_t*)spirvOutputBuffer + spirvOutputBufferSize;
 
 	uint32_t val;
 
@@ -1651,10 +1648,42 @@ bool smolv::Decode(const void* smolvData, size_t smolvSize, void* spirvOutputBuf
 		}
 	}
 
+	return true;
+}
+
+
+bool smolv::Decode(const void* smolvData, size_t smolvSize, void* spirvOutputBuffer, size_t spirvOutputBufferSize)
+{
+	// check header, and whether we have enough output buffer space
+	const size_t neededBufferSize = GetDecodedBufferSize(smolvData, smolvSize);
+	if (neededBufferSize == 0)
+		return false; // invalid SMOL-V
+	if (spirvOutputBufferSize < neededBufferSize)
+		return false; // not enough space in output buffer
+	if (spirvOutputBuffer == NULL)
+		return false; // output buffer is null
+
+	uint8_t* outSpirv = (uint8_t*)spirvOutputBuffer;
+	const uint8_t* outSpirvEnd = (const uint8_t*)spirvOutputBuffer + spirvOutputBufferSize;
+	if (!smolv_DecodeImpl(smolvData, smolvSize, outSpirv, outSpirvEnd))
+		return false;
+
 	if ((uint8_t*)spirvOutputBuffer + neededBufferSize != outSpirv)
 		return false; // something went wrong during decoding? we should have decoded to exact output size
-	
+
 	return true;
+}
+
+
+bool smolv::Validate(const void* smolvData, size_t smolvSize)
+{
+	const size_t neededBufferSize = GetDecodedBufferSize(smolvData, smolvSize);
+	if (neededBufferSize == 0)
+		return false;
+	size_t outBytes = 0;
+	if (!smolv_DecodeImpl(smolvData, smolvSize, outBytes, neededBufferSize))
+		return false;
+	return outBytes == neededBufferSize;
 }
 
 
