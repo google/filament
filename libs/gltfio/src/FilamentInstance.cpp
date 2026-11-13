@@ -165,16 +165,25 @@ void FFilamentInstance::recomputeBoundingBoxes() {
                         }
 
                         const cgltf_accessor* targetAccessor = targetAttribute.data;
+                        if (!targetAccessor) {
+                            continue;
+                        }
+                        const size_t targetDim = cgltf_num_components(targetAccessor->type);
+                        if (targetDim < 3) {
+                            continue;
+                        }
 
-                        assert_invariant(targetAccessor);
-                        assert_invariant(targetAccessor->count == accessor->count);
-                        assert_invariant(cgltf_num_components(targetAccessor->type) == dim);
+                        utils::FixedCapacityVector<float> targetUnpacked(
+                                targetAccessor->count * targetDim, 0.0f);
+                        cgltf_accessor_unpack_floats(targetAccessor, targetUnpacked.data(),
+                                targetUnpacked.size());
 
-                        cgltf_accessor_unpack_floats(targetAccessor, unpacked.data(), unpacked.size());
-
+                        const size_t targetCount =
+                                std::min<size_t>(accessor->count, targetAccessor->count);
                         Aabb targetAabb;
-                        for (cgltf_size i = 0, j = 0, n = accessor->count; i < n; ++i, j += dim) {
-                            float3 delta(unpacked[j + 0], unpacked[j + 1], unpacked[j + 2]);
+                        for (size_t i = 0, j = 0; i < targetCount; ++i, j += targetDim) {
+                            float3 delta(targetUnpacked[j + 0], targetUnpacked[j + 1],
+                                    targetUnpacked[j + 2]);
                             targetAabb.min = min(targetAabb.min, delta);
                             targetAabb.max = max(targetAabb.max, delta);
                         }

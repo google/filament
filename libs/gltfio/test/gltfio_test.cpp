@@ -3048,6 +3048,77 @@ TEST_F(glTFIOTest, BufferlessMorphPositionDimensionMismatchDoesNotOverRead) {
     AssetLoader::destroy(&assetLoader);
 }
 
+// Issue #10792: morph POSITION accessors with VEC2/SCALAR/MAT4 types (both with and without
+// min/max, and with or without bufferView) must be rejected at createAsset() time, and
+// uploadBuffers()'s non-packing morph arm must also guard against non-VEC3/VEC4 types as defense
+// in depth instead of treating them as float4 and reading past the end of the bufferView.
+TEST_F(glTFIOTest, InvalidMorphTargetDimensionsAreRejectedAndGuarded) {
+    AssetLoader* assetLoader = AssetLoader::create({ mEngine, mMaterialProvider, mNameManager });
+    ASSERT_NE(assetLoader, nullptr);
+
+    // 1. End-to-end rejection in AssetLoader::createPrimitive() across with/without min/max and
+    // with/without bufferView.
+    for (char const* const badType : { "SCALAR", "VEC2", "MAT4" }) {
+        for (bool const withBufferView : { true, false }) {
+            for (bool const withMinMax : { true, false }) {
+                if (std::string_view(badType) == "MAT4" && withMinMax) continue;
+                SCOPED_TRACE(testing::Message() << badType << " bv=" << withBufferView
+                                                << " minMax=" << withMinMax);
+                std::vector<uint8_t> const glb =
+                        makeTypedMorphPositionGlb(badType, 5126, withBufferView, withMinMax);
+                EXPECT_EQ(assetLoader->createAsset(glb.data(), uint32_t(glb.size())), nullptr);
+            }
+        }
+    }
+
+    // 2. Direct defense-in-depth exercise of uploadBuffers()'s non-packing morph arm on tight VEC2
+    // (48 bytes at the exact GLB tail vs 96-byte float4 copy) and SCALAR (24 bytes at the exact GLB
+    // tail vs 96-byte float4 copy).
+    for (cgltf_type const badType : { cgltf_type_vec2, cgltf_type_scalar }) {
+        size_t const dim = (badType == cgltf_type_vec2) ? 2u : 1u;
+        size_t const stride = dim * sizeof(float);
+        size_t const morphBytes = 6u * stride;
+
+        std::vector<uint8_t> const glb =
+                makeTypedMorphPositionGlb("VEC3", 5126, /* withBufferView = */ true);
+        FilamentAsset* const asset = assetLoader->createAsset(glb.data(), uint32_t(glb.size()));
+        ASSERT_NE(asset, nullptr);
+
+        gltfio::FFilamentAsset* const fasset = downcast(asset);
+        cgltf_data* const hierarchy = fasset->mSourceAsset->hierarchy;
+        // Shrink glbData so the morph bufferView ends right at the allocation boundary.
+        size_t const trimBytes = (6u * sizeof(math::float3)) - morphBytes;
+        FixedCapacityVector<uint8_t> trimmed(fasset->mSourceAsset->glbData.size() - trimBytes);
+        std::copy_n(fasset->mSourceAsset->glbData.data(), trimmed.size(), trimmed.data());
+        // Re-parse or update the buffer/view/accessor sizes and bin pointer in place: note that
+        // cgltf's bin pointer points into the old glbData, so update hierarchy->bin and buffer 0
+        // size, view 1 size, and accessor 1 type/stride to match the shrunk tail allocation.
+        size_t const jsonOffset = static_cast<size_t>(
+                reinterpret_cast<uint8_t const*>(hierarchy->json) -
+                fasset->mSourceAsset->glbData.data());
+        size_t const binOffset = static_cast<size_t>(
+                static_cast<uint8_t const*>(hierarchy->bin) - fasset->mSourceAsset->glbData.data());
+        fasset->mSourceAsset->glbData.swap(trimmed);
+        hierarchy->json =
+                reinterpret_cast<char const*>(fasset->mSourceAsset->glbData.data() + jsonOffset);
+        hierarchy->bin = fasset->mSourceAsset->glbData.data() + binOffset;
+        hierarchy->bin_size = 72u + morphBytes;
+        hierarchy->buffers[0].size = 72u + morphBytes;
+        hierarchy->buffer_views[1].size = morphBytes;
+        hierarchy->accessors[1].type = badType;
+        hierarchy->accessors[1].stride = stride;
+
+        ResourceLoader resourceLoader({ mEngine, ".", false });
+        EXPECT_TRUE(resourceLoader.loadResources(asset));
+        FilamentInstance* const inst = asset->getInstance();
+        ASSERT_NE(inst, nullptr);
+        inst->recomputeBoundingBoxes();
+        assetLoader->destroyAsset(asset);
+    }
+
+    AssetLoader::destroy(&assetLoader);
+}
+
 #undef EXPECT_FLOAT3_EQ
 
 int main(int argc, char** argv) {

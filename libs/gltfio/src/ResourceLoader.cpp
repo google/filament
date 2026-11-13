@@ -596,6 +596,11 @@ inline bool uploadBuffers(FFilamentAsset* asset, Engine& engine,
             continue;
         }
 
+        if (accessor->type != cgltf_type_vec3 && accessor->type != cgltf_type_vec4) {
+            LOG(WARNING) << "Unsupported morph target position type, skipping.";
+            continue;
+        }
+
         cgltf_size capacity = 0;
         cgltf_size totalOffset = 0;
         if (accessor->buffer_view->has_meshopt_compression) {
@@ -681,8 +686,7 @@ inline bool uploadBuffers(FFilamentAsset* asset, Engine& engine,
             slot.morphTargetBuffer->setPositionsAt(engine, slot.bufferIndex, (const float3*) data,
                     uploadCount,
                     slot.morphTargetOffset);
-        } else {
-            assert_invariant(accessor->type == cgltf_type_vec4);
+        } else if (accessor->type == cgltf_type_vec4) {
             slot.morphTargetBuffer->setPositionsAt(engine, slot.bufferIndex, (const float4*) data,
                     uploadCount,
                     slot.morphTargetOffset);
