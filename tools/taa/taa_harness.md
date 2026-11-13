@@ -22,49 +22,103 @@ This alone is sufficient after editing `taa.mat` — it is a source of `libfilam
 dependency chain (material compile → resource package → `taa.cpp` → `libfilament.a` →
 `taa_harness`) is wired correctly through ninja. No need for a full `build.sh`.
 
-## Upscaler qualification benchmark (`--benchmark` & `--compare`)
+## Upscaler qualification & GPU performance benchmark (`--benchmark`, `--perf`, `--compare`)
 
 *(For the developer-facing user guide on running the benchmark and interpreting its scores, see
 [benchmark.md](benchmark.md).)*
 
-When evaluating `taa.mat` changes or comparing tuned `-s` `TemporalAntiAliasingOptions` presets,
-pass `--benchmark` (`-b`).
+When evaluating or comparing TAA configurations (e.g. Filament's default `taa.mat` vs tuned `-s`
+option presets), pass `--benchmark` (`-b`) for quality qualification, `--perf` for isolated GPU
+performance timing, or `-b --perf` to run both in a unified 4-axis scorecard.
 
-Instead of running a single model, `--benchmark` executes a curated 10-scenario suite across four
-scenes (`Fox.glb`, `DamagedHelmet.glb`, `SubpixelStar.glb`, and `SSRReflection.glb`, at `-u 2 -F box`
-by default) and distills the results into **3 headline qualification metrics** in decibels (dB,
-where higher is always better: `+3 dB` = 2x less error energy, `+6 dB` = 2x lower RMS error)
-alongside their direct physical units:
+Instead of running a single model, `--benchmark` executes a curated 11-scenario suite across five
+scenes (`Fox.glb`, `DamagedHelmet.glb`, `SubpixelStar.glb`, `SSRReflection.glb`, and
+`BusterDrone.glb`, at `-u 2 -F box` by default) and distills the results into **3 headline
+qualification metrics** in decibels (dB, where higher is always better: `+3 dB` = 2x less error
+energy, `+6 dB` = 2x lower RMS error) alongside their direct physical units:
 
-1. **`Spatial Quality` (dB & Correlated Detail %)** — Static converged accuracy combining
-   whole-frame and silhouette MSE on real geometry (`fox_static`, `helmet_static`) with
-   phase-correlated Laplacian detail transfer (`detail_transfer_mean`, including `star_static`),
-   so neither blur nor ghosting/ringing overshoot (`spurious_hf_mean`) can game the score.
+1. **`Spatial Quality` (dB, GMSD & Correlated Detail %)** — Static converged accuracy combining
+   silhouette MSE (`0.40`), whole-frame MSE (`0.35`), and foreground-masked $3\times 3$ Prewitt
+   Gradient Magnitude Similarity Deviation (`gmsd_mean`, `0.25`) on real geometry (`fox_static`,
+   `helmet_static`) with phase-correlated Laplacian detail transfer (`detail_transfer_mean`,
+   including `star_static`) and $10\times 10$ inner-grid ($8\times 8$ core) hotspot pooling
+   (`spatial_hotspot_top10_rmse`, `spatial_hotspot_peak_rmse`), so neither interior texture blur,
+   localized hotspot failure, nor ghosting/ringing overshoot (`spurious_hf_mean`) can game the
+   score.
 2. **`Temporal Stability` (dB & Top-1% / Sub-Pixel Flicker RMS)** — Worst-1% pixel residual
    temporal shimmer (`residual_flicker_top1pct_rms`) and `SubpixelStar` ring flicker
    (`subpixel_ring_flicker_rms`) across static scenes plus a `0.1` render-texel/frame slow camera
    drift (`fox_drift`).
-3. **`Motion Robustness` (dB & Dynamic Edge RMSE)** — Combines `edge_rmse_mean`, `edge_ghost_peak`,
-   and unrecovered post-motion `edge_tail_error` across:
+3. **`Motion Robustness` (dB, Dynamic Edge RMSE & Wake Ghosting RMS)** — Combines `edge_rmse_mean`
+   (`0.40`), `edge_ghost_peak` (`0.30`), unrecovered post-motion `edge_tail_error` (`0.15`), and
+   in-motion analytical backward-velocity wake ghosting (`wake_ghosting_rms`, `0.15`), plus
+   $8\times 8$ inner-core hotspot pooling (`motion_hotspot_top10_rmse`, `motion_hotspot_peak_rmse`),
+   across:
    - **Tracked Motion** (`helmet_cam_rotate`, `helmet_cam_dolly`, `fox_obj_translate`,
-     `helmet_obj_spin` with `motionVectors = true`)
+     `helmet_obj_spin`, and `buster_drone_anim` articulated multi-node rigid animation, all with
+     `motionVectors = true`)
    - **Unmodeled Motion** (`fox_skinned_run` skeletal animation clip `-A 2`, and `ssr_reflection`
      sliding specular reflection with SSR enabled)
+4. **`GPU Performance` (ms, when `--perf` is passed; lower is better)** — Isolated GPU cost of the
+   upscaler dispatch in milliseconds (`upscaler_gpu_ms_p50`, `upscaler_gpu_ms_p90`), measured at a
+   realistic target viewport (`--perf-resolution 1920x1080` by default) with zero pixel readback
+   during the timed window. Differential GPU cost is computed by pairing an identical render-res
+   baseline pass (`taa.enabled = false`, `motionVectors = true`, `disable_subpasses = true` so tonemap
+   remains an out-of-subpass render pass matching the upscaler's render-pass layout on TBDR GPUs)
+   against the upscaled pass (`taa.enabled = true`, `taa.upscaling = u`). Includes CTS anti-cheat
+   cross-checks (`timing_discrepancy_ms`, `post_check_passed`, `cts_valid`).
 
-Example side-by-side qualification of Filament's default TAA vs a custom `-s` preset:
+Example side-by-side qualification + GPU performance comparison of Filament's default TAA vs a
+custom `-s` preset:
 
 ```bash
 H=./out/cmake-debug/tools/taa/taa_harness
-cat > /tmp/adaptive.json <<'EOF'
-{ "view": { "taa": { "motionAdaptiveHistory": true, "historyReprojection": true } } }
-EOF
-$H -b --label "Filament TAA" -o /tmp/bench_default.json
-$H -b -s /tmp/adaptive.json --label "TAA (Adaptive)" -o /tmp/bench_adaptive.json
+$H -b --perf -a vulkan --label "Filament TAA" -o /tmp/bench_default.json
+$H -b --perf -a vulkan -s adaptive.json --label "TAA (Adaptive)" -o /tmp/bench_adaptive.json
 $H --compare /tmp/bench_default.json,/tmp/bench_adaptive.json
 ```
 
 Pass `-F lanczos` explicitly with `-b` when you want an upscaler-neutral 256-sample true Lanczos-2
 reference instead of the fast 32-sample `-F box` default.
+
+### Android APK (`:samples:sample-taa-harness`), ADPF Fixed Performance Mode & Systrace Verification
+
+On Android, `taa_harness` is built as a shared library (`libtaa_harness.so`) and packaged alongside
+IBL assets and the 5 benchmark glTF models inside the `:samples:sample-taa-harness` APK
+(`android/samples/sample-taa-harness`), running via `am instrument -w` on standard `user` builds
+with zero private APIs.
+
+```bash
+# 1. Build and install libtaa_harness.so into out/android-release/filament
+ninja -C out/cmake-android-release-aarch64 taa_harness install
+
+# 2. Assemble the sample-taa-harness APK
+cd android && ./gradlew \
+    -Pcom.google.android.filament.dist-dir="$PWD/../out/android-release/filament" \
+    -Pcom.google.android.filament.tools-dir="$PWD/../out/release/filament" \
+    -Pcom.google.android.filament.abis=arm64-v8a \
+    :samples:sample-taa-harness:assembleDebug && cd ..
+
+# 3. Run on connected Android device via am instrument -w (or use run_android_benchmark.py)
+python3 tools/taa/run_android_benchmark.py --verify-systrace
+```
+
+You can also invoke the instrumentation runner directly via `adb`:
+
+```bash
+adb install -r -t android/samples/sample-taa-harness/build/outputs/apk/debug/sample-taa-harness-debug.apk
+adb shell 'am instrument -w -e fixed_perf "1" -e args "-b -a vulkan" com.google.android.filament.taaharness/.TaaHarnessInstrumentation'
+```
+
+You can run both the C++ analytical metric unit test suite (`test_taa_metrics`, which verifies every
+spatial, gradient, hotspot, temporal, motion-curve, analytical wake-ghosting, and SHA-256 kernel
+against closed-form synthetic ground truth) and the offline Systrace / `--compare` unit test suite on
+desktop at any time:
+
+```bash
+ninja -C out/cmake-debug test_taa_metrics && ./out/cmake-debug/tools/taa/test_taa_metrics
+python3 tools/taa/test_verify_systrace.py -v
+```
 
 ## Before/after workflow for a TAA change
 
@@ -167,7 +221,7 @@ cleanly.
 |---|---|
 | `third_party/models/Fox/Fox.glb` | the default, and what the checked-in baseline is generated from. Thin limbs, hard silhouettes, and the only scene here with a *skinned* animation. **`-A` matters**: 0 (`Survey`, the default) barely moves, 1 is `Walk`, 2 is `Run`. With `--object-motion translate` it is also the rigid moving-object scene with the hardest silhouettes. |
 | `third_party/models/DamagedHelmet/DamagedHelmet.glb` | specular and normal-mapped content Fox has none of; it is what made two upscaling bugs visible that Fox alone missed. No checked-in baseline — generate one before leaning on it. With `--object-motion spin` it is the moving-object scene whose *interior* has the most to lose to camera-only reprojection: highlights slide across the surface as it turns. |
-| `third_party/models/BusterDrone/scene.gltf` | the only real-content asset with a *rigid* node animation (propellers, hull parts; no skin, a few morph weights), so the one `--object-motion animation` scene where motion vectors apply. 39 meshes, textured; `-A 0` is the only clip. The propellers move many render texels per frame — expect the `|v| >= 1` "no previous position" path to fire on them under upscaling. |
+| `third_party/models/BusterDrone/BusterDrone.glb` | self-contained GLB repackaging of `third_party/models/BusterDrone/scene.gltf`: the only real-content asset with an articulated *rigid* multi-node animation (propellers, hull panels, turbines across 39 meshes / 33 animated child nodes; no skin), so the `--object-motion animation` scene where per-object motion vectors apply (`buster_drone_anim` and `perf_buster_drone_anim`). Note that `t = [0, 0.73s)` in clip `-A 0` is stationary; pass `--animation-start` (e.g. `10.0` or `6.0`) to measure active rigid-node motion. |
 | `tools/taa/models/SubpixelStar/SubpixelStar.glb` | sub-pixel flicker on thin high-contrast geometry (below). |
 | `tools/taa/models/ParallaxPillar/ParallaxPillar.glb` | a chroma-distinct silhouette edge under camera parallax. |
 | `tools/taa/models/SSRReflection/SSRReflection.glb` | chroma motion from a view-dependent reflection on a geometrically static surface. |
@@ -263,6 +317,28 @@ Fox and quietly puts the third column back up near `defaults` has broken it.
   subtracted out**. This is "how bad did it get," isolated from reference-definition noise.
 - **`edge_tail_error`** — residual edge error above the frame-0 floor on the final captured frame
   (half a capture window after motion stopped); isolates unrecovered stale-history lock.
+- **`wake_ghosting_rms`** / **`wake_ghosting_frame_N`** / **`motion_wake_ghosting_rms`** —
+  in-motion trailing ghost-wake persistence along the analytical negative screen-space velocity
+  vector $-\hat{\mathbf{v}}(\mathbf{x})$ at backward offsets $d \in \{2, 4, 6, 8\}\text{ px}$ on
+  disoccluded trailing edges (where $\lvert Y_{\text{ref},k} - Y_{\text{ref},k-1}\rvert > 0.015$
+  and backward wake samples lie in newly disoccluded regions with background contrast against the
+  edge). Separates trailing ghost wakes during active motion ($1 \le k \le N_{\text{motion}}$) from
+  symmetric leading-edge spatial blur and post-motion tail lock.
+- **`gmsd_mean`** / **`gmsd_frame_N`** / **`spatial_gmsd`** — Gradient Magnitude Similarity
+  Deviation (Xue et al., 2014) computed with $3\times 3$ Prewitt horizontal and vertical filters on
+  linear luminance ($c = 0.0026$) over the foreground/silhouette mask. Measures spatial standard
+  deviation of first-order local gradient structure similarity (`0.0` = identical gradient
+  structure; lower is better), complementing second-order Laplacian `detail_transfer_mean` on
+  continuous interior normal-map and albedo texture gradients.
+- **`hotspot_top10_rmse`** / **`hotspot_peak_rmse`** / **`hotspot_top10_rmse_frame_N`** —
+  localized spatial error concentration over a $10\times 10$ viewport grid restricted to the inner
+  $8\times 8$ core ($1 \le r, c \le 8$, discarding the outer viewport border ring) and gated to
+  active cells ($\ge 10$ foreground/silhouette texels). Computes the $95\text{th}$-percentile pixel
+  RMSE within each active cell; `hotspot_top10_rmse` is the mean of the worst 10 cells' P95 and
+  `hotspot_peak_rmse` is the single worst cell's P95. In `--compare`, if a candidate improves global
+  `Spatial Quality (dB)` or `Motion Robustness (dB)` ($\ge +0.05\text{ dB}$) while worsening the
+  corresponding `hotspot_top10_rmse` ($> 2\%$ and $> 0.0005$), `--compare` prints a
+  `WARNING [HOTSPOT_RANK_REVERSAL]` diagnostic.
 - **`detail_transfer_mean`** / **`edge_detail_transfer_mean`** — phase-correlated Laplacian
   projection $\langle \nabla^2 I, \nabla^2 R \rangle / \|\nabla^2 R\|^2$. Unlike `sharpness_mean`,
   only high-frequency detail that is *in phase* with the reference counts positively (`1.0` =
@@ -333,12 +409,27 @@ Fox and quietly puts the third column back up near `defaults` has broken it.
 - **`aliased_*`** (only meaningful for `--camera-motion rotate --jitter-pattern helix4` at 2:1) —
   exactness check against a plain non-antialiased render at output resolution. Only interpretable
   in that specific configuration; ignore it otherwise.
+- **`upscaler_gpu_ms_p50`** / **`upscaler_gpu_ms_p90`** (with `--perf`) — differential GPU cost of
+  the upscaler in milliseconds (`max(0.0, frame_gpu_ms_p50 - baseline_gpu_ms_p50)`). Lower is
+  better.
+- **`frame_gpu_ms_p50`** / **`baseline_gpu_ms_p50`** / **`frame_gpu_ms_iqr`** (with `--perf`) —
+  median full-frame GPU time with upscaler enabled, median render-resolution baseline GPU time, and
+  interquartile range (`p75 - p25`, noise/stability indicator).
+- **`timing_discrepancy_ms`** / **`post_check_passed`** / **`cts_valid`** (with `--perf`) — CTS
+  anti-cheat metrics: `timing_discrepancy_ms` compares hardware timer queries against wall-clock /
+  completion-fence intervals (`<= 0.25 ms` required), `post_check_passed` verifies non-trivial jitter
+  accumulation on post-window drain frames (`1.0` = pass), and `cts_valid` combines these with
+  Android ADPF Fixed Performance Mode and thermal stability (`<= LIGHT`).
 
 ## CLI cheat sheet (defaults as of this file; `--help` is authoritative)
 
 | flag | default | for |
 |---|---|---|
-| `-b`, `--benchmark` | off | run the 10-scenario upscaler qualification benchmark and print the 3-metric scorecard |
+| `-b`, `--benchmark` | off | run the 11-scenario upscaler qualification benchmark and print the scorecard |
+| `--perf` | off | run the GPU performance benchmark (paired differential timing, zero readback in timed window); combine with `-b` for a 4-axis scorecard |
+| `--perf-resolution <WxH>` | `1920x1080` | output viewport resolution for `--perf` runs (`render = W/u x H/u`) |
+| `--perf-warmup <N>` | `64` | untimed warmup frames per `--perf` run |
+| `--perf-frames <N>` | `128` | timed frames per `--perf` run |
 | `--label <name>` | auto | display name for this configuration in benchmark scorecards and `--compare` |
 | `--compare <a.json,b.json,...>` | off | print a side-by-side comparison table of benchmark JSON files (runs standalone without GPU) |
 | `--ssr` | off | enable screen-space reflections (automatically enabled on `ssr_reflection` in `--benchmark`) |
@@ -356,6 +447,7 @@ Fox and quietly puts the third column back up near `defaults` has broken it.
 | `--camera-translation-align as-requested\|pixel\|subpixel` | `as-requested` | isolates history-buffer resampling specifically — `pixel` = every reprojection an exact texel fetch, `subpixel` = every reprojection a half-texel fetch. Also applies to `--object-motion translate` |
 | `--object-motion animation\|translate\|spin` | `animation` | what the `object` regime moves: the glTF clip, the asset's root entity dollying screen-right, or the root entity spinning about its vertical axis. Only the last two are rigid, i.e. visible to motion vectors |
 | `-A` | 0 | which glTF animation `--object-motion animation` plays — **check this**, the default is often not the one that moves; see Test scenes |
+| `--animation-start` | 0.0 | start offset in seconds within the glTF animation clip (used by `buster_drone_anim` to skip stationary intro frames) |
 | `--object-speed` | 0 (= mode default: 1.0 / 90) | `animation`: playback multiplier; `spin`: degrees/second |
 | `--object-texels-per-frame` | 3.5 | `translate` speed, in render-resolution texels/frame at the target's depth — same convention and default as `--camera-texels-per-frame` |
 | `-d <dir>` | off | dump captures/references/amplified diffs/mask as PNGs — use this to actually *look at* a discrepancy the numbers flag |
@@ -367,6 +459,11 @@ Fox and quietly puts the third column back up near `defaults` has broken it.
 
 ```json
 {
+  "protocol_version": "2.1",
+  "schedule_signature": "<64-char sha256 hex>",
+  "schedule_descriptor": "protocol=2.1;mode=...",
+  "quality_schedule_signature": "<64-char sha256 hex>",
+  "quality_schedule_descriptor": "protocol=2.1;mode=...",
   "model": "...", "backend": "3",   // 3 = Metal; see backend::Backend in DriverEnums.h
   "size": 512, "warmup_frames": 64, "capture_frames": 16,
   "reference_filter": "lanczos-filament", "reference_samples": 256, "msaa": 4,
@@ -380,7 +477,11 @@ Fox and quietly puts the third column back up near `defaults` has broken it.
 ```
 
 Flat `(regime, upscaling, metric) -> value` rows — trivial to load and filter with any JSON
-library; no nested schema to navigate.
+library; no nested schema to navigate. `--compare` enforces that all compared JSON files share
+`protocol_version: "2.1"` and identical `quality_schedule_signature` / `perf_schedule_signature` on
+overlapping modes (exiting with status `1` and listing any mismatched schedule parameters if they
+disagree), and automatically localizes the top per-frame regressions and improvements to a 4-frame
+sliding window `[t_start..t_end]` and peak frame `t*`.
 
 ## Things that look like bugs and aren't
 

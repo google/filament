@@ -1105,4 +1105,5 @@ endif()
 # Builds libfilament-samples.a, which the sample-cpp-viewer Android app links against.
 if (ANDROID)
     add_subdirectory(${FILAMENT}/samples)
+    add_subdirectory(${TOOLS}/taa)
 endif()
