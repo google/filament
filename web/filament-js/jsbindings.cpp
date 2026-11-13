@@ -2562,7 +2562,7 @@ class_<AssetLoader>("gltfio$AssetLoader")
     .function("_createInstancedAsset", EMBIND_LAMBDA(FilamentAsset*,
             (AssetLoader* self, BufferDescriptor buffer, int numInstances), {
         // Ignore the returned instances, they can be extracted from the asset.
-        std::vector<FilamentInstance*> instances;
+        std::vector<FilamentInstance*> instances(numInstances);
         return self->createInstancedAsset((const uint8_t*) buffer.bd->buffer,
                 buffer.bd->size, instances.data(), numInstances);
     }), allow_raw_pointers())
