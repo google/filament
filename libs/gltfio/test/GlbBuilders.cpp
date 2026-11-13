@@ -1140,4 +1140,62 @@ std::vector<uint8_t> makeMaterialVariantsMappingGlb(int extraVariantIndex) {
     return assembleGlb(std::move(json), std::move(bin));
 }
 
+std::vector<uint8_t> makeSkinnedJointIndexGlb(uint16_t jointIndex) {
+    // Layout of the binary buffer (192 bytes):
+    //   [0..36):    3 x float3 POSITION: (0,0,0), (1,0,0), (0,1,0)
+    //   [36..60):   3 x ushort4 JOINTS_0: (jointIndex, 0, 0, 0)
+    //   [60..108):  3 x float4 WEIGHTS_0: (1, 0, 0, 0)
+    //   [108..172): 1 x mat4f inverseBindMatrix (identity)
+    constexpr size_t kPosOffset = 0;
+    constexpr size_t kPosBytes = 36;
+    constexpr size_t kJointsOffset = 36;
+    constexpr size_t kJointsBytes = 24;
+    constexpr size_t kWeightsOffset = 60;
+    constexpr size_t kWeightsBytes = 48;
+    constexpr size_t kIbmOffset = 108;
+    constexpr size_t kIbmBytes = 64;
+    constexpr size_t kTotalBytes = kIbmOffset + kIbmBytes;
+
+    std::vector<uint8_t> bin(kTotalBytes, 0);
+    {
+        float* pos = reinterpret_cast<float*>(bin.data() + kPosOffset);
+        pos[3] = 1.0f;
+        pos[7] = 1.0f;
+
+        uint16_t* joints = reinterpret_cast<uint16_t*>(bin.data() + kJointsOffset);
+        for (size_t v = 0; v < 3; ++v) {
+            joints[v * 4] = jointIndex;
+        }
+
+        float* weights = reinterpret_cast<float*>(bin.data() + kWeightsOffset);
+        for (size_t v = 0; v < 3; ++v) {
+            weights[v * 4] = 1.0f;
+        }
+
+        float* ibm = reinterpret_cast<float*>(bin.data() + kIbmOffset);
+        ibm[0] = ibm[5] = ibm[10] = ibm[15] = 1.0f;
+    }
+
+    std::string json =
+            R"({"asset":{"version":"2.0"},"scene":0,"scenes":[{"nodes":[0]}],)"
+            R"("nodes":[{"mesh":0,"skin":0,"children":[1]},{"translation":[2,0,0]}],)"
+            R"("skins":[{"joints":[1],"inverseBindMatrices":3}],)"
+            R"("meshes":[{"primitives":[{"attributes":{)"
+            R"("POSITION":0,"JOINTS_0":1,"WEIGHTS_0":2},"mode":4}]}],)"
+            R"("accessors":[)"
+            R"({"bufferView":0,"componentType":5126,"count":3,"type":"VEC3",)"
+            R"("min":[0,0,0],"max":[1,1,0]},)"
+            R"({"bufferView":1,"componentType":5123,"count":3,"type":"VEC4"},)"
+            R"({"bufferView":2,"componentType":5126,"count":3,"type":"VEC4"},)"
+            R"({"bufferView":3,"componentType":5126,"count":1,"type":"MAT4"}],)"
+            R"("bufferViews":[)"
+            R"({"buffer":0,"byteOffset":0,"byteLength":)" + std::to_string(kPosBytes) + R"(},)"
+            R"({"buffer":0,"byteOffset":36,"byteLength":)" + std::to_string(kJointsBytes) + R"(},)"
+            R"({"buffer":0,"byteOffset":60,"byteLength":)" + std::to_string(kWeightsBytes) + R"(},)"
+            R"({"buffer":0,"byteOffset":108,"byteLength":)" + std::to_string(kIbmBytes) + R"(}],)"
+            R"("buffers":[{"byteLength":)" + std::to_string(kTotalBytes) + R"(}]})";
+
+    return assembleGlb(std::move(json), std::move(bin));
+}
+
 } // namespace test

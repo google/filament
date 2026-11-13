@@ -2799,6 +2799,55 @@ TEST_F(glTFIOTest, OutOfBoundsMaterialVariantMappingIsSkipped) {
     }
 }
 
+// Issue #10191: recomputeBoundingBoxes() must bounds-check JOINTS_0 indices against joints_count
+// before indexing instanceSkin.joints and assetSkin.inverseBindMatrices.
+TEST_F(glTFIOTest, OutOfBoundsJointIndexInRecomputeBoundingBoxes) {
+    // Valid control (jointIndex = 0, joint 0 translated by +2 on X): AABB shifts to [2..3, 0..1, 0].
+    {
+        std::vector<uint8_t> const glb = makeSkinnedJointIndexGlb(0u);
+        AssetLoader* assetLoader =
+                AssetLoader::create({ mEngine, mMaterialProvider, mNameManager });
+        ASSERT_NE(assetLoader, nullptr);
+        FilamentAsset* const asset = assetLoader->createAsset(glb.data(), uint32_t(glb.size()));
+        ASSERT_NE(asset, nullptr);
+        ResourceLoader resourceLoader({ mEngine, ".", false });
+        ASSERT_TRUE(resourceLoader.loadResources(asset));
+
+        FilamentInstance* const instance = asset->getInstance();
+        ASSERT_NE(instance, nullptr);
+        instance->recomputeBoundingBoxes();
+        Aabb const bounds = instance->getBoundingBox();
+        EXPECT_FLOAT3_EQ(bounds.min, (math::float3{ 2.0f, 0.0f, 0.0f }));
+        EXPECT_FLOAT3_EQ(bounds.max, (math::float3{ 3.0f, 1.0f, 0.0f }));
+
+        assetLoader->destroyAsset(asset);
+        AssetLoader::destroy(&assetLoader);
+    }
+
+    // Out-of-bounds joint indices (small OOB == joints_count, medium OOB, and max uint16).
+    for (uint16_t const badJoint : { uint16_t(1), uint16_t(16), uint16_t(65535) }) {
+        SCOPED_TRACE(badJoint);
+        std::vector<uint8_t> const glb = makeSkinnedJointIndexGlb(badJoint);
+        AssetLoader* assetLoader =
+                AssetLoader::create({ mEngine, mMaterialProvider, mNameManager });
+        ASSERT_NE(assetLoader, nullptr);
+        FilamentAsset* const asset = assetLoader->createAsset(glb.data(), uint32_t(glb.size()));
+        ASSERT_NE(asset, nullptr);
+        ResourceLoader resourceLoader({ mEngine, ".", false });
+        ASSERT_TRUE(resourceLoader.loadResources(asset));
+
+        FilamentInstance* const instance = asset->getInstance();
+        ASSERT_NE(instance, nullptr);
+        instance->recomputeBoundingBoxes();
+        Aabb const bounds = instance->getBoundingBox();
+        EXPECT_FLOAT3_EQ(bounds.min, (math::float3{ 0.0f, 0.0f, 0.0f }));
+        EXPECT_FLOAT3_EQ(bounds.max, (math::float3{ 0.0f, 0.0f, 0.0f }));
+
+        assetLoader->destroyAsset(asset);
+        AssetLoader::destroy(&assetLoader);
+    }
+}
+
 #undef EXPECT_FLOAT3_EQ
 
 int main(int argc, char** argv) {

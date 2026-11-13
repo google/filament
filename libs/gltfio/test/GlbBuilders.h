@@ -176,6 +176,12 @@ std::vector<uint8_t> makeDenseStrideOverflowGlb(uint64_t byteStride, bool stride
 // (e.g. 1000 or -1 to reproduce issue #10192).
 std::vector<uint8_t> makeMaterialVariantsMappingGlb(int extraVariantIndex);
 
+// Builds a skinned single-triangle GLB with 1 joint (translated by (2, 0, 0), identity IBM) whose
+// JOINTS_0 (UNSIGNED_SHORT VEC4) first influence on each vertex is set to `jointIndex` (with weight
+// 1.0). Setting `jointIndex >= 1` (e.g. 1 or 65535) reproduces issue #10191 when
+// recomputeBoundingBoxes() is called.
+std::vector<uint8_t> makeSkinnedJointIndexGlb(uint16_t jointIndex);
+
 } // namespace test
 
 #endif // TNT_GLTFIO_TEST_GLBBUILDERS_H

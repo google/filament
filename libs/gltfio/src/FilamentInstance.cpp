@@ -24,6 +24,9 @@
 #include <utils/Logger.h>
 #include <utils/Panic.h>
 
+#include <algorithm>
+#include <limits>
+
 using namespace filament;
 using namespace filament::math;
 using namespace utils;
@@ -195,25 +198,35 @@ void FFilamentInstance::recomputeBoundingBoxes() {
         FixedCapacityVector<float3> verts;
         FixedCapacityVector<uint4> joints;
         FixedCapacityVector<float4> weights;
+        constexpr uint32_t kInvalidJoint = std::numeric_limits<uint32_t>::max();
+        constexpr float kJointFloatUpperBound = static_cast<float>(uint64_t{ 1 } << 32);
         for (cgltf_size slot = 0, n = prim.prim->attributes_count; slot < n; ++slot) {
             const cgltf_attribute& attr = prim.prim->attributes[slot];
+            if (attr.index != 0 || !attr.data) {
+                continue;
+            }
             const cgltf_accessor& accessor = *attr.data;
             switch (attr.type) {
             case cgltf_attribute_type_position:
-                verts = FixedCapacityVector<float3>(accessor.count);
+                verts = FixedCapacityVector<float3>(accessor.count, float3{ 0.0f });
                 cgltf_accessor_unpack_floats(&accessor, &verts.data()->x, accessor.count * 3);
                 break;
             case cgltf_attribute_type_joints: {
-                FixedCapacityVector<float4> tmp(accessor.count);
+                FixedCapacityVector<float4> tmp(accessor.count, float4{ 0.0f });
                 cgltf_accessor_unpack_floats(&accessor, &tmp.data()->x, accessor.count * 4);
-                joints = FixedCapacityVector<uint4>(accessor.count);
-                for (size_t i = 0, n = accessor.count; i < n; ++i) {
-                    joints[i] = uint4(tmp[i]);
+                joints = FixedCapacityVector<uint4>(accessor.count, uint4{ kInvalidJoint });
+                for (size_t i = 0, count = accessor.count; i < count; ++i) {
+                    for (size_t c = 0; c < 4; ++c) {
+                        const float v = tmp[i][c];
+                        if (v >= 0.0f && v < kJointFloatUpperBound) {
+                            joints[i][c] = static_cast<uint32_t>(v);
+                        }
+                    }
                 }
                 break;
             }
             case cgltf_attribute_type_weights:
-                weights = FixedCapacityVector<float4>(accessor.count);
+                weights = FixedCapacityVector<float4>(accessor.count, float4{ 0.0f });
                 cgltf_accessor_unpack_floats(&accessor, &weights.data()->x, accessor.count * 4);
                 break;
             default:
@@ -222,18 +235,35 @@ void FFilamentInstance::recomputeBoundingBoxes() {
         }
 
         Aabb aabb;
+        if (prim.skinIndex < 0 || size_t(prim.skinIndex) >= mSkins.size() ||
+                size_t(prim.skinIndex) >= mOwner->mSkins.size()) {
+            return aabb;
+        }
+        if (joints.size() < verts.size() || weights.size() < verts.size()) {
+            for (size_t i = 0, n = verts.size(); i < n; ++i) {
+                aabb.min = min(aabb.min, verts[i]);
+                aabb.max = max(aabb.max, verts[i]);
+            }
+            return aabb;
+        }
+
         TransformManager::Instance transformable = tm.getInstance(prim.node);
         const mat4f inverseGlobalTransform = inverse(tm.getWorldTransform(transformable));
         const Skin& instanceSkin = mSkins[prim.skinIndex];
         const FFilamentAsset::Skin& assetSkin = mOwner->mSkins[prim.skinIndex];
+        const size_t jointCount =
+                std::min(instanceSkin.joints.size(), assetSkin.inverseBindMatrices.size());
         for (size_t i = 0, n = verts.size(); i < n; i++) {
             mat4f tmp = mat4f(0.0f);
             for (size_t j = 0; j < 4; j++) {
-                size_t jointIndex = joints[i][j];
+                const size_t jointIndex = joints[i][j];
+                if (jointIndex >= jointCount) {
+                    continue;
+                }
                 Entity jointEntity = instanceSkin.joints[jointIndex];
                 mat4f globalJointTransform = tm.getWorldTransform(tm.getInstance(jointEntity));
                 mat4f inverseBindMatrix = assetSkin.inverseBindMatrices[jointIndex];
-                tmp += weights[i][j] *  globalJointTransform * inverseBindMatrix;
+                tmp += weights[i][j] * globalJointTransform * inverseBindMatrix;
             }
             const mat4f skinMatrix = inverseGlobalTransform * tmp;
 
