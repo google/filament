@@ -18,6 +18,8 @@
 
 #include "VulkanConstants.h"
 
+#include <utils/Mutex.h>
+
 #include <algorithm>
 #include <deque>
 #include <utility>
@@ -50,6 +52,7 @@ VulkanFencePool::VulkanFencePool(VulkanContext const& context,
 }
 
 std::shared_ptr<VulkanCmdFence> VulkanFencePool::acquireFenceStatus() noexcept {
+    utils::LockGuard const lock(mMutex);
     VkFence fence = acquireFence();
     std::function<void(VkFence)> recycleFn = [this](VkFence fence) {
         this->releaseFence(fence);
@@ -64,6 +67,7 @@ std::shared_ptr<VulkanCmdFence> VulkanFencePool::acquireFenceStatus() noexcept {
 void VulkanFencePool::gc() noexcept {
     FVK_SYSTRACE_CONTEXT();
     FVK_SYSTRACE_START("vulkanfencepool::gc");
+    utils::LockGuard const lock(mMutex);
 
     // Clear any fence statuses that no longer exist.
     auto expiredStatuses = std::remove_if(mFenceStatuses.begin(), mFenceStatuses.end(),
@@ -87,6 +91,7 @@ void VulkanFencePool::gc() noexcept {
 }
 
 void VulkanFencePool::terminate() noexcept {
+    utils::LockGuard const lock(mMutex);
     for (const auto& weakFenceStatus : mFenceStatuses) {
         if (const auto fenceStatus = weakFenceStatus.lock()) {
             // Swap out the recycle function for the fence status, so that
@@ -123,6 +128,7 @@ void VulkanFencePool::releaseFence(VkFence fence) noexcept {
     // major issue.
     FILAMENT_CHECK_PRECONDITION(fence != VK_NULL_HANDLE);
 
+    utils::LockGuard const lock(mMutex);
     // Reset the fence before returning it to the pool of available
     // fences.
     vkResetFences(mDevice, 1, &fence);

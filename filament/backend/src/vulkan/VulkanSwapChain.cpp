@@ -132,15 +132,15 @@ void VulkanSwapChain::present(DriverBase& driver) {
         return;
     }
 
+    VkImageSubresourceRange const subresources{
+            .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+            .baseMipLevel = 0,
+            .levelCount = 1,
+            .baseArrayLayer = 0,
+            .layerCount = mLayerCount,
+    };
     if (!mHeadless && mTransitionSwapChainImageLayoutForPresent) {
         VulkanCommandBuffer& commands = mCommands->get();
-        VkImageSubresourceRange const subresources{
-                .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-                .baseMipLevel = 0,
-                .levelCount = 1,
-                .baseArrayLayer = 0,
-                .layerCount = mLayerCount,
-        };
         mColors[mCurrentSwapIndex]->transitionLayout(&commands, subresources, VulkanLayout::PRESENT);
     }
 
@@ -149,6 +149,22 @@ void VulkanSwapChain::present(DriverBase& driver) {
     // We only present if it is not headless. No-op for headless.
     if (!mHeadless) {
         auto finishedDrawing = mCommands->acquireFinishedSignal();
+        if (UTILS_UNLIKELY(!finishedDrawing)) {
+            // Queue submission failed (e.g. OOM or VK_ERROR_DEVICE_LOST), so neither the layout
+            // transition nor the acquire-semaphore wait ran on the GPU. Leave mAcquired true so
+            // the next frame reuses this acquired swapchain image and its preserved acquire
+            // semaphore without presenting an un-transitioned image or dereferencing null.
+            mColors[mCurrentSwapIndex]->setLayout(subresources, VulkanLayout::UNDEFINED);
+            if (mFrameScheduled.callback) {
+                driver.scheduleCallback(mFrameScheduled.handler,
+                        [callback = mFrameScheduled.callback]() {
+                            PresentCallable noop =
+                                    PresentCallable(PresentCallable::noopPresent, nullptr);
+                            callback->operator()(noop);
+                        });
+            }
+            return;
+        }
         mFinishedDrawing[mCurrentSwapIndex] = finishedDrawing;
         VkResult const result =
                 mPlatform->present(swapChain, mCurrentSwapIndex, finishedDrawing->getVkSemaphore());
