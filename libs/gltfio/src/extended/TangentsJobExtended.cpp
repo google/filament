@@ -26,11 +26,13 @@
 #include <geometry/TangentSpaceMesh.h>
 
 #include <utils/Log.h>
+#include <utils/Logger.h>
 #include <utils/Panic.h>
 #include <utils/StructureOfArrays.h>
 
 #include <algorithm>
 #include <cstring>
+#include <limits>
 #include <memory>
 #include <unordered_map>
 #include <vector>
@@ -244,18 +246,24 @@ void copy(InDataType in, size_t inStride, OutDataType out, size_t outStride, siz
     PANIC_POSTCONDITION("Invalid conversion");
 }
 
-// Decodes integer data into `outDim` floats per vertex with cgltf, which follows the glTF spec
-// (normalization, stride, sparse). Missing components get 0 (w gets 1). Zero-fills on failure.
-void unpackIntegerToFloat(cgltf_accessor const* accessor, size_t const vertexCount, float* out,
+// Decodes float or integer data into `outDim` floats per vertex with cgltf, which follows the
+// glTF spec (normalization, stride, sparse). Missing components get 0 (w gets 1). Zero-fills on
+// failure.
+void unpackFloats(cgltf_accessor const* accessor, size_t const vertexCount, float* out,
         size_t const outDim) {
     size_t const inDim = cgltf_num_components(accessor->type);
+    if (inDim == 0 || vertexCount > std::numeric_limits<size_t>::max() / inDim) {
+        LOG(ERROR) << "Unable to decode vertex attribute data.";
+        std::memset(out, 0, sizeof(float) * outDim * vertexCount);
+        return;
+    }
     size_t const floatCount = inDim * vertexCount;
 
     std::vector<float> scratch;
     float* const dst = inDim == outDim ? out : (scratch.resize(floatCount), scratch.data());
 
     if (cgltf_accessor_unpack_floats(accessor, dst, floatCount) != floatCount) {
-        utils::slog.e << "Unable to decode vertex attribute data" << utils::io::endl;
+        LOG(ERROR) << "Unable to decode vertex attribute data.";
         std::memset(out, 0, sizeof(float) * outDim * vertexCount);
         return;
     }
@@ -273,53 +281,41 @@ void unpackIntegerToFloat(cgltf_accessor const* accessor, size_t const vertexCou
 }
 
 template<typename T>
-void unpack(cgltf_accessor const* accessor, size_t const vertexCount, T out,
-        bool isMorphTarget = false) {
+void unpack(cgltf_accessor const* accessor, size_t const vertexCount, T out) {
     assert_invariant(accessor->count == vertexCount);
     // Per the glTF 2.0 specification (Accessor schema), when bufferView is undefined the accessor
-    // must be initialized with zeros. This also occurs when Draco mesh decompression fails and
-    // leaves the primitive's accessors without a bufferView.
-    if (!accessor->buffer_view) {
+    // must be initialized with zeros (unless overridden by sparse values). This also occurs when
+    // Draco mesh decompression fails and leaves the primitive's accessors without a bufferView.
+    uint8_t const* const viewData =
+            accessor->buffer_view ? cgltf_buffer_view_data(accessor->buffer_view) : nullptr;
+    if (!viewData && !accessor->is_sparse) {
         std::memset(out, 0, data::byteCount<T>() * vertexCount);
         return;
     }
-    uint8_t const* data = nullptr;
-    if (accessor->buffer_view->has_meshopt_compression) {
-        data = (uint8_t const*) accessor->buffer_view->data + accessor->offset;
-    } else {
-        data = (uint8_t const*) accessor->buffer_view->buffer->data +
-               utility::computeBindingOffset(accessor);
-    }
+
     auto componentType = accessor->component_type;
     size_t const inDim = cgltf_num_components(accessor->type);
     size_t const outDim = componentCount<T>();
 
     if (componentType == cgltf_component_type_r_32f) {
-        assert_invariant(accessor->buffer_view);
         assert_invariant(data::componentType<T>() == FLOAT_TYPE);
-        size_t const elementCount = outDim * vertexCount;
-
-        if ((isMorphTarget && utility::requiresPacking(accessor)) ||
-                utility::requiresConversion(accessor)) {
-            cgltf_accessor_unpack_floats(accessor, (float*) out, elementCount);
+        if (!viewData || inDim != outDim || utility::requiresPacking(accessor)) {
+            unpackFloats(accessor, vertexCount, (float*) out, outDim);
             return;
-        } else {
-            if (inDim == 3 && outDim == 4) {
-                data::copy<float3*, T>((float3*) data, accessor->stride, (T) out,
-                        data::byteCount<T>(), vertexCount);
-                return;
-            } else {
-                assert_invariant(inDim == outDim);
-                data::copy<T, T>((T) data, accessor->stride, (T) out, data::byteCount<T>(),
-                        vertexCount);
-                return;
-            }
         }
+        data::copy<T, T>((T) (viewData + accessor->offset), accessor->stride, (T) out,
+                data::byteCount<T>(), vertexCount);
+        return;
     } else {
         if constexpr (data::componentType<T>() == FLOAT_TYPE) {
-            unpackIntegerToFloat(accessor, vertexCount, (float*) out, outDim);
+            unpackFloats(accessor, vertexCount, (float*) out, outDim);
             return;
         }
+        if (!viewData) {
+            std::memset(out, 0, data::byteCount<T>() * vertexCount);
+            return;
+        }
+        uint8_t const* const data = viewData + accessor->offset;
         assert_invariant(outDim == inDim);
         if (componentType == cgltf_component_type_r_8u) {
             if (inDim == 2) {
@@ -356,12 +352,11 @@ void unpack(cgltf_accessor const* accessor, size_t const vertexCount, T out,
 }
 
 template<typename T, uint8_t attrib>
-void unpack(cgltf_accessor const* accessor, AttributeDataMap& data, size_t const vertexCount,
-        bool isMorphTarget = false) {
+void unpack(cgltf_accessor const* accessor, AttributeDataMap& data, size_t const vertexCount) {
     assert_invariant(accessor->count == vertexCount);
     assert_invariant(data.find(attrib) != data.end());
 
-    unpack(accessor, vertexCount, data::get<T, attrib>(data), isMorphTarget);
+    unpack(accessor, vertexCount, data::get<T, attrib>(data));
 }
 
 template<typename T, uint8_t attrib>
@@ -453,8 +448,7 @@ void TangentsJobExtended::run(Params* params) {
                 data::allocate<POSITIONS_T>(attributes, vertexCount);
                 data::unpack<POSITIONS_T>(accessor, attributes, vertexCount);
                 if (auto itr = morphAccessors.find(attr); itr != morphAccessors.end()) {
-                    data::unpack<float3*>(itr->second, vertexCount, morphDelta.data(),
-                            isMorphTarget);
+                    data::unpack<float3*>(itr->second, vertexCount, morphDelta.data());
                     data::add<POSITIONS_T>(attributes, vertexCount, morphDelta.data());
 
                     // We stash the positions as colors so that they can be retrieved without change

@@ -50,10 +50,12 @@
 #include <meshoptimizer.h>
 #include <tsl/robin_map.h>
 
+#include <algorithm>
 #include <fstream>
 #include <limits>
 #include <memory>
 #include <string>
+#include <string_view>
 #include <tuple>
 
 using namespace filament;
@@ -410,35 +412,36 @@ inline bool uploadBuffers(FFilamentAsset* asset, Engine& engine,
 
         // For morph targets without buffer_view, use cgltf_accessor_unpack_floats to unpack data directly
         if (!accessor->buffer_view && isMorphTarget) {
+            if (accessor->type != cgltf_type_vec3 && accessor->type != cgltf_type_vec4) {
+                LOG(WARNING) << "Unsupported morph target position type, skipping.";
+                continue;
+            }
+            const size_t uploadCount = std::min<size_t>(accessor->count, slot.morphTargetCount);
             const size_t components = cgltf_num_components(accessor->type);
-            if (components > 0 && accessor->count > std::numeric_limits<size_t>::max() / components) {
+            if (components == 0 || uploadCount == 0 ||
+                    uploadCount > std::numeric_limits<size_t>::max() / components) {
                 continue;
             }
-            const size_t floatsCount = accessor->count * components;
-            if (floatsCount == 0) {
-                continue;
-            }
+            const size_t floatsCount = uploadCount * components;
 
             if (floatsCount > std::numeric_limits<size_t>::max() / sizeof(float)) {
                 continue;
             }
             const size_t floatsByteCount = sizeof(float) * floatsCount;
 
-            float* floatsData = (float*)malloc(floatsByteCount);
+            float* floatsData = (float*) malloc(floatsByteCount);
             if (!floatsData) {
                 LOG(WARNING) << "Failed to allocate memory for morph target unpacking, skipping.";
                 continue;
             }
-            cgltf_accessor_unpack_floats(accessor, floatsData, floatsCount);
-
-            if (accessor->type == cgltf_type_vec3) {
-                slot.morphTargetBuffer->setPositionsAt(engine, slot.bufferIndex,
-                    (const float3*)floatsData, slot.morphTargetCount, slot.morphTargetOffset);
-            }
-            else {
-                assert_invariant(accessor->type == cgltf_type_vec4);
-                slot.morphTargetBuffer->setPositionsAt(engine, slot.bufferIndex,
-                    (const float4*)floatsData, slot.morphTargetCount, slot.morphTargetOffset);
+            if (cgltf_accessor_unpack_floats(accessor, floatsData, floatsCount) == floatsCount) {
+                if (accessor->type == cgltf_type_vec3) {
+                    slot.morphTargetBuffer->setPositionsAt(engine, slot.bufferIndex,
+                            (const float3*) floatsData, uploadCount, slot.morphTargetOffset);
+                } else if (accessor->type == cgltf_type_vec4) {
+                    slot.morphTargetBuffer->setPositionsAt(engine, slot.bufferIndex,
+                            (const float4*) floatsData, uploadCount, slot.morphTargetOffset);
+                }
             }
 
             free(floatsData);
@@ -589,44 +592,63 @@ inline bool uploadBuffers(FFilamentAsset* asset, Engine& engine,
         // must be a morph target.
         assert(slot.morphTargetBuffer);
 
-        if (utility::requiresPacking(accessor)) {
-            cgltf_size capacity = 0;
-            cgltf_size totalOffset = 0;
-            if (accessor->buffer_view->has_meshopt_compression) {
-                capacity = accessor->buffer_view->size;
-                totalOffset = accessor->offset;
-            } else if (accessor->buffer_view->buffer) {
-                capacity = accessor->buffer_view->buffer->size;
-                totalOffset = accessor->buffer_view->offset + accessor->offset;
-            }
+        if (!bufferData) {
+            continue;
+        }
 
-            if (capacity == 0 || totalOffset >= capacity) {
+        if (accessor->type != cgltf_type_vec3 && accessor->type != cgltf_type_vec4) {
+            LOG(WARNING) << "Unsupported morph target position type, skipping.";
+            continue;
+        }
+
+        cgltf_size capacity = 0;
+        cgltf_size totalOffset = 0;
+        if (accessor->buffer_view->has_meshopt_compression) {
+            capacity = accessor->buffer_view->size;
+            totalOffset = accessor->offset;
+        } else if (accessor->buffer_view->buffer) {
+            capacity = accessor->buffer_view->buffer->size;
+            if (accessor->offset > capacity ||
+                    accessor->buffer_view->offset > capacity - accessor->offset) {
                 continue;
             }
+            totalOffset = accessor->buffer_view->offset + accessor->offset;
+        }
 
-            const cgltf_size availableBytes = capacity - totalOffset;
-            const cgltf_size stride = accessor->stride;
-            const cgltf_size elementSize = cgltf_calc_size(accessor->type, accessor->component_type);
+        if (capacity == 0 || totalOffset >= capacity) {
+            continue;
+        }
 
-            cgltf_size maxCount = 0;
-            if (stride > 0 && availableBytes >= elementSize) {
-                maxCount = 1 + (availableBytes - elementSize) / stride;
-            }
+        const cgltf_size availableBytes = capacity - totalOffset;
+        const cgltf_size stride = accessor->stride;
+        const cgltf_size elementSize = cgltf_calc_size(accessor->type, accessor->component_type);
 
-            cgltf_size safeCount = accessor->count;
-            if (safeCount > maxCount) {
-                LOG(WARNING) << "Accessor count exceeds buffer capacity, clamping.";
-                safeCount = maxCount;
-            }
+        cgltf_size maxCount = 0;
+        if (stride > 0 && elementSize > 0 && availableBytes >= elementSize) {
+            maxCount = 1 + (availableBytes - elementSize) / stride;
+        }
 
+        cgltf_size safeCount = accessor->count;
+        if (safeCount > maxCount) {
+            LOG(WARNING) << "Accessor count exceeds buffer capacity, clamping.";
+            safeCount = maxCount;
+        }
+
+        const size_t uploadCount = std::min<size_t>(safeCount, slot.morphTargetCount);
+        if (uploadCount == 0) {
+            continue;
+        }
+
+        // MorphTargetBuffer stores float positions, so non-float accessors (such as tight SHORT3
+        // or BYTE4/UBYTE4/SHORT4/USHORT4) must also be unpacked to floats even when
+        // utility::requiresPacking() is false for VertexBuffer uploads.
+        if (accessor->component_type != cgltf_component_type_r_32f ||
+                utility::requiresPacking(accessor)) {
             const size_t components = cgltf_num_components(accessor->type);
-            if (components > 0 && safeCount > std::numeric_limits<size_t>::max() / components) {
+            if (components == 0 || uploadCount > std::numeric_limits<size_t>::max() / components) {
                 continue;
             }
-            const size_t floatsCount = safeCount * components;
-            if (floatsCount == 0) {
-                continue;
-            }
+            const size_t floatsCount = uploadCount * components;
 
             if (floatsCount > std::numeric_limits<size_t>::max() / sizeof(float)) {
                 continue;
@@ -638,22 +660,23 @@ inline bool uploadBuffers(FFilamentAsset* asset, Engine& engine,
                 LOG(WARNING) << "Failed to allocate memory for morph target packing, skipping.";
                 continue;
             }
-            cgltf_accessor_unpack_floats(accessor, floatsData, floatsCount);
-
-            // Always upload the unpacked floats: unlike the raw bytes of the bufferView, they are
-            // tightly packed and take the accessor's byteStride and sparse data into account.
-            if (accessor->type == cgltf_type_vec3) {
-                slot.morphTargetBuffer->setPositionsAt(engine, slot.bufferIndex,
-                        (const float3*) floatsData,
-                        slot.morphTargetCount,
-                        slot.morphTargetOffset);
-            } else if (accessor->type == cgltf_type_vec4) {
-                slot.morphTargetBuffer->setPositionsAt(engine, slot.bufferIndex,
-                        (const float4*) floatsData,
-                        slot.morphTargetCount,
-                        slot.morphTargetOffset);
-            } else {
-                LOG(WARNING) << "Unsupported morph target position type, skipping.";
+            if (cgltf_accessor_unpack_floats(accessor, floatsData, floatsCount) == floatsCount) {
+                // Always upload the unpacked floats: unlike the raw bytes of the bufferView, they
+                // are tightly packed and take the accessor's byteStride and sparse data into
+                // account.
+                if (accessor->type == cgltf_type_vec3) {
+                    slot.morphTargetBuffer->setPositionsAt(engine, slot.bufferIndex,
+                            (const float3*) floatsData,
+                            uploadCount,
+                            slot.morphTargetOffset);
+                } else if (accessor->type == cgltf_type_vec4) {
+                    slot.morphTargetBuffer->setPositionsAt(engine, slot.bufferIndex,
+                            (const float4*) floatsData,
+                            uploadCount,
+                            slot.morphTargetOffset);
+                } else {
+                    LOG(WARNING) << "Unsupported morph target position type, skipping.";
+                }
             }
             free(floatsData);
             continue;
@@ -661,12 +684,11 @@ inline bool uploadBuffers(FFilamentAsset* asset, Engine& engine,
 
         if (accessor->type == cgltf_type_vec3) {
             slot.morphTargetBuffer->setPositionsAt(engine, slot.bufferIndex, (const float3*) data,
-                    slot.morphTargetCount,
+                    uploadCount,
                     slot.morphTargetOffset);
-        } else {
-            assert_invariant(accessor->type == cgltf_type_vec4);
+        } else if (accessor->type == cgltf_type_vec4) {
             slot.morphTargetBuffer->setPositionsAt(engine, slot.bufferIndex, (const float4*) data,
-                    slot.morphTargetCount,
+                    uploadCount,
                     slot.morphTargetOffset);
         }
     }
