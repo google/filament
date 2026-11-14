@@ -517,6 +517,40 @@ class AdbDevice:
         return proc.returncode == 0 and not (proc.stderr or "").strip()
 
 
+def build_harness_flags(
+    *,
+    api: str,
+    json_filename: str,
+    upscaling: str,
+    perf_resolution: str,
+    perf_warmup: int,
+    perf_frames: int,
+    run_perf: bool = True,
+    run_quality: bool = False,
+    dump_dirname: str | None = None,
+    settings_arg: str | None = None,
+) -> list[str]:
+    flags = [f"-a {api}"]
+    if run_perf:
+        flags.extend(
+            [
+                "--perf",
+                f"--perf-resolution {perf_resolution}",
+                f"--perf-warmup {perf_warmup}",
+                f"--perf-frames {perf_frames}",
+            ]
+        )
+    if run_quality or dump_dirname:
+        flags.append("-b")
+    flags.extend([f"-u {upscaling}", f"-o {json_filename}"])
+    if dump_dirname:
+        flags.append(f"-d {dump_dirname}")
+    if settings_arg:
+        flags.append(f"-s {settings_arg}")
+    flags.append("-q")
+    return flags
+
+
 def build_perfetto_config(duration_ms: int = 60000) -> str:
     return f"""
 buffers: {{
@@ -587,7 +621,17 @@ def main() -> int:
     parser.add_argument(
         "--quality",
         action="store_true",
-        help="Also run the 10-scenario quality benchmark (-b) alongside --perf",
+        help="Also run the 11-scenario quality benchmark (-b) alongside --perf",
+    )
+    parser.add_argument(
+        "--dump",
+        action="store_true",
+        help="Capture and adb-pull per-frame PNG sequences (implies --quality) for taa_viewer.py",
+    )
+    parser.add_argument(
+        "--no-perf",
+        action="store_true",
+        help="Skip timed --perf windows (requires --quality or --dump)",
     )
     parser.add_argument("--perf-resolution", default="1920x1080")
     parser.add_argument("--perf-warmup", type=int, default=64)
@@ -612,6 +656,20 @@ def main() -> int:
     parser.add_argument("--tolerance-ms", type=float, default=0.15)
     parser.add_argument("--tolerance-pct", type=float, default=0.05)
     args = parser.parse_args()
+
+    if args.no_perf and not (args.quality or args.dump):
+        print(
+            "ERROR: --no-perf requires --quality or --dump so at least one schedule executes.",
+            file=sys.stderr,
+        )
+        return 1
+    if args.no_perf and args.verify_systrace:
+        print(
+            "ERROR: --verify-systrace verifies --perf GPU timing windows and cannot be combined "
+            "with --no-perf.",
+            file=sys.stderr,
+        )
+        return 1
 
     if args.verify_only:
         trace_file, json_file = Path(args.verify_only[0]), Path(args.verify_only[1])
@@ -691,25 +749,30 @@ def main() -> int:
             json_filename = f"taa_{tag}.json"
             remote_json = f"{APP_FILES_DIR}/{json_filename}"
             local_json = out_dir / json_filename
-            flags = [
-                f"-a {args.api}",
-                "--perf",
-                f"--perf-resolution {args.perf_resolution}",
-                f"--perf-warmup {args.perf_warmup}",
-                f"--perf-frames {args.perf_frames}",
-                f"-u {args.upscaling}",
-                f"-o {json_filename}",
-                "-q",
-            ]
-            if settings_arg:
-                flags.append(f"-s {settings_arg}")
-            if args.quality:
-                flags.append("-b")
+            dump_dirname = f"dump_{tag}" if args.dump else None
+            remote_dump = f"{APP_FILES_DIR}/{dump_dirname}" if dump_dirname else None
+            local_dump = (out_dir / dump_dirname) if dump_dirname else None
 
+            flags = build_harness_flags(
+                api=args.api,
+                json_filename=json_filename,
+                upscaling=args.upscaling,
+                perf_resolution=args.perf_resolution,
+                perf_warmup=args.perf_warmup,
+                perf_frames=args.perf_frames,
+                run_perf=not args.no_perf,
+                run_quality=args.quality,
+                dump_dirname=dump_dirname,
+                settings_arg=settings_arg,
+            )
+            if remote_dump:
+                adb.shell(f"rm -rf {remote_dump}", check=False)
+
+            timeout_sec = 600 if (args.quality or args.dump) else 180
             remote_trace = f"/data/misc/perfetto-traces/taa_{tag}.perfetto-trace"
             local_trace = out_dir / f"taa_{tag}.perfetto-trace"
             if args.verify_systrace:
-                cfg_text = build_perfetto_config(duration_ms=120000)
+                cfg_text = build_perfetto_config(duration_ms=timeout_sec * 1000)
                 cfg_local = out_dir / "perfetto_config.pbtxt"
                 cfg_local.write_text(cfg_text, encoding="utf-8")
                 adb.shell(f"mkdir -p {TRACE_TMP_DIR}", check=False)
@@ -723,12 +786,12 @@ def main() -> int:
                     f"cat {TRACE_TMP_DIR}/perfetto_config.pbtxt | "
                     f"perfetto --txt -c - -o {remote_trace} & "
                     f"PERFETTO_PID=$!; sleep 1; "
-                    f"timeout 180 {inst_cmd}; "
+                    f"timeout {timeout_sec} {inst_cmd}; "
                     f"HARNESS_RC=$?; sleep 1; kill -INT $PERFETTO_PID 2>/dev/null; "
                     f"wait $PERFETTO_PID 2>/dev/null; exit $HARNESS_RC"
                 )
             else:
-                cmd_str = f"timeout 180 {inst_cmd}"
+                cmd_str = f"timeout {timeout_sec} {inst_cmd}"
 
             run_t0 = time.monotonic()
             proc = adb.shell(cmd_str, check=False)
@@ -745,6 +808,9 @@ def main() -> int:
 
             adb.pull(remote_json, local_json)
             pulled_jsons.append(local_json)
+            if remote_dump and local_dump:
+                shutil.rmtree(local_dump, ignore_errors=True)
+                adb.pull(remote_dump, local_dump)
 
             if args.verify_systrace:
                 adb.pull(remote_trace, local_trace)
@@ -760,6 +826,8 @@ def main() -> int:
 
         suite_elapsed = time.monotonic() - suite_t0
         print(f"\nTotal benchmark suite wall time: {suite_elapsed:.2f}s")
+        if args.dump:
+            print(f"\nInspect captured frames interactively:\n  python3 tools/taa/taa_viewer.py {out_dir}")
 
         if len(pulled_jsons) > 1 and args.host_harness and Path(args.host_harness).is_file():
             compare_arg = ",".join(str(p) for p in pulled_jsons)
