@@ -3,10 +3,8 @@ import org.gradle.api.file.RelativePath
 
 plugins {
     alias(libs.plugins.undercouch.download)
-    `maven-publish`
+    id("com.google.android.filament.publish")
 }
-
-apply(from = rootProject.file("gradle/gradle-mvn-push.gradle.kts"))
 
 val versionName = providers.gradleProperty("VERSION_NAME").get()
 val tools = listOf("matc", "cmgen")
@@ -56,16 +54,16 @@ platforms.forEach { (platform, config) ->
 publishing {
     publications {
         tools.forEach { toolName ->
-            create<MavenPublication>(toolName) {
+            register<MavenPublication>(toolName) {
                 artifactId = toolName
 
                 platforms.forEach { (platform, config) ->
                     val platformName = platform.replaceFirstChar { it.uppercase() }
-                    val extractDir = layout.buildDirectory.dir("extracted/filament-v$versionName-$platform").get().asFile
                     val archivePath = config.path(toolName)
                     val exeName = File(archivePath).name
+                    val extractedFile = layout.buildDirectory.file("extracted/filament-v$versionName-$platform/$exeName")
 
-                    artifact(File(extractDir, exeName)) {
+                    artifact(extractedFile) {
                         classifier = config.classifier
                         extension = "exe"
                         builtBy(tasks.named("extractTools$platformName"))

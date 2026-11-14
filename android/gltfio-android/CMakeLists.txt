@@ -13,7 +13,13 @@ set(CMAKE_CXX_STANDARD 20)
 set(FILAMENT_DIR ${FILAMENT_DIST_DIR})
 set(DRACO_DIR ../../third_party/draco)
 
-add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../filament-android ${CMAKE_CURRENT_BINARY_DIR}/filament-android)
+add_library(filament-jni SHARED IMPORTED)
+set_target_properties(filament-jni PROPERTIES IMPORTED_LOCATION
+        ${CMAKE_CURRENT_SOURCE_DIR}/../filament-android/build/jni/${CMAKE_BUILD_TYPE}/${ANDROID_ABI}/libfilament-jni.so)
+
+add_library(geometry STATIC IMPORTED)
+set_target_properties(geometry PROPERTIES IMPORTED_LOCATION
+        ${FILAMENT_DIR}/lib/${ANDROID_ABI}/libgeometry.a)
 
 add_library(gltfio_core STATIC IMPORTED)
 set_target_properties(gltfio_core PROPERTIES IMPORTED_LOCATION
@@ -113,6 +119,7 @@ target_link_libraries(gltfio-jni
         PRIVATE gltfio_core
         PRIVATE ktxreader
         PUBLIC filament-jni
+        PUBLIC geometry
         PRIVATE stb
         PRIVATE basis_transcoder
         PRIVATE uberarchive
@@ -126,3 +133,11 @@ target_link_libraries(gltfio-jni
 if (FILAMENT_SUPPORTS_WEBP_TEXTURES)
         target_link_libraries(gltfio-jni PRIVATE webpdecoder)
 endif()
+
+add_custom_command(TARGET gltfio-jni POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E make_directory
+        "${CMAKE_CURRENT_SOURCE_DIR}/build/jni/${CMAKE_BUILD_TYPE}/${ANDROID_ABI}"
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        $<TARGET_FILE:gltfio-jni>
+        "${CMAKE_CURRENT_SOURCE_DIR}/build/jni/${CMAKE_BUILD_TYPE}/${ANDROID_ABI}/libgltfio-jni.so"
+)
