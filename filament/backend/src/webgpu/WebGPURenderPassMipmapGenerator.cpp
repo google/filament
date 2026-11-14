@@ -244,6 +244,13 @@ WebGPURenderPassMipmapGenerator::getCompatibilityFor(wgpu::TextureFormat const f
                           "mipmap generation.",
             };
         default:
+            if (isCompressedTextureFormat(format)) {
+                return {
+                    .compatible = false,
+                    .reason = "Compressed texture formats are not renderable and do not support "
+                              "render pass based mipmap generation.",
+                };
+            }
             const ScalarSampleType scalarSampleType{ getScalarSampleTypeFrom(format) };
             switch (scalarSampleType) {
                 case ScalarSampleType::U32:

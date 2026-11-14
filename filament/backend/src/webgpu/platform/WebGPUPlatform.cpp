@@ -79,9 +79,18 @@ constexpr std::array OPTIONAL_FEATURES = {
     // SPD compute path instead of the (linearly filtering) render pass path.
     wgpu::FeatureName::Float32Filterable,
 
+    // Compressed texture formats. WebGPUDriver::isTextureFormatSupported() reports a compressed
+    // format as supported only when its feature is enabled.
+    wgpu::FeatureName::TextureCompressionBC,
+    wgpu::FeatureName::TextureCompressionETC2,
+    wgpu::FeatureName::TextureCompressionASTC,
+    wgpu::FeatureName::TextureCompressionBCSliced3D,
+    wgpu::FeatureName::TextureCompressionASTCSliced3D,
+
     // Unsupported on WASM
 #if !defined(__EMSCRIPTEN__)
     wgpu::FeatureName::TextureComponentSwizzle,
+    wgpu::FeatureName::TextureCompressionUnaligned,
 #endif
 };
 
@@ -560,8 +569,12 @@ wgpu::Adapter selectPreferredAdapter(
             selectedOptionalFeaturesCount = supportedOptionalFeaturesCount;
             continue;
         }
-        // second, prefer more optional features supported...
-        if (supportedOptionalFeaturesCount > selectedOptionalFeaturesCount) {
+        // second, among adapters with the same power preference, prefer more optional features
+        // supported. This must not override the power preference: e.g. an integrated GPU
+        // supporting ETC2/ASTC must not win over a discrete GPU that only supports BC.
+        if (details.powerPreference.powerPreference ==
+                        selectedAdapter->powerPreference.powerPreference &&
+                supportedOptionalFeaturesCount > selectedOptionalFeaturesCount) {
             selectedAdapter = &details;
             selectedOptionalFeaturesCount = supportedOptionalFeaturesCount;
             continue;
