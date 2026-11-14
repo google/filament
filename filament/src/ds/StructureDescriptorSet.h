@@ -64,7 +64,7 @@ public:
 private:
     DescriptorSetLayout const* mDescriptorSetLayout = nullptr;
     mutable DescriptorSet mDescriptorSet;
-    TypedUniformBuffer<PerViewUib> mUniforms;
+    mutable TypedUniformBuffer<PerViewUib> mUniforms;
 };
 
 } // namespace filament

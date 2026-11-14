@@ -51,8 +51,9 @@ public:
     }
 
     void terminate(backend::DriverApi& driver) noexcept {
-        assert_invariant(mUboHandle);
-        driver.destroyBufferObject(std::move(mUboHandle));
+        if (mUboHandle) {
+            driver.destroyBufferObject(std::move(mUboHandle));
+        }
     }
 
     ~TypedUniformBuffer() noexcept {

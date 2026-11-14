@@ -43,19 +43,15 @@ void SsrPassDescriptorSet::init(FEngine& engine) noexcept {
     // create the descriptor-set from the layout
     mDescriptorSet = DescriptorSet{
             "SsrPassDescriptorSet", engine.getPerViewDescriptorSetLayoutSsrVariant() };
-
-    // create a dummy Shadow UBO (see comment in setFrameUniforms() below)
-    mShadowUbh = engine.getDriverApi().createBufferObject(sizeof(ShadowUib),
-            BufferObjectBinding::UNIFORM, BufferUsage::STATIC);
 }
 
 void SsrPassDescriptorSet::terminate(DriverApi& driver) {
     mDescriptorSet.terminate(driver);
-    driver.destroyBufferObject(mShadowUbh);
 }
 
 void SsrPassDescriptorSet::setFrameUniforms(FEngine const& engine,
         TypedUniformBuffer<PerViewUib>& uniforms) noexcept {
+    assert_invariant(engine.getDummyUniformBuffer());
     // initialize the descriptor-set
     mDescriptorSet.setBuffer(engine.getPerViewDescriptorSetLayoutSsrVariant(),
             +PerViewBindingPoints::FRAME_UNIFORMS,
@@ -65,7 +61,7 @@ void SsrPassDescriptorSet::setFrameUniforms(FEngine const& engine,
     // to have this UBO because the fragment shader used is the "generic" one. Both Metal
     // and GL would be okay without this, but Vulkan's validation layer would complain.
     mDescriptorSet.setBuffer(engine.getPerViewDescriptorSetLayoutSsrVariant(),
-            +PerViewBindingPoints::SHADOWS, mShadowUbh, 0, sizeof(ShadowUib));
+            +PerViewBindingPoints::SHADOWS, engine.getDummyUniformBuffer(), 0, sizeof(ShadowUib));
 }
 
 void SsrPassDescriptorSet::prepareHistorySSR(FEngine const& engine, Handle<HwTexture> ssr) noexcept {

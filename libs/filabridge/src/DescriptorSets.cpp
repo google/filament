@@ -167,42 +167,36 @@ DescriptorSetLayout const& getPerRenderableLayout() noexcept {
 
 utils::CString getDescriptorName(DescriptorSetBindingPoints const set,
         descriptor_binding_t const binding) noexcept {
-    using namespace std::literals;
-
-    static std::unordered_map<descriptor_binding_t, std::string_view> const set0{{
-        { +PerViewBindingPoints::FRAME_UNIFORMS, "FrameUniforms"sv },
-        { +PerViewBindingPoints::SHADOWS,        "ShadowUniforms"sv },
-        { +PerViewBindingPoints::LIGHTS,         "LightsUniforms"sv },
-        { +PerViewBindingPoints::RECORD_BUFFER,  "FroxelRecordUniforms"sv },
-        { +PerViewBindingPoints::FROXEL_BUFFER,  "FroxelsUniforms"sv },
-        { +PerViewBindingPoints::STRUCTURE,      "sampler0_structure"sv },
-        { +PerViewBindingPoints::SHADOW_MAP,     "sampler0_shadowMap"sv },
-        { +PerViewBindingPoints::IBL_DFG_LUT,    "sampler0_iblDFG"sv },
-        { +PerViewBindingPoints::IBL_SPECULAR,   "sampler0_iblSpecular"sv },
-        { +PerViewBindingPoints::SSAO,           "sampler0_ssao"sv },
-        { +PerViewBindingPoints::SSR,            "sampler0_ssr"sv },
-        { +PerViewBindingPoints::FOG,            "sampler0_fog"sv },
-    }};
-
-    static std::unordered_map<descriptor_binding_t, std::string_view> const set1{{
-        { +PerRenderableBindingPoints::OBJECT_UNIFORMS,             "ObjectUniforms"sv },
-        { +PerRenderableBindingPoints::BONES_UNIFORMS,              "BonesUniforms"sv },
-        { +PerRenderableBindingPoints::MORPHING_UNIFORMS,           "MorphingUniforms"sv },
-        { +PerRenderableBindingPoints::MORPH_TARGET_POSITIONS,      "sampler1_positions"sv },
-        { +PerRenderableBindingPoints::MORPH_TARGET_TANGENTS,       "sampler1_tangents"sv },
-        { +PerRenderableBindingPoints::BONES_INDICES_AND_WEIGHTS,   "sampler1_indicesAndWeights"sv },
-    }};
-
     switch (set) {
         case DescriptorSetBindingPoints::PER_VIEW: {
-            auto const pos = set0.find(binding);
-            assert_invariant(pos != set0.end());
-            return { pos->second.data(), pos->second.size() };
+            switch (PerViewBindingPoints(binding)) {
+                case PerViewBindingPoints::FRAME_UNIFORMS: return "FrameUniforms";
+                case PerViewBindingPoints::SHADOWS:        return "ShadowUniforms";
+                case PerViewBindingPoints::LIGHTS:         return "LightsUniforms";
+                case PerViewBindingPoints::RECORD_BUFFER:  return "FroxelRecordUniforms";
+                case PerViewBindingPoints::FROXEL_BUFFER:  return "FroxelsUniforms";
+                case PerViewBindingPoints::STRUCTURE:      return "sampler0_structure";
+                case PerViewBindingPoints::SHADOW_MAP:     return "sampler0_shadowMap";
+                case PerViewBindingPoints::IBL_DFG_LUT:    return "sampler0_iblDFG";
+                case PerViewBindingPoints::IBL_SPECULAR:   return "sampler0_iblSpecular";
+                case PerViewBindingPoints::SSAO:           return "sampler0_ssao";
+                case PerViewBindingPoints::SSR:            return "sampler0_ssr";
+                case PerViewBindingPoints::FOG:            return "sampler0_fog";
+            }
+            assert_invariant(false);
+            break;
         }
         case DescriptorSetBindingPoints::PER_RENDERABLE: {
-            auto const pos = set1.find(binding);
-            assert_invariant(pos != set1.end());
-            return { pos->second.data(), pos->second.size() };
+            switch (PerRenderableBindingPoints(binding)) {
+                case PerRenderableBindingPoints::OBJECT_UNIFORMS:           return "ObjectUniforms";
+                case PerRenderableBindingPoints::BONES_UNIFORMS:            return "BonesUniforms";
+                case PerRenderableBindingPoints::MORPHING_UNIFORMS:         return "MorphingUniforms";
+                case PerRenderableBindingPoints::MORPH_TARGET_POSITIONS:    return "sampler1_positions";
+                case PerRenderableBindingPoints::MORPH_TARGET_TANGENTS:     return "sampler1_tangents";
+                case PerRenderableBindingPoints::BONES_INDICES_AND_WEIGHTS: return "sampler1_indicesAndWeights";
+            }
+            assert_invariant(false);
+            break;
         }
         case DescriptorSetBindingPoints::PER_MATERIAL: {
             assert_invariant(binding < 1);

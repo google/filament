@@ -90,12 +90,15 @@ public:
 
     void terminate(backend::DriverApi& driverApi) noexcept;
 
-    // GPU buffer containing records. Valid after construction.
+    // Lazily allocates the GPU buffers for records and froxels if not already created.
+    void ensureBuffersCreated(backend::DriverApi& driverApi) noexcept;
+
+    // GPU buffer containing records. Lazily created via ensureBuffersCreated().
     backend::Handle<backend::HwBufferObject> getRecordBuffer() const noexcept {
         return mRecordsBuffer;
     }
 
-    // GPU buffer containing froxels. Valid after construction.
+    // GPU buffer containing froxels. Lazily created via ensureBuffersCreated().
     backend::Handle<backend::HwBufferObject> getFroxelBuffer() const noexcept {
         return mFroxelsBuffer;
     }

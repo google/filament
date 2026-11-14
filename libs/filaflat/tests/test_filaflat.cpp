@@ -133,7 +133,7 @@ TEST_F(FilaflatSecurityTest, MaterialChunkHeapOverflow) {
     content.reserve(1024);
     content.resize(1024);
     content[0] = 'H'; content[1023] = '\0';
-    dict.push_back(content);
+    dict.emplace_back(content.data(), content.size());
 
     ShaderContent output;
     // THIS LINE EXPLOITS THE VULNERABILITY (Heap buffer overflow, memcpy overwrite)
@@ -468,8 +468,14 @@ TEST_F(FilaflatSecurityTest, DictionarySpirvValidBlobStillParses) {
     ASSERT_TRUE(DictionaryReader::unflatten(
             container, filamat::ChunkType::DictionarySpirv, dictionary));
     ASSERT_EQ(1u, dictionary.size());
-    ASSERT_EQ(spirvSize, dictionary[0].size());
-    EXPECT_EQ(0, memcmp(dictionary[0].data(), spirv.data(), spirvSize));
+    ASSERT_EQ(encoded.size(), dictionary[0].size());
+    EXPECT_EQ(0, memcmp(dictionary[0].data(), encoded.data(), encoded.size()));
+
+    // Verify on-demand SMOL-V decoding from the unflattened dictionary slice.
+    std::vector<uint8_t> decoded(spirvSize);
+    ASSERT_TRUE(smolv::Decode(
+            dictionary[0].data(), dictionary[0].size(), decoded.data(), decoded.size()));
+    EXPECT_EQ(0, memcmp(decoded.data(), spirv.data(), spirvSize));
 
     // The decoded/encoded ratio the bound has to accommodate. smol-v's worst sustained expansion
     // is 8x (a bunched OpMemberDecorate member costs 2 input bytes and emits 16 output bytes), so
@@ -508,6 +514,36 @@ TEST_F(FilaflatSecurityTest, DictionarySpirvDecodedSizeExceedsRatio) {
     EXPECT_LE(largest, 8 * encoded.size())
             << "VULNERABILITY: allocated " << largest << " bytes for a "
             << encoded.size() << "-byte blob!";
+}
+
+// A SMOL-V blob with a valid 24-byte header and plausible declared decoded size, but truncated
+// mid-stream instruction bytes, must still be rejected at load time by smolv::Validate() without
+// allocating a decoded SPIR-V scratch buffer.
+TEST_F(FilaflatSecurityTest, DictionarySpirvCorruptInstructionRejectedAtLoadWithZeroScratchAlloc) {
+    const std::vector<uint32_t> spirv = makeTestSpirv(8);
+    smolv::ByteArray encoded;
+    ASSERT_TRUE(smolv::Encode(spirv.data(), spirv.size() * 4, encoded, 0));
+    ASSERT_GT(encoded.size(), 32u);
+
+    // Keep the 24-byte SMOL-V header intact (so GetDecodedBufferSize() and the 8x ratio check
+    // both pass), but truncate the encoded instruction stream so decoding fails mid-stream.
+    encoded.resize(encoded.size() - 5);
+    ASSERT_GT(smolv::GetDecodedBufferSize(encoded.data(), encoded.size()), 0u);
+    EXPECT_FALSE(smolv::Validate(encoded.data(), encoded.size()));
+
+    std::vector<uint8_t> fileData = makeSpirvDictionaryChunk(encoded);
+    ChunkContainer container(fileData.data(), fileData.size());
+    ASSERT_TRUE(container.parse());
+
+    BlobDictionary dictionary;
+    size_t largest = 0;
+    {
+        AllocationRecorder recorder;
+        EXPECT_FALSE(DictionaryReader::unflatten(
+                container, filamat::ChunkType::DictionarySpirv, dictionary));
+        largest = recorder.largest();
+    }
+    EXPECT_LE(largest, sizeof(ShaderContentView));
 }
 
 
@@ -552,13 +588,9 @@ protected:
         EXPECT_TRUE(chunk.initialize(filamat::ChunkType::MaterialGlsl));
 
         const char line[] = "abc";
-        ShaderContent entry;
-        entry.reserve(sizeof(line));
-        entry.resize(sizeof(line));
-        memcpy(entry.data(), line, sizeof(line));
         BlobDictionary dict;
         dict.reserve(1);
-        dict.push_back(entry);
+        dict.emplace_back(reinterpret_cast<uint8_t const*>(line), sizeof(line));
 
         return chunk.getShader(output, dict, MaterialChunk::ShaderModel(1), filament::Variant{0},
                 MaterialChunk::ShaderStage(0));

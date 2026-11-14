@@ -68,7 +68,12 @@ public:
             MaterialDefinition const& definition);
     ~FMaterial() noexcept;
 
-    class DefaultMaterialBuilder : public Builder {
+    class StaticMaterialBuilder : public Builder {
+    public:
+        StaticMaterialBuilder();
+    };
+
+    class DefaultMaterialBuilder : public StaticMaterialBuilder {
     public:
         DefaultMaterialBuilder();
     };
@@ -226,7 +231,7 @@ public:
     }
 
     std::string_view getSource() const noexcept {
-        return mDefinition.source.c_str_safe();
+        return mDefinition.getSource().c_str_safe();
     }
 
     inline bool isSharedVariant(Variant const variant) const {

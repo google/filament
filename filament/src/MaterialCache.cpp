@@ -60,16 +60,31 @@ void MaterialCache::terminate(FEngine& engine) {
 }
 
 MaterialDefinition* UTILS_NULLABLE MaterialCache::acquireMaterial(FEngine& engine,
-        const void* UTILS_NONNULL data, size_t size) noexcept {
+        const void* UTILS_NONNULL data, size_t size, bool const copyPayload) noexcept {
+    constexpr size_t crc32ChunkSize = sizeof(uint64_t) + sizeof(uint32_t) + sizeof(uint32_t);
+    MaterialParser probeParser({}, data, size, false);
+    if (size > crc32ChunkSize && probeParser.parseChunkContainer()) {
+        const MaterialKey probeKey{ &probeParser };
+        return mDefinitions.acquire(probeKey,
+                [&]() -> std::pair<MaterialKey, std::unique_ptr<MaterialDefinition>> {
+                    std::unique_ptr<MaterialParser> parser = MaterialDefinition::createParser(
+                            engine.getBackend(), engine.getShaderLanguage(), data, size,
+                            copyPayload);
+                    assert_invariant(parser);
+                    std::unique_ptr<MaterialDefinition> definition =
+                            MaterialDefinition::create(engine, std::move(parser));
+                    if (!definition) {
+                        return { MaterialKey{ &probeParser }, nullptr };
+                    }
+                    const MaterialKey key{ &definition->getMaterialParser() };
+                    return { key, std::move(definition) };
+                });
+    }
+
     std::unique_ptr<MaterialParser> parser = MaterialDefinition::createParser(engine.getBackend(),
-            engine.getShaderLanguage(), data, size);
+            engine.getShaderLanguage(), data, size, copyPayload);
     assert_invariant(parser);
 
-    // The `key` must be constructed using parser.get() before parser is moved into the lambda
-    // function. This prevents a potential crash or undefined behavior, as accessing a moved-from
-    // object is unsafe. The validity of the generated key is guaranteed because the
-    // MaterialDefinition object (which owns the same parser object) created within the lambda is
-    // subsequently used as the associated value in the map.
     const MaterialKey key{ parser.get() };
 
     return mDefinitions.acquire(key, [&engine, parser = std::move(parser)]() mutable {
