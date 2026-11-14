@@ -164,6 +164,55 @@ constexpr filament::math::float3 kSkinInverseBindTranslation = { 1.0f, 2.0f, 3.0
 // kSkinInverseBindTranslation. Reproduces issue #10795.
 std::vector<uint8_t> makeUnusableInverseBindMatricesGlb();
 
+// Builds a non-indexed 5-vertex TRIANGLES GLB with POSITION and NORMAL attributes where either the
+// NORMAL bufferView (`strideOnNormal = true`, reaching ResourceLoader/TangentsJob) or the POSITION
+// bufferView (`strideOnNormal = false`, reaching AssetLoader's VertexBuffer setup) declares
+// `byteStride` on a 60-byte view. When `byteStride` is e.g. 2^62 - 3 (4611686018427387901),
+// `stride * (count - 1) + 12` wraps modulo 2^64 to 0, reproducing issue #10793.
+std::vector<uint8_t> makeDenseStrideOverflowGlb(uint64_t byteStride, bool strideOnNormal = true);
+
+// Builds a single-triangle GLB using KHR_materials_variants with one top-level variant ("v0") and
+// two primitive mappings: one valid mapping to variant 0, and one mapping to `extraVariantIndex`
+// (e.g. 1000 or -1 to reproduce issue #10192).
+std::vector<uint8_t> makeMaterialVariantsMappingGlb(int extraVariantIndex);
+
+// Builds a skinned single-triangle GLB with 1 joint (translated by (2, 0, 0), identity IBM) whose
+// JOINTS_0 (UNSIGNED_SHORT VEC4) first influence on each vertex is set to `jointIndex` (with weight
+// 1.0). Setting `jointIndex >= 1` (e.g. 1 or 65535) reproduces issue #10191 when
+// recomputeBoundingBoxes() is called.
+std::vector<uint8_t> makeSkinnedJointIndexGlb(uint16_t jointIndex);
+
+// Builds a 2-skin GLB whose mesh node is bound to skin 1 while skin 0 has an unusable
+// inverseBindMatrices accessor (either VEC3 float when `wrongType` is true, or MAT4 float with
+// count 1 < joints_count 2 when false). Skin 1 has 1 joint with translation
+// kSkinInverseBindTranslation. Reproduces issue #10198 across updateBoneMatrices(),
+// recomputeBoundingBoxes(), and getSkinNameAt().
+std::vector<uint8_t> makeSkinnedMeshAfterInvalidSkinGlb(bool wrongType);
+
+// Builds a two-primitive GLB (3 vertices per primitive, 6 total in MorphTargetBuffer) where each
+// primitive has one morph target POSITION accessor of `morphType` ("VEC3" or "VEC4") and count
+// `morphCount`. When `withBufferView` is false, the morph accessor omits bufferView; otherwise its
+// bufferView sits at the exact end of the GLB BIN chunk with `morphByteStride` (0 for tight).
+// Reproduces issue #10197 across all three uploadBuffers() morph arms.
+std::vector<uint8_t> makeMorphCountMismatchGlb(char const* morphType, uint32_t morphCount,
+        bool withBufferView, uint32_t morphByteStride = 0);
+
+// Builds a 6-vertex (2-triangle) GLB whose morph target POSITION accessor has `morphType`,
+// `componentType`, and optional `withBufferView` / `withMinMax`. When `withBufferView` is true, the
+// morph bufferView is tightly packed (no byteStride) at the exact end of the GLB BIN chunk with
+// zero trailing padding. Reproduces issues #10794, #10797, and #10792.
+std::vector<uint8_t> makeTypedMorphPositionGlb(char const* morphType, int componentType,
+        bool withBufferView = true, bool withMinMax = true);
+
+// Builds a 6-vertex (2-triangle) lit GLB with POSITION (of `basePosType`), NORMAL, and TANGENT
+// base attributes, and optionally a morph target carrying POSITION + `morphAttr` ("POSITION",
+// "NORMAL", or "TANGENT") whose `morphAttr` accessor has `morphType` ("SCALAR", "VEC2", "VEC3",
+// or "VEC4") placed tightly at the exact end of the GLB BIN chunk. When `morphAttr` is null, no
+// morph target is added and the base POSITION bufferView sits at the exact end of the GLB BIN
+// chunk. Reproduces issue #10798 (and #10674).
+std::vector<uint8_t> makeExtendedDimensionMismatchGlb(char const* morphAttr, char const* morphType,
+        char const* basePosType = "VEC3");
+
 } // namespace test
 
 #endif // TNT_GLTFIO_TEST_GLBBUILDERS_H

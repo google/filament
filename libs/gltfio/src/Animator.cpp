@@ -26,6 +26,7 @@
 #include <filament/TransformManager.h>
 #include <filament/VertexBuffer.h>
 
+#include <utils/compiler.h>
 #include <utils/debug.h>
 #include <utils/Log.h>
 
@@ -667,11 +668,14 @@ void AnimatorImpl::resetBoneMatrices(FFilamentInstance* instance) {
 }
 
 void AnimatorImpl::updateBoneMatrices(FFilamentInstance* instance) {
-    assert_invariant(instance->mSkins.size() == asset->mSkins.size());
     size_t skinIndex = 0;
     for (const auto& skin : instance->mSkins) {
+        if (UTILS_UNLIKELY(skinIndex >= asset->mSkins.size())) {
+            break;
+        }
         const auto& assetSkin = asset->mSkins[skinIndex++];
-        size_t njoints = skin.joints.size();
+        size_t const njoints = skin.joints.size();
+        size_t const safeJoints = std::min<size_t>(njoints, assetSkin.inverseBindMatrices.size());
         boneMatrices.resize(njoints);
         for (Entity entity : skin.targets) {
             auto renderable = renderableManager->getInstance(entity);
@@ -683,7 +687,7 @@ void AnimatorImpl::updateBoneMatrices(FFilamentInstance* instance) {
             if (xformable) {
                 inverseGlobalTransform = inverse(transformManager->getWorldTransformAccurate(xformable));
             }
-            for (size_t boneIndex = 0; boneIndex < njoints; ++boneIndex) {
+            for (size_t boneIndex = 0; boneIndex < safeJoints; ++boneIndex) {
                 const auto& joint = skin.joints[boneIndex];
                 const mat4f& inverseBindMatrix = assetSkin.inverseBindMatrices[boneIndex];
                 TransformManager::Instance jointInstance = transformManager->getInstance(joint);
@@ -691,6 +695,9 @@ void AnimatorImpl::updateBoneMatrices(FFilamentInstance* instance) {
                 boneMatrices[boneIndex] =
                         mat4f{ inverseGlobalTransform * globalJointTransform } *
                         inverseBindMatrix;
+            }
+            for (size_t boneIndex = safeJoints; boneIndex < njoints; ++boneIndex) {
+                boneMatrices[boneIndex] = mat4f{};
             }
             renderableManager->setBones(renderable, boneMatrices.data(), boneMatrices.size());
         }

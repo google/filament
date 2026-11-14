@@ -16,6 +16,7 @@
 
 #include "downcast.h"
 #include "DracoCache.h"
+#include "FFilamentAsset.h"
 #include "FFilamentInstance.h"
 #include "GlbBuilders.h"
 #include "Utility.h"
@@ -65,6 +66,7 @@
 #include <fstream>
 #include <limits>
 #include <string>
+#include <string_view>
 #include <tuple>
 #include <unordered_map>
 #include <vector>
@@ -2622,6 +2624,588 @@ TEST_F(glTFIOTest, DiffuseTransmissionMaterial) {
     jitProvider->destroyMaterials();
     delete jitProvider;
     AssetLoader::destroy(&loader);
+}
+
+// Issue #10793: cgltf_validate() must reject dense accessors and bufferViews whose extent
+// computation wraps SIZE_MAX (and zero-count accessors whose count - 1 underflows SIZE_MAX).
+TEST(glTFIOCgltf, DenseAccessorAndBufferViewOverflowIsRejected) {
+    uint8_t dummy[64] = {};
+    cgltf_buffer buffer{ .size = sizeof(dummy), .data = dummy };
+    cgltf_buffer_view view{ .buffer = &buffer, .offset = 0, .size = sizeof(dummy), .stride = 12 };
+    cgltf_accessor accessor{
+        .component_type = cgltf_component_type_r_32f,
+        .type = cgltf_type_vec3,
+        .offset = 0,
+        .count = 5,
+        .stride = 12,
+        .buffer_view = &view,
+    };
+    cgltf_data data{
+        .accessors = &accessor,
+        .accessors_count = 1,
+        .buffer_views = &view,
+        .buffer_views_count = 1,
+        .buffers = &buffer,
+        .buffers_count = 1,
+    };
+
+    // Valid control.
+    ASSERT_EQ(cgltf_validate(&data), cgltf_result_success);
+
+    // Zero count: (count - 1) would underflow to SIZE_MAX and 12 * SIZE_MAX + 12 wraps to 0.
+    accessor.count = 0;
+    EXPECT_EQ(cgltf_validate(&data), cgltf_result_invalid_gltf);
+    accessor.count = 5;
+
+    // Accessor offset + element_size wraps SIZE_MAX.
+    accessor.offset = std::numeric_limits<cgltf_size>::max() - 8;
+    EXPECT_EQ(cgltf_validate(&data), cgltf_result_data_too_short);
+    accessor.offset = 0;
+
+    // Dense stride * (count - 1) + element_size wraps to 0 mod 2^64 (on 64-bit) or 2^32 (on 32-bit).
+    cgltf_size const wrappingStride = (std::numeric_limits<cgltf_size>::max() - 11u) / 4u;
+    accessor.stride = wrappingStride;
+    view.stride = wrappingStride;
+    EXPECT_EQ(cgltf_validate(&data), cgltf_result_data_too_short);
+    accessor.stride = 12;
+    view.stride = 12;
+
+    // bufferView offset + size wraps SIZE_MAX.
+    view.offset = std::numeric_limits<cgltf_size>::max() - 15u;
+    view.size = 16u;
+    EXPECT_EQ(cgltf_validate(&data), cgltf_result_data_too_short);
+}
+
+// Issue #10793: end-to-end load with a wrapping byteStride on POSITION + NORMAL must fail
+// validation instead of launching TangentsJob and reading from a wild address.
+TEST_F(glTFIOTest, DenseStrideOverflowInTangentsJobIsRejected) {
+    // Control with tight stride (12) succeeds.
+    {
+        std::vector<uint8_t> const glb = makeDenseStrideOverflowGlb(12u);
+        AssetLoader* assetLoader =
+                AssetLoader::create({ mEngine, mMaterialProvider, mNameManager });
+        ASSERT_NE(assetLoader, nullptr);
+        FilamentAsset* const asset = assetLoader->createAsset(glb.data(), uint32_t(glb.size()));
+        ASSERT_NE(asset, nullptr);
+        ResourceLoader resourceLoader({ mEngine, ".", false });
+        EXPECT_TRUE(resourceLoader.loadResources(asset));
+        assetLoader->destroyAsset(asset);
+        AssetLoader::destroy(&assetLoader);
+    }
+
+    // Wrapping strides from #10793 (2^62 - 3 and 2^63 - 3, both below LLONG_MAX so JSON parses).
+    if constexpr (sizeof(cgltf_size) >= 8) {
+        for (uint64_t const badStride : { 4611686018427387901ULL, 9223372036854775805ULL }) {
+            SCOPED_TRACE(badStride);
+
+            // 1. Stride on NORMAL: AssetLoader re-purposes the NORMAL slot to SHORT4 tangents, so
+            // createAsset() succeeds on the standard loader and ResourceLoader::loadResources()
+            // relies on cgltf_validate() to block TangentsJob from reading at buffer + badStride.
+            {
+                std::vector<uint8_t> const glb =
+                        makeDenseStrideOverflowGlb(badStride, /* strideOnNormal = */ true);
+
+                AssetLoader* assetLoader =
+                        AssetLoader::create({ mEngine, mMaterialProvider, mNameManager });
+                ASSERT_NE(assetLoader, nullptr);
+                FilamentAsset* const asset =
+                        assetLoader->createAsset(glb.data(), uint32_t(glb.size()));
+                ASSERT_NE(asset, nullptr);
+                ResourceLoader resourceLoader({ mEngine, ".", false });
+                EXPECT_FALSE(resourceLoader.loadResources(asset));
+                assetLoader->destroyAsset(asset);
+                AssetLoader::destroy(&assetLoader);
+
+                if (AssetConfigurationExtended::isSupported()) {
+                    AssetConfigurationExtended ext{ .gltfPath = "." };
+                    AssetLoader* extLoader = AssetLoader::create({
+                            .engine = mEngine,
+                            .materials = mMaterialProvider,
+                            .names = mNameManager,
+                            .ext = &ext,
+                    });
+                    ASSERT_NE(extLoader, nullptr);
+                    EXPECT_EQ(extLoader->createAsset(glb.data(), uint32_t(glb.size())), nullptr);
+                    AssetLoader::destroy(&extLoader);
+                }
+            }
+
+            // 2. Stride on POSITION: AssetLoader rejects oversized / unaligned VertexBuffer strides
+            // cleanly (returning nullptr) instead of truncating to uint8_t or panicking.
+            {
+                std::vector<uint8_t> const glb =
+                        makeDenseStrideOverflowGlb(badStride, /* strideOnNormal = */ false);
+                AssetLoader* assetLoader =
+                        AssetLoader::create({ mEngine, mMaterialProvider, mNameManager });
+                ASSERT_NE(assetLoader, nullptr);
+                EXPECT_EQ(assetLoader->createAsset(glb.data(), uint32_t(glb.size())), nullptr);
+                AssetLoader::destroy(&assetLoader);
+            }
+        }
+    }
+}
+
+// Issue #10192: createMaterialVariants() runs during createAsset() before cgltf_validate(), so an
+// out-of-bounds variant index in KHR_materials_variants must be skipped without indexing
+// instance->mVariants out of bounds.
+TEST_F(glTFIOTest, OutOfBoundsMaterialVariantMappingIsSkipped) {
+    for (int const badVariant : { 1, 1000 }) {
+        SCOPED_TRACE(badVariant);
+        std::vector<uint8_t> const glb = makeMaterialVariantsMappingGlb(badVariant);
+
+        AssetLoader* assetLoader =
+                AssetLoader::create({ mEngine, mMaterialProvider, mNameManager });
+        ASSERT_NE(assetLoader, nullptr);
+
+        FilamentAsset* const asset = assetLoader->createAsset(glb.data(), uint32_t(glb.size()));
+        ASSERT_NE(asset, nullptr);
+
+        FilamentInstance* const instance = asset->getInstance();
+        ASSERT_NE(instance, nullptr);
+        ASSERT_EQ(instance->getMaterialVariantCount(), 1u);
+        EXPECT_STREQ(instance->getMaterialVariantName(0), "v0");
+        instance->applyMaterialVariant(0);
+
+        // ResourceLoader::loadResources() later rejects the malformed variant index via
+        // cgltf_validate().
+        ResourceLoader resourceLoader({ mEngine, ".", false });
+        EXPECT_FALSE(resourceLoader.loadResources(asset));
+
+        assetLoader->destroyAsset(asset);
+        AssetLoader::destroy(&assetLoader);
+    }
+
+    // Negative variant index is rejected at JSON parse time.
+    {
+        std::vector<uint8_t> const glb = makeMaterialVariantsMappingGlb(-1);
+        AssetLoader* assetLoader =
+                AssetLoader::create({ mEngine, mMaterialProvider, mNameManager });
+        ASSERT_NE(assetLoader, nullptr);
+        EXPECT_EQ(assetLoader->createAsset(glb.data(), uint32_t(glb.size())), nullptr);
+        AssetLoader::destroy(&assetLoader);
+    }
+
+    // Valid control (both mappings target variant 0) loads and applies cleanly.
+    {
+        std::vector<uint8_t> const glb = makeMaterialVariantsMappingGlb(0);
+        AssetLoader* assetLoader =
+                AssetLoader::create({ mEngine, mMaterialProvider, mNameManager });
+        ASSERT_NE(assetLoader, nullptr);
+        FilamentAsset* const asset = assetLoader->createAsset(glb.data(), uint32_t(glb.size()));
+        ASSERT_NE(asset, nullptr);
+        ResourceLoader resourceLoader({ mEngine, ".", false });
+        EXPECT_TRUE(resourceLoader.loadResources(asset));
+        asset->getInstance()->applyMaterialVariant(0);
+        assetLoader->destroyAsset(asset);
+        AssetLoader::destroy(&assetLoader);
+    }
+}
+
+// Issue #10191: recomputeBoundingBoxes() must bounds-check JOINTS_0 indices against joints_count
+// before indexing instanceSkin.joints and assetSkin.inverseBindMatrices.
+TEST_F(glTFIOTest, OutOfBoundsJointIndexInRecomputeBoundingBoxes) {
+    // Valid control (jointIndex = 0, joint 0 translated by +2 on X): AABB shifts to [2..3, 0..1, 0].
+    {
+        std::vector<uint8_t> const glb = makeSkinnedJointIndexGlb(0u);
+        AssetLoader* assetLoader =
+                AssetLoader::create({ mEngine, mMaterialProvider, mNameManager });
+        ASSERT_NE(assetLoader, nullptr);
+        FilamentAsset* const asset = assetLoader->createAsset(glb.data(), uint32_t(glb.size()));
+        ASSERT_NE(asset, nullptr);
+        ResourceLoader resourceLoader({ mEngine, ".", false });
+        ASSERT_TRUE(resourceLoader.loadResources(asset));
+
+        FilamentInstance* const instance = asset->getInstance();
+        ASSERT_NE(instance, nullptr);
+        instance->recomputeBoundingBoxes();
+        Aabb const bounds = instance->getBoundingBox();
+        EXPECT_FLOAT3_EQ(bounds.min, (math::float3{ 2.0f, 0.0f, 0.0f }));
+        EXPECT_FLOAT3_EQ(bounds.max, (math::float3{ 3.0f, 1.0f, 0.0f }));
+
+        assetLoader->destroyAsset(asset);
+        AssetLoader::destroy(&assetLoader);
+    }
+
+    // Out-of-bounds joint indices (small OOB == joints_count, medium OOB, and max uint16).
+    for (uint16_t const badJoint : { uint16_t(1), uint16_t(16), uint16_t(65535) }) {
+        SCOPED_TRACE(badJoint);
+        std::vector<uint8_t> const glb = makeSkinnedJointIndexGlb(badJoint);
+        AssetLoader* assetLoader =
+                AssetLoader::create({ mEngine, mMaterialProvider, mNameManager });
+        ASSERT_NE(assetLoader, nullptr);
+        FilamentAsset* const asset = assetLoader->createAsset(glb.data(), uint32_t(glb.size()));
+        ASSERT_NE(asset, nullptr);
+        ResourceLoader resourceLoader({ mEngine, ".", false });
+        ASSERT_TRUE(resourceLoader.loadResources(asset));
+
+        FilamentInstance* const instance = asset->getInstance();
+        ASSERT_NE(instance, nullptr);
+        instance->recomputeBoundingBoxes();
+        Aabb const bounds = instance->getBoundingBox();
+        EXPECT_FLOAT3_EQ(bounds.min, (math::float3{ 0.0f, 0.0f, 0.0f }));
+        EXPECT_FLOAT3_EQ(bounds.max, (math::float3{ 0.0f, 0.0f, 0.0f }));
+
+        assetLoader->destroyAsset(asset);
+        AssetLoader::destroy(&assetLoader);
+    }
+}
+
+// Issue #10198: when an earlier skin's inverseBindMatrices accessor fails validation (wrong type or
+// count < joints_count), a skinned renderable attached to a later skin must still align across
+// updateBoneMatrices(), recomputeBoundingBoxes(), and getSkinNameAt(), and updateBoneMatrices()
+// must also remain bounds-safe if asset->mSkins or inverseBindMatrices are ever shorter.
+TEST_F(glTFIOTest, SkinnedMeshAfterInvalidSkinInverseBindMatrices) {
+    for (bool const wrongType : { true, false }) {
+        SCOPED_TRACE(wrongType);
+        std::vector<uint8_t> const glb = makeSkinnedMeshAfterInvalidSkinGlb(wrongType);
+
+        AssetLoader* assetLoader =
+                AssetLoader::create({ mEngine, mMaterialProvider, mNameManager });
+        ASSERT_NE(assetLoader, nullptr);
+        FilamentAsset* const asset = assetLoader->createAsset(glb.data(), uint32_t(glb.size()));
+        ASSERT_NE(asset, nullptr);
+
+        ResourceLoader resourceLoader({ mEngine, ".", false });
+        ASSERT_TRUE(resourceLoader.loadResources(asset));
+
+        FilamentInstance* const instance = asset->getInstance();
+        ASSERT_NE(instance, nullptr);
+        ASSERT_EQ(instance->getSkinCount(), 2u);
+        EXPECT_STREQ(instance->getSkinNameAt(0), "skin0");
+        EXPECT_STREQ(instance->getSkinNameAt(1), "skin1");
+
+        // Exercise Animator::updateBoneMatrices() with a non-empty skin.targets renderable.
+        instance->getAnimator()->updateBoneMatrices();
+
+        // Exercise recomputeBoundingBoxes() on the skinned primitive bound to skin 1.
+        instance->recomputeBoundingBoxes();
+        Aabb const bounds = instance->getBoundingBox();
+        EXPECT_FLOAT3_EQ(bounds.min, kSkinInverseBindTranslation);
+        EXPECT_FLOAT3_EQ(bounds.max, (kSkinInverseBindTranslation + math::float3{ 1.0f, 1.0f, 0.0f }));
+
+        // Defense in depth: directly shorten FFilamentAsset::mSkins and verify updateBoneMatrices()
+        // breaks cleanly without reading past asset->mSkins.
+        gltfio::FFilamentAsset* const fasset = downcast(asset);
+        fasset->mSkins = FixedCapacityVector<gltfio::FFilamentAsset::Skin>(1);
+        instance->getAnimator()->updateBoneMatrices();
+
+        assetLoader->destroyAsset(asset);
+        AssetLoader::destroy(&assetLoader);
+    }
+}
+
+// Issue #10197: uploadBuffers() must never read past the morph accessor's element count (across the
+// bufferView-less, requiresPacking, and non-packing arms) nor write past slot.morphTargetCount.
+TEST_F(glTFIOTest, MorphAccessorCountMismatchDoesNotOverRead) {
+    // 1. End-to-end load where morph accessor count (2) < mesh vertex count (3): rejected by
+    // cgltf_validate() during loadResources() without reading out of bounds.
+    for (bool const withBufferView : { false, true }) {
+        for (uint32_t const stride : { 0u, 20u }) {
+            if (!withBufferView && stride != 0u) continue;
+            std::vector<uint8_t> const glb =
+                    makeMorphCountMismatchGlb("VEC3", /* morphCount = */ 2u, withBufferView, stride);
+            AssetLoader* assetLoader =
+                    AssetLoader::create({ mEngine, mMaterialProvider, mNameManager });
+            ASSERT_NE(assetLoader, nullptr);
+            FilamentAsset* const asset = assetLoader->createAsset(glb.data(), uint32_t(glb.size()));
+            ASSERT_NE(asset, nullptr);
+            ResourceLoader resourceLoader({ mEngine, ".", false });
+            EXPECT_FALSE(resourceLoader.loadResources(asset));
+            assetLoader->destroyAsset(asset);
+            AssetLoader::destroy(&assetLoader);
+        }
+    }
+
+    // 2. Direct defense-in-depth exercise of all three uploadBuffers() morph arms when
+    // cgltf_validate() passes (morphCount == 3) while slot.morphTargetCount (6, fitting within the
+    // 6-vertex two-primitive MorphTargetBuffer) exceeds the 3-element source buffer at the GLB tail,
+    // and conversely when accessor->count exceeds slot.morphTargetCount at a non-zero offset.
+    struct ArmCase {
+        char const* morphType;
+        bool withBufferView;
+        uint32_t stride;
+    };
+    constexpr ArmCase kArms[] = {
+        { "VEC3", false, 0u },  // no-buffer_view vec3
+        { "VEC4", false, 0u },  // no-buffer_view vec4
+        { "VEC3", true, 16u },  // requiresPacking vec3
+        { "VEC4", true, 20u },  // requiresPacking vec4
+        { "VEC3", true, 0u },   // non-packing tight vec3 (36 bytes, 0 GLB tail padding)
+        { "VEC4", true, 0u },   // non-packing tight vec4 (48 bytes, 0 GLB tail padding)
+    };
+    for (ArmCase const& arm : kArms) {
+        SCOPED_TRACE(testing::Message() << arm.morphType << " bv=" << arm.withBufferView
+                                        << " stride=" << arm.stride);
+        std::vector<uint8_t> const glb =
+                makeMorphCountMismatchGlb(arm.morphType, 3u, arm.withBufferView, arm.stride);
+        AssetLoader* assetLoader =
+                AssetLoader::create({ mEngine, mMaterialProvider, mNameManager });
+        ASSERT_NE(assetLoader, nullptr);
+        FilamentAsset* const asset = assetLoader->createAsset(glb.data(), uint32_t(glb.size()));
+        ASSERT_NE(asset, nullptr);
+
+        gltfio::FFilamentAsset* const fasset = downcast(asset);
+        auto& slots =
+                std::get<gltfio::FFilamentAsset::ResourceInfo>(fasset->mResourceInfo).mBufferSlots;
+        // Inflate the first morph slot's morphTargetCount from 3 to 6 (offset 0, so 0 + 6 <= 6 in
+        // MorphTargetBuffer, while the backing morph buffer only has 3 elements) and shrink the
+        // second morph slot's morphTargetCount from 3 to 2 at offset 3 (where accessor->count = 3).
+        size_t morphSlotsSeen = 0;
+        for (auto& slot : slots) {
+            if (slot.morphTargetBuffer) {
+                if (morphSlotsSeen == 0) {
+                    slot.morphTargetOffset = 0;
+                    slot.morphTargetCount = 6;
+                } else {
+                    slot.morphTargetOffset = 3;
+                    slot.morphTargetCount = 2;
+                }
+                ++morphSlotsSeen;
+            }
+        }
+        ASSERT_EQ(morphSlotsSeen, 2u);
+
+        ResourceLoader resourceLoader({ mEngine, ".", false });
+        EXPECT_TRUE(resourceLoader.loadResources(asset));
+
+        assetLoader->destroyAsset(asset);
+        AssetLoader::destroy(&assetLoader);
+    }
+}
+
+// Issue #10794: tight non-float morph target POSITION accessors (e.g. VEC3 SHORT and VEC4
+// BYTE/UBYTE/SHORT/USHORT) do not require conversion for VertexBuffer, so utility::requiresPacking()
+// returns false; uploadBuffers() must still unpack them to floats rather than copying 12/16 bytes
+// per vertex past the end of the bufferView.
+TEST_F(glTFIOTest, NonFloatTightMorphPositionsAreUnpacked) {
+    struct MorphTypeCase {
+        char const* type;
+        int componentType;
+    };
+    constexpr MorphTypeCase kCases[] = {
+        { "VEC3", 5122 }, // SHORT3 (6 bytes/vertex; 36 bytes at GLB tail vs 72-byte float3 copy)
+        { "VEC4", 5120 }, // BYTE4 (4 bytes/vertex; 24 bytes at GLB tail vs 96-byte float4 copy)
+        { "VEC4", 5121 }, // UBYTE4 (4 bytes/vertex; 24 bytes at GLB tail vs 96-byte float4 copy)
+        { "VEC4", 5122 }, // SHORT4 (8 bytes/vertex; 48 bytes at GLB tail vs 96-byte float4 copy)
+        { "VEC4", 5123 }, // USHORT4 (8 bytes/vertex; 48 bytes at GLB tail vs 96-byte float4 copy)
+        { "VEC3", 5126 }, // FLOAT3 control
+        { "VEC4", 5126 }, // FLOAT4 control
+    };
+
+    AssetLoader* assetLoader = AssetLoader::create({ mEngine, mMaterialProvider, mNameManager });
+    ASSERT_NE(assetLoader, nullptr);
+
+    for (MorphTypeCase const& c : kCases) {
+        SCOPED_TRACE(testing::Message() << c.type << " componentType=" << c.componentType);
+        std::vector<uint8_t> const glb =
+                makeTypedMorphPositionGlb(c.type, c.componentType, /* withBufferView = */ true);
+        FilamentAsset* const asset = assetLoader->createAsset(glb.data(), uint32_t(glb.size()));
+        ASSERT_NE(asset, nullptr);
+
+        ResourceLoader resourceLoader({ mEngine, ".", false });
+        EXPECT_TRUE(resourceLoader.loadResources(asset));
+
+        assetLoader->destroyAsset(asset);
+    }
+
+    AssetLoader::destroy(&assetLoader);
+}
+
+// Issue #10797: the bufferView-less morph arm in uploadBuffers() must check for VEC3/VEC4 instead
+// of treating VEC2/SCALAR as float4 and over-reading the malloc'd unpack buffer.
+TEST_F(glTFIOTest, BufferlessMorphPositionDimensionMismatchDoesNotOverRead) {
+    AssetLoader* assetLoader = AssetLoader::create({ mEngine, mMaterialProvider, mNameManager });
+    ASSERT_NE(assetLoader, nullptr);
+
+    // Valid VEC3 and VEC4 bufferView-less controls load cleanly.
+    for (char const* const validType : { "VEC3", "VEC4" }) {
+        std::vector<uint8_t> const glb = makeTypedMorphPositionGlb(validType, 5126,
+                /* withBufferView = */ false, /* withMinMax = */ false);
+        FilamentAsset* const asset = assetLoader->createAsset(glb.data(), uint32_t(glb.size()));
+        ASSERT_NE(asset, nullptr);
+        ResourceLoader resourceLoader({ mEngine, ".", false });
+        EXPECT_TRUE(resourceLoader.loadResources(asset));
+        assetLoader->destroyAsset(asset);
+    }
+
+    // Directly exercise uploadBuffers()'s bufferView-less morph arm with VEC2 and SCALAR accessors.
+    for (cgltf_type const badType : { cgltf_type_vec2, cgltf_type_scalar }) {
+        std::vector<uint8_t> const glb = makeTypedMorphPositionGlb("VEC3", 5126,
+                /* withBufferView = */ false, /* withMinMax = */ false);
+        FilamentAsset* const asset = assetLoader->createAsset(glb.data(), uint32_t(glb.size()));
+        ASSERT_NE(asset, nullptr);
+
+        gltfio::FFilamentAsset* const fasset = downcast(asset);
+        // Set material to unlit on the morph accessor's primitive or mutate the morph accessor type
+        // directly so uploadBuffers()'s no-buffer_view arm sees VEC2 / SCALAR.
+        fasset->mSourceAsset->hierarchy->accessors[1].type = badType;
+
+        ResourceLoader resourceLoader({ mEngine, ".", false });
+        EXPECT_TRUE(resourceLoader.loadResources(asset));
+        assetLoader->destroyAsset(asset);
+    }
+
+    AssetLoader::destroy(&assetLoader);
+}
+
+// Issue #10792: morph POSITION accessors with VEC2/SCALAR/MAT4 types (both with and without
+// min/max, and with or without bufferView) must be rejected at createAsset() time, and
+// uploadBuffers()'s non-packing morph arm must also guard against non-VEC3/VEC4 types as defense
+// in depth instead of treating them as float4 and reading past the end of the bufferView.
+TEST_F(glTFIOTest, InvalidMorphTargetDimensionsAreRejectedAndGuarded) {
+    AssetLoader* assetLoader = AssetLoader::create({ mEngine, mMaterialProvider, mNameManager });
+    ASSERT_NE(assetLoader, nullptr);
+
+    // 1. End-to-end rejection in AssetLoader::createPrimitive() across with/without min/max and
+    // with/without bufferView.
+    for (char const* const badType : { "SCALAR", "VEC2", "MAT4" }) {
+        for (bool const withBufferView : { true, false }) {
+            for (bool const withMinMax : { true, false }) {
+                if (std::string_view(badType) == "MAT4" && withMinMax) continue;
+                SCOPED_TRACE(testing::Message() << badType << " bv=" << withBufferView
+                                                << " minMax=" << withMinMax);
+                std::vector<uint8_t> const glb =
+                        makeTypedMorphPositionGlb(badType, 5126, withBufferView, withMinMax);
+                EXPECT_EQ(assetLoader->createAsset(glb.data(), uint32_t(glb.size())), nullptr);
+            }
+        }
+    }
+
+    // 2. Direct defense-in-depth exercise of uploadBuffers()'s non-packing morph arm on tight VEC2
+    // (48 bytes at the exact GLB tail vs 96-byte float4 copy) and SCALAR (24 bytes at the exact GLB
+    // tail vs 96-byte float4 copy).
+    for (cgltf_type const badType : { cgltf_type_vec2, cgltf_type_scalar }) {
+        size_t const dim = (badType == cgltf_type_vec2) ? 2u : 1u;
+        size_t const stride = dim * sizeof(float);
+        size_t const morphBytes = 6u * stride;
+
+        std::vector<uint8_t> const glb =
+                makeTypedMorphPositionGlb("VEC3", 5126, /* withBufferView = */ true);
+        FilamentAsset* const asset = assetLoader->createAsset(glb.data(), uint32_t(glb.size()));
+        ASSERT_NE(asset, nullptr);
+
+        gltfio::FFilamentAsset* const fasset = downcast(asset);
+        cgltf_data* const hierarchy = fasset->mSourceAsset->hierarchy;
+        // Shrink glbData so the morph bufferView ends right at the allocation boundary.
+        size_t const trimBytes = (6u * sizeof(math::float3)) - morphBytes;
+        FixedCapacityVector<uint8_t> trimmed(fasset->mSourceAsset->glbData.size() - trimBytes);
+        std::copy_n(fasset->mSourceAsset->glbData.data(), trimmed.size(), trimmed.data());
+        // Re-parse or update the buffer/view/accessor sizes and bin pointer in place: note that
+        // cgltf's bin pointer points into the old glbData, so update hierarchy->bin and buffer 0
+        // size, view 1 size, and accessor 1 type/stride to match the shrunk tail allocation.
+        size_t const jsonOffset = static_cast<size_t>(
+                reinterpret_cast<uint8_t const*>(hierarchy->json) -
+                fasset->mSourceAsset->glbData.data());
+        size_t const binOffset = static_cast<size_t>(
+                static_cast<uint8_t const*>(hierarchy->bin) - fasset->mSourceAsset->glbData.data());
+        fasset->mSourceAsset->glbData.swap(trimmed);
+        hierarchy->json =
+                reinterpret_cast<char const*>(fasset->mSourceAsset->glbData.data() + jsonOffset);
+        hierarchy->bin = fasset->mSourceAsset->glbData.data() + binOffset;
+        hierarchy->bin_size = 72u + morphBytes;
+        hierarchy->buffers[0].size = 72u + morphBytes;
+        hierarchy->buffer_views[1].size = morphBytes;
+        hierarchy->accessors[1].type = badType;
+        hierarchy->accessors[1].stride = stride;
+
+        ResourceLoader resourceLoader({ mEngine, ".", false });
+        EXPECT_TRUE(resourceLoader.loadResources(asset));
+        FilamentInstance* const inst = asset->getInstance();
+        ASSERT_NE(inst, nullptr);
+        inst->recomputeBoundingBoxes();
+        assetLoader->destroyAsset(asset);
+    }
+
+    AssetLoader::destroy(&assetLoader);
+}
+
+// Issue #10798 (and #10674): TangentsJobExtended::data::unpack must route dimension-mismatched
+// float accessors (morph POSITION/NORMAL/TANGENT and base attributes) through unpackFloats()
+// rather than reading sizeof(float3)/sizeof(float4) per vertex past the end of the bufferView.
+TEST(glTFIOTangentsJobExtended, DimensionMismatchedMorphAndBaseAttributesDoNotOverRead) {
+    auto runOnGlb = [](std::vector<uint8_t> const& glb, int morphTargetIndex,
+                            math::float3 expectedFirstPos) {
+        cgltf_options options{};
+        cgltf_data* data = nullptr;
+        ASSERT_EQ(cgltf_parse(&options, glb.data(), glb.size(), &data), cgltf_result_success);
+        ASSERT_EQ(cgltf_load_buffers(&options, data, "."), cgltf_result_success);
+        ASSERT_EQ(cgltf_validate(data), cgltf_result_success);
+        cgltf_primitive const* prim = &data->meshes[0].primitives[0];
+
+        TangentsJobExtended::Params params{
+            .in = { .prim = prim, .morphTargetIndex = morphTargetIndex }
+        };
+        TangentsJobExtended::run(&params);
+        auto& out = params.out;
+        ASSERT_GT(out.vertexCount, 0u);
+        ASSERT_NE(out.positions, nullptr);
+        if (morphTargetIndex != TangentsJobExtended::kMorphTargetUnused) {
+            for (size_t v = 0; v < out.vertexCount; ++v) {
+                EXPECT_FLOAT_EQ(out.positions[v].x, expectedFirstPos.x);
+                EXPECT_FLOAT_EQ(out.positions[v].y, expectedFirstPos.y);
+                EXPECT_FLOAT_EQ(out.positions[v].z, expectedFirstPos.z);
+            }
+        }
+        free(out.positions);
+        free(out.tbn);
+        free(out.triangles);
+        cgltf_free(data);
+    };
+
+    // Morph POSITION with SCALAR, VEC2, VEC3 (control), and VEC4 at the exact GLB tail.
+    runOnGlb(makeExtendedDimensionMismatchGlb("POSITION", "SCALAR"), 0, { 1.0f, 0.0f, 0.0f });
+    runOnGlb(makeExtendedDimensionMismatchGlb("POSITION", "VEC2"), 0, { 1.0f, 2.0f, 0.0f });
+    runOnGlb(makeExtendedDimensionMismatchGlb("POSITION", "VEC3"), 0, { 1.0f, 2.0f, 3.0f });
+    runOnGlb(makeExtendedDimensionMismatchGlb("POSITION", "VEC4"), 0, { 1.0f, 2.0f, 3.0f });
+
+    // Morph NORMAL and TANGENT with SCALAR, VEC2, and VEC3 (control) at the exact GLB tail.
+    for (char const* const attr : { "NORMAL", "TANGENT" }) {
+        for (char const* const type : { "SCALAR", "VEC2", "VEC3" }) {
+            SCOPED_TRACE(testing::Message() << attr << " " << type);
+            runOnGlb(makeExtendedDimensionMismatchGlb(attr, type), 0, { 0.0f, 0.0f, 0.0f });
+        }
+    }
+
+    // Base POSITION with SCALAR and VEC2 at the exact GLB tail (#10674).
+    for (char const* const baseType : { "SCALAR", "VEC2" }) {
+        SCOPED_TRACE(baseType);
+        runOnGlb(makeExtendedDimensionMismatchGlb(nullptr, "VEC3", baseType),
+                TangentsJobExtended::kMorphTargetUnused, {});
+    }
+}
+
+TEST_F(glTFIOTest, ExtendedLoaderDimensionMismatchedMorphsAndBaseAttributes) {
+    if (!AssetConfigurationExtended::isSupported()) {
+        GTEST_SKIP() << "The extended asset loader is not supported on this platform.";
+    }
+
+    for (char const* const attr : { "POSITION", "NORMAL", "TANGENT" }) {
+        for (char const* const type : { "SCALAR", "VEC2", "VEC3", "VEC4" }) {
+            SCOPED_TRACE(testing::Message() << attr << " " << type);
+            loadExtendedMorphAsset(mEngine, mMaterialProvider, mNameManager,
+                    makeExtendedDimensionMismatchGlb(attr, type), 1u);
+        }
+    }
+
+    for (char const* const baseType : { "SCALAR", "VEC2" }) {
+        SCOPED_TRACE(baseType);
+        std::vector<uint8_t> const glb =
+                makeExtendedDimensionMismatchGlb(nullptr, "VEC3", baseType);
+        AssetConfigurationExtended ext{ .gltfPath = "." };
+        AssetLoader* assetLoader = AssetLoader::create({
+                .engine = mEngine,
+                .materials = mMaterialProvider,
+                .names = mNameManager,
+                .ext = &ext,
+        });
+        ASSERT_NE(assetLoader, nullptr);
+        FilamentAsset* const asset = assetLoader->createAsset(glb.data(), uint32_t(glb.size()));
+        ASSERT_NE(asset, nullptr);
+        ResourceLoader resourceLoader({ mEngine, ".", false });
+        EXPECT_TRUE(resourceLoader.loadResources(asset));
+        assetLoader->destroyAsset(asset);
+        AssetLoader::destroy(&assetLoader);
+    }
 }
 
 #undef EXPECT_FLOAT3_EQ
