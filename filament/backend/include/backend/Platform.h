@@ -112,8 +112,45 @@ public:
     class ExternalImage {
         friend class ExternalImageHandle;
         std::atomic_uint32_t mRefCount{0};
+
+        /** Optional release callback, invoked when this ExternalImage is
+         * destroyed */
+        CallbackHandler* UTILS_NULLABLE mHandler = nullptr;
+        void (*UTILS_NULLABLE mCallback)(void* UTILS_NULLABLE user) = nullptr;
+        void* UTILS_NULLABLE mUserData = nullptr;
+
     protected:
         virtual ~ExternalImage() noexcept;
+
+    public:
+        /**
+         * Sets an optional release callback for this ExternalImage.
+         *
+         * The callback is called when the last reference to this ExternalImage
+         * is dropped, i.e. once the backend no longer needs it, that is after
+         * the GPU is done with every texture created from it.
+         *
+         * This must be called before the ExternalImage is handed off to the
+         * backend. Calling this method again replaces any previously registered
+         * callback without invoking it.
+         *
+         * When not using a handler, the callback is invoked synchronously on
+         * the thread releasing the last reference (likely the backend thread),
+         * so it must be thread-safe and should not block for a long time.
+         * A typical use case would be to return an Image to an ImageReader on
+		 * Android.
+         *
+         * @param handler   An optional handler used to dispatch the callback.
+         * @param callback  The function called upon this object's destruction.
+         * @param userData  An optional opaque pointer passed to the callback.
+         */
+        void setReleaseCallback(CallbackHandler* UTILS_NULLABLE handler,
+                void (*UTILS_NULLABLE callback)(void* UTILS_NULLABLE user),
+                void* UTILS_NULLABLE userData) noexcept {
+            mHandler = handler;
+            mCallback = callback;
+            mUserData = userData;
+        }
     };
 
     class ExternalImageHandle {
