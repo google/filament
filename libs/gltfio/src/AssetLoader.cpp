@@ -57,10 +57,11 @@
 #include <cgltf.h>
 #include <tsl/robin_map.h>
 
-#include <codecvt>
+#include <cstring>
 #include <limits>
-#include <locale>
 #include <memory>
+#include <string>
+#include <utility>
 #include <vector>
 
 using namespace filament;
@@ -93,7 +94,33 @@ constexpr cgltf_material kDefaultMat = {
     },
 };
 
-std::string getNodeName(cgltf_node const* node, char const* defaultNodeName) {
+struct NodeName {
+    const char* raw = nullptr;
+    std::string escaped;
+    const char* c_str() const noexcept { return raw ? raw : escaped.c_str(); }
+};
+
+int parseHexDigit(char c) noexcept {
+    if (c >= '0' && c <= '9') return c - '0';
+    if (c >= 'a' && c <= 'f') return 10 + (c - 'a');
+    if (c >= 'A' && c <= 'F') return 10 + (c - 'A');
+    return -1;
+}
+
+void appendUtf8Codepoint(std::string& out, uint32_t cp) {
+    if (cp <= 0x7Fu) {
+        out.push_back(static_cast<char>(cp));
+    } else if (cp <= 0x7FFu) {
+        out.push_back(static_cast<char>(0xC0u | (cp >> 6)));
+        out.push_back(static_cast<char>(0x80u | (cp & 0x3Fu)));
+    } else {
+        out.push_back(static_cast<char>(0xE0u | (cp >> 12)));
+        out.push_back(static_cast<char>(0x80u | ((cp >> 6) & 0x3Fu)));
+        out.push_back(static_cast<char>(0x80u | (cp & 0x3Fu)));
+    }
+}
+
+NodeName getNodeName(cgltf_node const* node, char const* defaultNodeName) {
     auto const getNameImpl = [node, defaultNodeName]() -> char const* {
         if (node->name) return node->name;
         if (node->mesh && node->mesh->name) return node->mesh->name;
@@ -103,48 +130,55 @@ std::string getNodeName(cgltf_node const* node, char const* defaultNodeName) {
         return "<unknown>";
     };
 
-    std::string strOrig(getNameImpl());
+    const char* const rawName = getNameImpl();
+
+    // Fast path: if there are no \uXXXX escape sequences, avoid any string allocations or copies.
+    const char* match = std::strstr(rawName, "\\u");
+    if (UTILS_LIKELY(match == nullptr)) {
+        return NodeName{ rawName, {} };
+    }
 
     // We handle the potential case of escaped characters in the JSON which should be properly
     // interpreted as unicode. See spec:
     // https://registry.khronos.org/glTF/specs/2.0/glTF-2.0.html#json-encoding
     // Also see spec for escaped strings in JSON (Section 2.5) https://www.ietf.org/rfc/rfc4627.txt
-
+    const size_t totalLen = std::strlen(rawName);
     std::string strEscaped;
-    size_t cur = 0, idx = 0;
-    std::wstring_convert<std::codecvt_utf8<char32_t>, char32_t> conv;
+    strEscaped.reserve(totalLen);
 
-    auto const addUnencodedSubstr = [&](size_t const cursor, size_t const nextPoint) {
-        assert_invariant(nextPoint >= cursor);
-        if (cursor == nextPoint) {
-            return;
-        }
-        strEscaped += strOrig.substr(cursor, nextPoint - cursor);
-    };
-
-    while ((idx = strOrig.find("\\u", cur)) != std::string::npos) {
-        if (idx + 6 > strOrig.length()) {
-            slog.w << "gltfio: Unable to interpret node name=" << strOrig
+    size_t cur = 0;
+    while (match != nullptr) {
+        const size_t idx = static_cast<size_t>(match - rawName);
+        if (idx + 6 > totalLen) {
+            slog.w << "gltfio: Unable to interpret node name=" << rawName
                           << " as proper unicode encoding." << io::endl;
-            return strOrig;
+            return NodeName{ rawName, {} };
         }
 
-        // Turns string of the form \u0062 to 0x0062
-        std::string const hexStr = strOrig.substr(idx + 2, 4);
-        if (hexStr.find_first_not_of("0123456789abcdefABCDEF") != std::string::npos) {
-            slog.w << "gltfio: Unable to interpret node name=" << strOrig
-                          << " as proper unicode encoding." << io::endl;
-            return strOrig;
+        uint32_t cp = 0;
+        for (size_t i = 0; i < 4; ++i) {
+            const int d = parseHexDigit(rawName[idx + 2 + i]);
+            if (d < 0) {
+                slog.w << "gltfio: Unable to interpret node name=" << rawName
+                              << " as proper unicode encoding." << io::endl;
+                return NodeName{ rawName, {} };
+            }
+            cp = (cp << 4) | static_cast<uint32_t>(d);
         }
 
-        addUnencodedSubstr(cur, idx);
-
-        strEscaped += conv.to_bytes((char32_t) std::stoul(hexStr, nullptr, 16));
+        if (idx > cur) {
+            strEscaped.append(rawName + cur, idx - cur);
+        }
+        appendUtf8Codepoint(strEscaped, cp);
         cur = idx + 6;
+        match = std::strstr(rawName + cur, "\\u");
     }
-    addUnencodedSubstr(cur, strOrig.length());
 
-    return strEscaped;
+    if (totalLen > cur) {
+        strEscaped.append(rawName + cur, totalLen - cur);
+    }
+
+    return NodeName{ nullptr, std::move(strEscaped) };
 }
 
 bool primitiveHasVertexColor(const cgltf_primitive& inPrim) {
@@ -585,11 +619,10 @@ void FAssetLoader::traversePrimitives(const cgltf_node* rootNode, FFilamentAsset
         const cgltf_node* node = stack.back();
         stack.pop_back();
 
-        auto const nameStr = getNodeName(node, mDefaultNodeName);
-        const char* name = nameStr.c_str();
-        name = name ? name : "node";
-
         if (node->mesh) {
+            auto const nameStr = getNodeName(node, mDefaultNodeName);
+            const char* name = nameStr.c_str();
+            name = name ? name : "node";
             createPrimitives(node, name, fAsset);
             fAsset->mRenderableCount++;
         }

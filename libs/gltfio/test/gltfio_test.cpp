@@ -3452,6 +3452,32 @@ TEST_F(glTFIOTest, AnimatorInterpolatesAndRejectsDuplicateTimestamps) {
     AssetLoader::destroy(&assetLoader);
 }
 
+TEST_F(glTFIOTest, NodeNameResolutionAndUnicodeUnescaping) {
+    AssetLoader* assetLoader = AssetLoader::create({ mEngine, mMaterialProvider, mNameManager });
+    ASSERT_NE(assetLoader, nullptr);
+
+    char const* const gltfJson =
+            R"({"asset":{"version":"2.0"},"scene":0,"scenes":[{"nodes":[0,1,2,3]}],)"
+            R"("nodes":[)"
+            R"({"name":"plain_node"},)"
+            R"({"name":"escaped_\u0062_\u00e9_\u2605"},)"
+            R"({"name":"invalid_\\u123"},)"
+            R"({"name":"invalid_\\u123g"})"
+            R"(]})";
+
+    FilamentAsset* const asset = assetLoader->createAsset(
+            reinterpret_cast<uint8_t const*>(gltfJson), uint32_t(std::strlen(gltfJson)));
+    ASSERT_NE(asset, nullptr);
+
+    EXPECT_TRUE(asset->getFirstEntityByName("plain_node"));
+    EXPECT_TRUE(asset->getFirstEntityByName("escaped_b_\xC3\xA9_\xE2\x98\x85"));
+    EXPECT_TRUE(asset->getFirstEntityByName(R"(invalid_\\u123)"));
+    EXPECT_TRUE(asset->getFirstEntityByName(R"(invalid_\\u123g)"));
+
+    assetLoader->destroyAsset(asset);
+    AssetLoader::destroy(&assetLoader);
+}
+
 #undef EXPECT_FLOAT3_EQ
 
 int main(int argc, char** argv) {
