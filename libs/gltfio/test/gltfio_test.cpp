@@ -19,6 +19,7 @@
 #include "FFilamentAsset.h"
 #include "FFilamentInstance.h"
 #include "GlbBuilders.h"
+#include "TangentsJob.h"
 #include "Utility.h"
 
 #include "extended/TangentsJobExtended.h"
@@ -3205,6 +3206,166 @@ TEST_F(glTFIOTest, ExtendedLoaderDimensionMismatchedMorphsAndBaseAttributes) {
         EXPECT_TRUE(resourceLoader.loadResources(asset));
         assetLoader->destroyAsset(asset);
         AssetLoader::destroy(&assetLoader);
+    }
+}
+
+TEST(glTFIOTangentsJob, GeneratesExpectedQuatsAcrossAllModes) {
+    using math::float2;
+    using math::float3;
+    using math::float4;
+    using math::short4;
+
+    float3 positions[3] = {
+        { 0.0f, 0.0f, 0.0f },
+        { 1.0f, 0.0f, 0.0f },
+        { 0.0f, 1.0f, 0.0f },
+    };
+    float3 normals[3] = {
+        { 0.0f, 0.0f, 1.0f },
+        { 0.0f, 0.0f, 1.0f },
+        { 0.0f, 0.0f, 1.0f },
+    };
+    float4 tangents[3] = {
+        { 1.0f, 0.0f, 0.0f, 1.0f },
+        { 1.0f, 0.0f, 0.0f, 1.0f },
+        { 1.0f, 0.0f, 0.0f, 1.0f },
+    };
+    float2 uvs[3] = {
+        { 0.0f, 0.0f },
+        { 1.0f, 0.0f },
+        { 0.0f, 1.0f },
+    };
+    uint8_t indices8[3] = { 0, 1, 2 };
+    uint16_t indices16[3] = { 0, 1, 2 };
+    uint32_t indices32[3] = { 0, 1, 2 };
+
+    auto makeAccessor = [](void* data, size_t byteSize, cgltf_type type,
+            cgltf_component_type compType, size_t count, size_t stride,
+            cgltf_buffer* buf, cgltf_buffer_view* view) -> cgltf_accessor {
+        *buf = { .size = byteSize, .data = data };
+        *view = { .buffer = buf, .size = byteSize, .stride = stride };
+        return cgltf_accessor{
+            .component_type = compType,
+            .type = type,
+            .count = count,
+            .stride = stride,
+            .buffer_view = view,
+        };
+    };
+
+    cgltf_buffer posBuf{}, normBuf{}, tanBuf{}, uvBuf{}, idxBuf{};
+    cgltf_buffer_view posView{}, normView{}, tanView{}, uvView{}, idxView{};
+    cgltf_accessor posAcc = makeAccessor(positions, sizeof(positions), cgltf_type_vec3,
+            cgltf_component_type_r_32f, 3, sizeof(float3), &posBuf, &posView);
+    cgltf_accessor normAcc = makeAccessor(normals, sizeof(normals), cgltf_type_vec3,
+            cgltf_component_type_r_32f, 3, sizeof(float3), &normBuf, &normView);
+    cgltf_accessor tanAcc = makeAccessor(tangents, sizeof(tangents), cgltf_type_vec4,
+            cgltf_component_type_r_32f, 3, sizeof(float4), &tanBuf, &tanView);
+    cgltf_accessor uvAcc = makeAccessor(uvs, sizeof(uvs), cgltf_type_vec2,
+            cgltf_component_type_r_32f, 3, sizeof(float2), &uvBuf, &uvView);
+
+    // Mode 1: Normals + Tangents (positions/uvs/indices present on primitive, should be ignored).
+    {
+        cgltf_attribute attrs[3] = {
+            { .type = cgltf_attribute_type_position, .index = 0, .data = &posAcc },
+            { .type = cgltf_attribute_type_normal, .index = 0, .data = &normAcc },
+            { .type = cgltf_attribute_type_tangent, .index = 0, .data = &tanAcc },
+        };
+        cgltf_primitive prim{
+            .type = cgltf_primitive_type_triangles,
+            .attributes = attrs,
+            .attributes_count = 3,
+        };
+        TangentsJob::Params params{ .in = { .prim = &prim } };
+        TangentsJob::run(&params);
+        ASSERT_EQ(params.out.vertexCount, 3u);
+        ASSERT_NE(params.out.results, nullptr);
+        EXPECT_EQ(params.out.results[0], params.out.results[1]);
+        EXPECT_EQ(params.out.results[1], params.out.results[2]);
+        EXPECT_NE(params.out.results[0], (short4{ 0, 0, 0, 0 }));
+        free(params.out.results);
+    }
+
+    // Mode 2: Normals only (Frisvad's method).
+    {
+        cgltf_attribute attrs[2] = {
+            { .type = cgltf_attribute_type_position, .index = 0, .data = &posAcc },
+            { .type = cgltf_attribute_type_normal, .index = 0, .data = &normAcc },
+        };
+        cgltf_primitive prim{
+            .type = cgltf_primitive_type_triangles,
+            .attributes = attrs,
+            .attributes_count = 2,
+        };
+        TangentsJob::Params params{ .in = { .prim = &prim } };
+        TangentsJob::run(&params);
+        ASSERT_EQ(params.out.vertexCount, 3u);
+        ASSERT_NE(params.out.results, nullptr);
+        EXPECT_NE(params.out.results[0], (short4{ 0, 0, 0, 0 }));
+        free(params.out.results);
+    }
+
+    // Mode 3: Normals + UVs + Positions + Indices (Lengyel's method) across 8/16/32-bit indices.
+    short4 expectedUvQuats[3] = {};
+    for (int idxMode = 0; idxMode < 3; ++idxMode) {
+        cgltf_accessor idxAcc{};
+        if (idxMode == 0) {
+            idxAcc = makeAccessor(indices8, sizeof(indices8), cgltf_type_scalar,
+                    cgltf_component_type_r_8u, 3, sizeof(uint8_t), &idxBuf, &idxView);
+        } else if (idxMode == 1) {
+            idxAcc = makeAccessor(indices16, sizeof(indices16), cgltf_type_scalar,
+                    cgltf_component_type_r_16u, 3, sizeof(uint16_t), &idxBuf, &idxView);
+        } else {
+            idxAcc = makeAccessor(indices32, sizeof(indices32), cgltf_type_scalar,
+                    cgltf_component_type_r_32u, 3, sizeof(uint32_t), &idxBuf, &idxView);
+        }
+        cgltf_attribute attrs[3] = {
+            { .type = cgltf_attribute_type_position, .index = 0, .data = &posAcc },
+            { .type = cgltf_attribute_type_normal, .index = 0, .data = &normAcc },
+            { .type = cgltf_attribute_type_texcoord, .index = 0, .data = &uvAcc },
+        };
+        cgltf_primitive prim{
+            .type = cgltf_primitive_type_triangles,
+            .indices = &idxAcc,
+            .attributes = attrs,
+            .attributes_count = 3,
+        };
+        TangentsJob::Params params{ .in = { .prim = &prim } };
+        TangentsJob::run(&params);
+        ASSERT_EQ(params.out.vertexCount, 3u);
+        ASSERT_NE(params.out.results, nullptr);
+        if (idxMode == 0) {
+            for (size_t i = 0; i < 3; ++i) {
+                expectedUvQuats[i] = params.out.results[i];
+                EXPECT_NE(expectedUvQuats[i], (short4{ 0, 0, 0, 0 }));
+            }
+        } else {
+            for (size_t i = 0; i < 3; ++i) {
+                EXPECT_EQ(params.out.results[i], expectedUvQuats[i]);
+            }
+        }
+        free(params.out.results);
+    }
+
+    // Mode 4: Flat normals (Positions + Indices, no Normals).
+    {
+        cgltf_accessor idxAcc = makeAccessor(indices16, sizeof(indices16), cgltf_type_scalar,
+                cgltf_component_type_r_16u, 3, sizeof(uint16_t), &idxBuf, &idxView);
+        cgltf_attribute attrs[1] = {
+            { .type = cgltf_attribute_type_position, .index = 0, .data = &posAcc },
+        };
+        cgltf_primitive prim{
+            .type = cgltf_primitive_type_triangles,
+            .indices = &idxAcc,
+            .attributes = attrs,
+            .attributes_count = 1,
+        };
+        TangentsJob::Params params{ .in = { .prim = &prim } };
+        TangentsJob::run(&params);
+        ASSERT_EQ(params.out.vertexCount, 3u);
+        ASSERT_NE(params.out.results, nullptr);
+        EXPECT_NE(params.out.results[0], (short4{ 0, 0, 0, 0 }));
+        free(params.out.results);
     }
 }
 
