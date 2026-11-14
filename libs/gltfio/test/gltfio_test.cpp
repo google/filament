@@ -3400,6 +3400,58 @@ TEST_F(glTFIOTest, UbershaderBitmaskLookupMatchesFeatureCombinations) {
     }
 }
 
+TEST_F(glTFIOTest, AnimatorInterpolatesAndRejectsDuplicateTimestamps) {
+    AssetLoader* assetLoader = AssetLoader::create({ mEngine, mMaterialProvider, mNameManager });
+    ASSERT_NE(assetLoader, nullptr);
+
+    // Valid timeline [0.0f, 1.0f]: verify boundary and interior timestamps.
+    {
+        std::vector<uint8_t> const glb = makeTranslationAnimationGlb();
+        FilamentAsset* const asset = assetLoader->createAsset(glb.data(), uint32_t(glb.size()));
+        ASSERT_NE(asset, nullptr);
+
+        ResourceLoader resourceLoader({ mEngine, ".", false });
+        ASSERT_TRUE(resourceLoader.loadResources(asset));
+
+        Animator* const animator = asset->getInstance()->getAnimator();
+        ASSERT_NE(animator, nullptr);
+        ASSERT_EQ(animator->getAnimationCount(), 1u);
+
+        animator->applyAnimation(0, 0.0f);
+        EXPECT_FLOAT3_EQ(getAnimatedNodeTranslation(mEngine, asset), (math::float3{ 0.0f }));
+
+        animator->applyAnimation(0, 0.25f);
+        EXPECT_FLOAT3_EQ(getAnimatedNodeTranslation(mEngine, asset), 0.25f * kTranslationAnimationEnd);
+
+        animator->applyAnimation(0, 1.0f);
+        EXPECT_FLOAT3_EQ(getAnimatedNodeTranslation(mEngine, asset), kTranslationAnimationEnd);
+
+        assetLoader->destroyAsset(asset);
+    }
+
+    // Duplicate timestamps [0.0f, 0.0f]: must be rejected and leave channel disabled.
+    {
+        std::vector<uint8_t> const glb = makeTranslationAnimationGlb({ .lastTimestamp = 0.0f });
+        FilamentAsset* const asset = assetLoader->createAsset(glb.data(), uint32_t(glb.size()));
+        ASSERT_NE(asset, nullptr);
+
+        ResourceLoader resourceLoader({ mEngine, ".", false });
+        ASSERT_TRUE(resourceLoader.loadResources(asset));
+
+        Animator* const animator = asset->getInstance()->getAnimator();
+        ASSERT_NE(animator, nullptr);
+        EXPECT_FLOAT_EQ(animator->getAnimationDuration(0), 0.0f);
+
+        math::float3 const before = getAnimatedNodeTranslation(mEngine, asset);
+        animator->applyAnimation(0, 0.5f);
+        EXPECT_FLOAT3_EQ(getAnimatedNodeTranslation(mEngine, asset), before);
+
+        assetLoader->destroyAsset(asset);
+    }
+
+    AssetLoader::destroy(&assetLoader);
+}
+
 #undef EXPECT_FLOAT3_EQ
 
 int main(int argc, char** argv) {
