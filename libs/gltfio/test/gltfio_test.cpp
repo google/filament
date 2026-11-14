@@ -3478,6 +3478,55 @@ TEST_F(glTFIOTest, NodeNameResolutionAndUnicodeUnescaping) {
     AssetLoader::destroy(&assetLoader);
 }
 
+TEST_F(glTFIOTest, HierarchicalBoundingBoxAndTransformPropagation) {
+    AssetLoader* assetLoader = AssetLoader::create({ mEngine, mMaterialProvider, mNameManager });
+    ASSERT_NE(assetLoader, nullptr);
+
+    // Build a 3-level hierarchy:
+    // Node 0 ("root_xform"): translation (10, 0, 0), children [1, 3]
+    // Node 1 ("mid_xform"): scale (2, 2, 2), translation (0, 5, 0), children [2]
+    // Node 2 ("leaf_mesh"): translation (1, 0, 0), mesh 0 (AABB [0, 0, 0] -> [1, 1, 1]), extras
+    // Node 3 ("empty_leaf"): translation (100, 100, 100), no mesh, no children
+    // Expected world transform on Node 2:
+    // min = (10, 5, 0) + 2 * ((1, 0, 0) + (0, 0, 0)) = (12, 5, 0)
+    // max = (10, 5, 0) + 2 * ((1, 0, 0) + (1, 1, 1)) = (14, 7, 2)
+    std::string const json =
+            R"({"asset":{"version":"2.0"},"scene":0,"scenes":[{"nodes":[0]}],)"
+            R"("nodes":[)"
+            R"({"name":"node_root","translation":[10,0,0],"children":[1,3]},)"
+            R"({"name":"node_mid","translation":[0,5,0],"scale":[2,2,2],"children":[2]},)"
+            R"({"name":"node_mesh","translation":[1,0,0],"mesh":0,"extras":{"tag":"leaf"}},)"
+            R"({"name":"node_empty","translation":[100,100,100]})"
+            R"(],"meshes":[{"primitives":[{"attributes":{"POSITION":0}}]}],)"
+            R"("accessors":[{"bufferView":0,"componentType":5126,"count":3,"type":"VEC3",)"
+            R"("min":[0,0,0],"max":[1,1,1]}],)"
+            R"("bufferViews":[{"buffer":0,"byteOffset":0,"byteLength":36}],)"
+            R"("buffers":[{"byteLength":36}]})";
+
+    FilamentAsset* const asset = assetLoader->createAsset(
+            reinterpret_cast<uint8_t const*>(json.data()), uint32_t(json.size()));
+    ASSERT_NE(asset, nullptr);
+
+    Aabb const bbox = asset->getBoundingBox();
+    EXPECT_FLOAT3_EQ(bbox.min, (math::float3{ 12.0f, 5.0f, 0.0f }));
+    EXPECT_FLOAT3_EQ(bbox.max, (math::float3{ 14.0f, 7.0f, 2.0f }));
+
+    EXPECT_EQ(asset->getEntitiesByPrefix("node_", nullptr, 0), 4u);
+    utils::Entity const meshEntity = asset->getFirstEntityByName("node_mesh");
+    ASSERT_TRUE(meshEntity);
+
+    auto& tm = mEngine->getTransformManager();
+    tm.openLocalTransformTransaction();
+    tm.commitLocalTransformTransaction();
+    math::mat4f const worldMat = tm.getWorldTransform(tm.getInstance(meshEntity));
+    EXPECT_FLOAT3_EQ(worldMat[3].xyz, (math::float3{ 12.0f, 5.0f, 0.0f }));
+
+    EXPECT_STREQ(asset->getExtras(meshEntity), R"({"tag":"leaf"})");
+
+    assetLoader->destroyAsset(asset);
+    AssetLoader::destroy(&assetLoader);
+}
+
 #undef EXPECT_FLOAT3_EQ
 
 int main(int argc, char** argv) {

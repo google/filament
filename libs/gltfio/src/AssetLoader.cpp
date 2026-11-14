@@ -365,7 +365,8 @@ private:
     // Methods used during the first traveral (creation of VertexBuffer, IndexBuffer, etc)
     FFilamentAsset* createRootAsset(const cgltf_data* srcAsset);
     void traversePrimitives(const cgltf_node* rootNode, FFilamentAsset* fAsset);
-    void createPrimitives(const cgltf_node* node, const char* name, FFilamentAsset* fAsset);
+    void createPrimitives(const cgltf_node* node, const char* name, const mat4f& worldTransform,
+            FFilamentAsset* fAsset);
     bool createPrimitive(const cgltf_primitive& inPrim, const char* name, Primitive* outPrim,
             FFilamentAsset* fAsset);
 
@@ -503,6 +504,9 @@ FilamentInstance* FAssetLoader::createInstance(FFilamentAsset* fAsset) {
         instance->mVariants.push_back({ .name = CString(srcAsset->variants[i].name) });
     }
 
+    fAsset->mEntities.reserve(fAsset->mEntities.size() + srcAsset->nodes_count);
+    instance->mEntities.reserve(srcAsset->nodes_count);
+
     // For each scene root, recursively create all entities.
     for (const auto& pair : fAsset->mRootNodes) {
         traverseEntities(pair.first, pair.second, instanceRoot, fAsset, instance);
@@ -613,22 +617,39 @@ void FAssetLoader::traversePrimitives(const cgltf_node* rootNode, FFilamentAsset
     // Iterative pre-order traversal with an explicit stack. The node hierarchy can be
     // arbitrarily deep, so recursion here risks stack exhaustion on hostile assets.
     // Children are pushed in reverse order so they are visited in their original order.
-    std::vector<const cgltf_node*> stack;
-    stack.push_back(rootNode);
+    struct WorkItem {
+        const cgltf_node* node;
+        mat4f parentWorld;
+    };
+    mat4f rootParentWorld;
+    if (UTILS_UNLIKELY(rootNode->parent != nullptr)) {
+        cgltf_node_transform_world(rootNode->parent, &rootParentWorld[0][0]);
+    }
+    std::vector<WorkItem> stack;
+    stack.push_back({rootNode, rootParentWorld});
     while (!stack.empty()) {
-        const cgltf_node* node = stack.back();
+        WorkItem const work = stack.back();
         stack.pop_back();
+        const cgltf_node* node = work.node;
+
+        if (node->mesh == nullptr && node->children_count == 0) {
+            continue;
+        }
+
+        mat4f localTransform;
+        cgltf_node_transform_local(node, &localTransform[0][0]);
+        const mat4f worldTransform = work.parentWorld * localTransform;
 
         if (node->mesh) {
             auto const nameStr = getNodeName(node, mDefaultNodeName);
             const char* name = nameStr.c_str();
             name = name ? name : "node";
-            createPrimitives(node, name, fAsset);
+            createPrimitives(node, name, worldTransform, fAsset);
             fAsset->mRenderableCount++;
         }
 
         for (cgltf_size i = node->children_count; i > 0; --i) {
-            stack.push_back(node->children[i - 1]);
+            stack.push_back({node->children[i - 1], worldTransform});
         }
     }
 }
@@ -637,6 +658,11 @@ void FAssetLoader::createInstances(size_t const numInstances, FFilamentAsset* fA
     // Create a separate entity hierarchy for each instance. Note that MeshCache (vertex
     // buffers and index buffers) and MaterialInstanceCache (materials and textures) help avoid
     // needless duplication of resources.
+    const cgltf_data* srcAsset = fAsset->mSourceAsset ? fAsset->mSourceAsset->hierarchy : nullptr;
+    if (srcAsset && numInstances > 0) {
+        fAsset->mEntities.reserve(fAsset->mEntities.size() + numInstances * srcAsset->nodes_count);
+        fAsset->mInstances.reserve(fAsset->mInstances.size() + numInstances);
+    }
     for (size_t index = 0; index < numInstances; ++index) {
         if (createInstance(fAsset) == nullptr) {
             mError = true;
@@ -687,8 +713,7 @@ void FAssetLoader::traverseEntities(const cgltf_node* node, SceneMask const scen
             float3 const* translation =
                     reinterpret_cast<float3 const*>(&currentNode->translation[0]);
             mTrsTransformManager.create(entity, *translation, *rotation, *scale);
-            localTransform = mTrsTransformManager.getTransform(
-                    mTrsTransformManager.getInstance(entity));
+            localTransform = composeMatrix(*translation, *rotation, *scale);
         }
 
         auto const parentTransform = mTransformManager.getInstance(currentParent);
@@ -698,7 +723,7 @@ void FAssetLoader::traverseEntities(const cgltf_node* node, SceneMask const scen
         const cgltf_size extras_size =
                 currentNode->extras.end_offset - currentNode->extras.start_offset;
         if (extras_size > 0) {
-            mNodeManager.setExtras(mNodeManager.getInstance(entity),
+            nm.setExtras(nodeInstance,
                     {srcAsset->json + currentNode->extras.start_offset, extras_size});
         }
 
@@ -744,7 +769,7 @@ void FAssetLoader::traverseEntities(const cgltf_node* node, SceneMask const scen
 }
 
 void FAssetLoader::createPrimitives(const cgltf_node* node, const char* name,
-        FFilamentAsset* fAsset) {
+        const mat4f& worldTransform, FFilamentAsset* fAsset) {
     cgltf_data* gltf = fAsset->mSourceAsset->hierarchy;
     const cgltf_mesh* mesh = node->mesh;
     assert_invariant(gltf != nullptr);
@@ -816,14 +841,11 @@ void FAssetLoader::createPrimitives(const cgltf_node* node, const char* name,
     // The spec requires that min < max for the bounding box but since we can skip bounding boxes
     // for empty primitives, the bounding box may not be valid and needs new validation here.
     if (all(lessThanEqual(aabb.min, aabb.max))) {
-        mat4f worldTransform;
-        cgltf_node_transform_world(node, &worldTransform[0][0]);
-
         const Aabb transformed = aabb.transform(worldTransform);
         fAsset->mBoundingBox.min = min(fAsset->mBoundingBox.min, transformed.min);
         fAsset->mBoundingBox.max = max(fAsset->mBoundingBox.max, transformed.max);
     }
- }
+}
 
 void FAssetLoader::createRenderable(const cgltf_node* node, Entity const entity, const char* name,
         FFilamentAsset* fAsset) {
