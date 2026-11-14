@@ -377,10 +377,27 @@ Use your application's workload to decide which axis matters most:
 | `-d`, `--dump <dir>` | none | Save rendered PNG frames, references, and amplified error heatmaps for visual inspection. |
 | `-q`, `--quiet` | auto | Hide the terminal progress bar. |
 
-### Visual Inspection Tip (`--dump`)
+### Visual Inspection & Interactive Browser Viewer (`--dump` + `taa_viewer.py`)
 
 Whenever a benchmark score surprises you and you want to see the artifact with your own eyes, pass
 `-d /tmp/bench_frames/`. Inside that directory, each scenario gets its own subfolder containing the
-upscaled `capture_NN.png` frames, the `reference_NN.png` ground truth, and `diff_NN.png` (an 8x
-amplified error image showing exactly which pixels caused the error).
+upscaled `capture_NN.png` frames, the `reference_NN.png` ground truth, `diff_NN.png`, `mask.png`,
+and a self-describing `results.json`.
+
+To scrub sequences across multiple configurations side-by-side in your browser (with synchronized
+pan/zoom, `Split A|B` wipe, `1..9` instant flip, live thresholded error / signed-bias / temporal-flicker
+heatmaps, `8x8` P95 hotspot overlays, metric-linked timeline scrubbing, and a `16x16` pixel loupe):
+
+```bash
+python3 tools/taa/taa_viewer.py /tmp/bench_default.json /tmp/bench_adaptive.json
+```
+
+On Android, pass `--dump` (and optionally `--no-perf` for fast visual iteration) to
+`run_android_benchmark.py` to automatically `adb pull` frame dumps and JSONs into an output folder
+ready for `taa_viewer.py`:
+
+```bash
+python3 tools/taa/run_android_benchmark.py --dump --no-perf --output-dir /tmp/android_taa
+python3 tools/taa/taa_viewer.py /tmp/android_taa
+```
 

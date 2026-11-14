@@ -578,5 +578,42 @@ class TestCompareProtocolAndDiagnostics(unittest.TestCase):
             self.assertIn("peak t*= 2 (-0.0120)", proc.stdout)
 
 
+class AndroidFlagBuilderTest(unittest.TestCase):
+    def test_android_dump_and_no_perf_flag_builder(self) -> None:
+        from run_android_benchmark import build_harness_flags
+
+        dump_only = build_harness_flags(
+            api="vulkan",
+            json_filename="taa_default.json",
+            upscaling="2",
+            perf_resolution="1920x1080",
+            perf_warmup=64,
+            perf_frames=128,
+            run_perf=False,
+            run_quality=False,
+            dump_dirname="dump_default",
+        )
+        self.assertIn("-b", dump_only)
+        self.assertIn("-d dump_default", dump_only)
+        self.assertNotIn("--perf", dump_only)
+
+        both = build_harness_flags(
+            api="vulkan",
+            json_filename="taa_adaptive.json",
+            upscaling="2",
+            perf_resolution="1920x1080",
+            perf_warmup=64,
+            perf_frames=128,
+            run_perf=True,
+            run_quality=True,
+            dump_dirname="dump_adaptive",
+            settings_arg="adaptive.json",
+        )
+        self.assertIn("--perf", both)
+        self.assertIn("-b", both)
+        self.assertIn("-d dump_adaptive", both)
+        self.assertIn("-s adaptive.json", both)
+
+
 if __name__ == "__main__":
     unittest.main()
