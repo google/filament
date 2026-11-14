@@ -49,17 +49,17 @@ void DependencyGraph::addEdge(Entity entity, MaterialInstance* mi) {
 }
 
 void DependencyGraph::addEdge(MaterialInstance* mi, const char* parameter) {
-    if (auto iter = mMaterialToTexture.find(mi); iter != mMaterialToTexture.end()) {
-        const tsl::robin_map<std::string, TextureNode*>& params = iter.value().params;
-        if (params.find(parameter) != params.end()) {
-            return;
-        }
-    }
-    mMaterialToTexture[mi].params[parameter] = nullptr;
+    mMaterialToTexture[mi].params.try_emplace(parameter, nullptr);
 }
 
 void DependencyGraph::commitEdges() {
+    if (mDisabled) {
+        return;
+    }
     for (const auto& [material, entities] : mMaterialToEntity) {
+        if (mReadyMaterials.find(material) != mReadyMaterials.end()) {
+            continue;
+        }
         if (mMaterialToTexture.find(material) == mMaterialToTexture.end()) {
             markAsReady(material);
         } else {
@@ -111,6 +111,9 @@ void DependencyGraph::markAsReady(Texture* texture) {
 }
 
 void DependencyGraph::markAsReady(MaterialInstance* material) {
+    if (!mReadyMaterials.insert(material).second) {
+        return;
+    }
     auto iter = mMaterialToEntity.find(material);
     if (iter == mMaterialToEntity.end()) {
         // It's fine if no entities exist yet.

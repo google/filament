@@ -3527,6 +3527,86 @@ TEST_F(glTFIOTest, HierarchicalBoundingBoxAndTransformPropagation) {
     AssetLoader::destroy(&assetLoader);
 }
 
+TEST_F(glTFIOTest, DependencyGraphMultiInstanceAndMultiMaterialReadiness) {
+    // 1. Direct DependencyGraph test: an entity with one untextured material and one textured
+    // material must not become ready across repeated commitEdges() calls until the texture is
+    // marked ready.
+    {
+        MaterialKey keyA{};
+        UvMap uvA{};
+        MaterialInstance* matUntextured = mMaterialProvider->createMaterialInstance(
+                &keyA, &uvA, "untextured");
+        MaterialKey keyB{ .hasBaseColorTexture = true };
+        UvMap uvB{};
+        MaterialInstance* matTextured = mMaterialProvider->createMaterialInstance(
+                &keyB, &uvB, "textured");
+        Texture* tex = Texture::Builder().width(1).height(1).levels(1)
+                .format(Texture::InternalFormat::RGBA8).build(*mEngine);
+
+        utils::Entity const entity = EntityManager::get().create();
+        DependencyGraph graph;
+        graph.addEdge(entity, matUntextured);
+        graph.addEdge(entity, matTextured);
+        graph.addEdge(matTextured, "baseColorMap");
+        graph.addEdge(tex, matTextured, "baseColorMap");
+
+        // Repeated commitEdges() calls must not double-count matUntextured.
+        graph.commitEdges();
+        EXPECT_EQ(graph.popRenderables(nullptr, 0), 0u);
+        graph.commitEdges();
+        EXPECT_EQ(graph.popRenderables(nullptr, 0), 0u);
+
+        // Once the texture is ready, the entity becomes ready exactly once.
+        graph.markAsReady(tex);
+        EXPECT_EQ(graph.popRenderables(nullptr, 0), 1u);
+        utils::Entity popped{};
+        EXPECT_EQ(graph.popRenderables(&popped, 1), 1u);
+        EXPECT_EQ(popped, entity);
+        EXPECT_EQ(graph.popRenderables(nullptr, 0), 0u);
+
+        EntityManager::get().destroy(entity);
+        mEngine->destroy(tex);
+        mEngine->destroy(matTextured);
+        mEngine->destroy(matUntextured);
+    }
+
+    // 2. End-to-end multi-instance creation + dynamic createInstance() readiness.
+    {
+        AssetLoader* assetLoader = AssetLoader::create({ mEngine, mMaterialProvider, mNameManager });
+        ASSERT_NE(assetLoader, nullptr);
+
+        std::string const json =
+                R"({"asset":{"version":"2.0"},"scene":0,"scenes":[{"nodes":[0]}],)"
+                R"("nodes":[{"name":"inst_mesh","mesh":0}],)"
+                R"("meshes":[{"primitives":[{"attributes":{"POSITION":0}}]}],)"
+                R"("accessors":[{"bufferView":0,"componentType":5126,"count":3,"type":"VEC3",)"
+                R"("min":[0,0,0],"max":[1,1,1]}],)"
+                R"("bufferViews":[{"buffer":0,"byteOffset":0,"byteLength":36}],)"
+                R"("buffers":[{"byteLength":36}]})";
+
+        constexpr size_t kInitialInstances = 4;
+        FilamentInstance* instances[kInitialInstances] = {};
+        FilamentAsset* const asset = assetLoader->createInstancedAsset(
+                reinterpret_cast<uint8_t const*>(json.data()), uint32_t(json.size()),
+                instances, kInitialInstances);
+        ASSERT_NE(asset, nullptr);
+        EXPECT_EQ(asset->getAssetInstanceCount(), kInitialInstances);
+        EXPECT_EQ(asset->popRenderables(nullptr, 0), kInitialInstances);
+
+        FilamentInstance* const extraInstance = assetLoader->createInstance(asset);
+        ASSERT_NE(extraInstance, nullptr);
+        EXPECT_EQ(asset->getAssetInstanceCount(), kInitialInstances + 1);
+        EXPECT_EQ(asset->popRenderables(nullptr, 0), kInitialInstances + 1);
+
+        std::vector<utils::Entity> ready(kInitialInstances + 1);
+        EXPECT_EQ(asset->popRenderables(ready.data(), ready.size()), kInitialInstances + 1);
+        EXPECT_EQ(asset->popRenderables(nullptr, 0), 0u);
+
+        assetLoader->destroyAsset(asset);
+        AssetLoader::destroy(&assetLoader);
+    }
+}
+
 #undef EXPECT_FLOAT3_EQ
 
 int main(int argc, char** argv) {

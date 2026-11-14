@@ -527,8 +527,6 @@ FilamentInstance* FAssetLoader::createInstance(FFilamentAsset* fAsset) {
 
     mMaterialInstanceCache.flush(&instance->mMaterialInstances);
 
-    fAsset->mDependencyGraph.commitEdges();
-
     return instance;
 }
 
@@ -669,6 +667,7 @@ void FAssetLoader::createInstances(size_t const numInstances, FFilamentAsset* fA
             break;
         }
     }
+    fAsset->mDependencyGraph.commitEdges();
 
     // Sort the entities so that the renderable ones come first. This allows us to expose
     // a "renderables only" pointer without storing a separate list.
@@ -2292,7 +2291,12 @@ FilamentAsset* AssetLoader::createInstancedAsset(const uint8_t* bytes, uint32_t 
 }
 
 FilamentInstance* AssetLoader::createInstance(FilamentAsset* asset) {
-    return downcast(this)->createInstance(downcast(asset));
+    FFilamentAsset* fAsset = downcast(asset);
+    FilamentInstance* instance = downcast(this)->createInstance(fAsset);
+    if (instance) {
+        fAsset->mDependencyGraph.commitEdges();
+    }
+    return instance;
 }
 
 void AssetLoader::enableDiagnostics(bool const enable) {
