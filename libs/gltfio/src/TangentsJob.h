@@ -14,9 +14,14 @@
  * limitations under the License.
  */
 
+#ifndef GLTFIO_TANGENTSJOB_H
+#define GLTFIO_TANGENTSJOB_H
+
 #include <math/vec4.h>
 
 #include <cgltf.h>
+
+#include <cstdint>
 
 namespace filament {
 
@@ -71,3 +76,6 @@ struct TangentsJob {
 };
 
 } // namespace filament::gltfio
+
+#endif // GLTFIO_TANGENTSJOB_H
+

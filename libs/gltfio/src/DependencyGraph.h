@@ -23,7 +23,7 @@
 #include <tsl/robin_set.h>
 
 #include <queue>
-#include <string>
+#include <string_view>
 
 namespace filament {
     class MaterialInstance;
@@ -90,7 +90,7 @@ private:
     };
 
     struct MaterialNode {
-        tsl::robin_map<std::string, TextureNode*> params;
+        tsl::robin_map<std::string_view, TextureNode*> params;
     };
 
     struct EntityNode {
@@ -107,6 +107,7 @@ private:
     tsl::robin_map<Material*, tsl::robin_set<Entity, Entity::Hasher>> mMaterialToEntity;
     tsl::robin_map<Material*, MaterialNode> mMaterialToTexture;
     tsl::robin_map<Texture*, tsl::robin_set<Material*>> mTextureToMaterial;
+    tsl::robin_set<Material*> mReadyMaterials;
 
     // Each texture (and its readiness flag) can be referenced from multiple nodes, so we own
     // a collection of wrapper objects in the following map. This uses std::unique_ptr to allow

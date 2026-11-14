@@ -586,7 +586,7 @@ bool AssetLoaderExtended::createPrimitive(Input* input, Output* out,
         if (!mCgltfBuffersLoaded) {
             return false;
         }
-        if (!utility::decodeMeshoptCompression(gltf, &needsValidation)) {
+        if (!utility::decodeMeshoptCompression(gltf, &needsValidation, &mEngine->getJobSystem())) {
             return false;
         }
     }

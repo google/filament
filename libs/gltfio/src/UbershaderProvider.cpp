@@ -172,29 +172,29 @@ Material* UbershaderProvider::getMaterial(const MaterialKey& config) const {
     }
 
     ArchiveRequirements requirements = { shading, blending };
-    requirements.features["Sheen"] = config.hasSheen;
-    requirements.features["Transmission"] = config.hasTransmission;
-    requirements.features["Volume"] = config.hasVolume;
-    requirements.features["Ior"] = config.hasIOR;
-    requirements.features["VertexColors"] = config.hasVertexColors;
-    requirements.features["BaseColorTexture"] = config.hasBaseColorTexture;
-    requirements.features["NormalTexture"] = config.hasNormalTexture;
-    requirements.features["OcclusionTexture"] = config.hasOcclusionTexture;
-    requirements.features["EmissiveTexture"] = config.hasEmissiveTexture;
-    requirements.features["MetallicRoughnessTexture"] = config.hasMetallicRoughnessTexture;
-    requirements.features["ClearCoatTexture"] = config.hasClearCoatTexture;
-    requirements.features["ClearCoatRoughnessTexture"] = config.hasClearCoatRoughnessTexture;
-    requirements.features["ClearCoatNormalTexture"] = config.hasClearCoatNormalTexture;
-    requirements.features["ClearCoat"] = config.hasClearCoat;
-    requirements.features["TextureTransforms"] = config.hasTextureTransforms;
-    requirements.features["TransmissionTexture"] = config.hasTransmissionTexture;
-    requirements.features["SheenColorTexture"] = config.hasSheenColorTexture;
-    requirements.features["SheenRoughnessTexture"] = config.hasSheenRoughnessTexture;
-    requirements.features["VolumeThicknessTexture"] = config.hasVolumeThicknessTexture;
-    requirements.features["Specular"] = config.hasSpecular;
-    requirements.features["SpecularTexture"] = config.hasSpecularTexture;
-    requirements.features["SpecularColorTexture"] = config.hasSpecularColorTexture;
-    requirements.features["Dispersion"] = config.hasDispersion;
+    requirements.setFeature(ArchiveFeatureId::Sheen, config.hasSheen);
+    requirements.setFeature(ArchiveFeatureId::Transmission, config.hasTransmission);
+    requirements.setFeature(ArchiveFeatureId::Volume, config.hasVolume);
+    requirements.setFeature(ArchiveFeatureId::Ior, config.hasIOR);
+    requirements.setFeature(ArchiveFeatureId::VertexColors, config.hasVertexColors);
+    requirements.setFeature(ArchiveFeatureId::BaseColorTexture, config.hasBaseColorTexture);
+    requirements.setFeature(ArchiveFeatureId::NormalTexture, config.hasNormalTexture);
+    requirements.setFeature(ArchiveFeatureId::OcclusionTexture, config.hasOcclusionTexture);
+    requirements.setFeature(ArchiveFeatureId::EmissiveTexture, config.hasEmissiveTexture);
+    requirements.setFeature(ArchiveFeatureId::MetallicRoughnessTexture, config.hasMetallicRoughnessTexture);
+    requirements.setFeature(ArchiveFeatureId::ClearCoatTexture, config.hasClearCoatTexture);
+    requirements.setFeature(ArchiveFeatureId::ClearCoatRoughnessTexture, config.hasClearCoatRoughnessTexture);
+    requirements.setFeature(ArchiveFeatureId::ClearCoatNormalTexture, config.hasClearCoatNormalTexture);
+    requirements.setFeature(ArchiveFeatureId::ClearCoat, config.hasClearCoat);
+    requirements.setFeature(ArchiveFeatureId::TextureTransforms, config.hasTextureTransforms);
+    requirements.setFeature(ArchiveFeatureId::TransmissionTexture, config.hasTransmissionTexture);
+    requirements.setFeature(ArchiveFeatureId::SheenColorTexture, config.hasSheenColorTexture);
+    requirements.setFeature(ArchiveFeatureId::SheenRoughnessTexture, config.hasSheenRoughnessTexture);
+    requirements.setFeature(ArchiveFeatureId::VolumeThicknessTexture, config.hasVolumeThicknessTexture);
+    requirements.setFeature(ArchiveFeatureId::Specular, config.hasSpecular);
+    requirements.setFeature(ArchiveFeatureId::SpecularTexture, config.hasSpecularTexture);
+    requirements.setFeature(ArchiveFeatureId::SpecularColorTexture, config.hasSpecularColorTexture);
+    requirements.setFeature(ArchiveFeatureId::Dispersion, config.hasDispersion);
 
     if (Material* mat = mMaterials.getMaterial(requirements); mat != nullptr) {
         return mat;
@@ -325,37 +325,36 @@ MaterialInstance* UbershaderProvider::createMaterialInstance(MaterialKey* config
     mi->setParameter("occlusionMap", mDummyTexture, sampler);
     mi->setParameter("emissiveMap", mDummyTexture, sampler);
 
-    FeatureMap features = mMaterials.getFeatureMap(material);
-    const auto& needsTexture = [&features](std::string_view featureName) {
-        auto iter = features.find(featureName);
-        return iter != features.end() && iter.value() != ArchiveFeature::UNSUPPORTED;
+    const uint32_t supportedFeatures = mMaterials.getSupportedFeatures(material);
+    const auto needsTexture = [supportedFeatures](ArchiveFeatureId id) noexcept {
+        return (supportedFeatures & archiveFeatureBit(id)) != 0;
     };
 
-    if (needsTexture("ClearCoatTexture")) {
+    if (needsTexture(ArchiveFeatureId::ClearCoatTexture)) {
         mi->setParameter("clearCoatMap", mDummyTexture, sampler);
     }
 
-    if (needsTexture("ClearCoatRoughnessTexture")) {
+    if (needsTexture(ArchiveFeatureId::ClearCoatRoughnessTexture)) {
         mi->setParameter("clearCoatRoughnessMap", mDummyTexture, sampler);
     }
 
-    if (needsTexture("ClearCoatNormalTexture")) {
+    if (needsTexture(ArchiveFeatureId::ClearCoatNormalTexture)) {
         mi->setParameter("clearCoatNormalMap", mDummyTexture, sampler);
     }
 
-    if (needsTexture("VolumeThicknessTexture")) {
+    if (needsTexture(ArchiveFeatureId::VolumeThicknessTexture)) {
         mi->setParameter("volumeThicknessMap", mDummyTexture, sampler);
     }
 
-    if (needsTexture("TransmissionTexture")) {
+    if (needsTexture(ArchiveFeatureId::TransmissionTexture)) {
         mi->setParameter("transmissionMap", mDummyTexture, sampler);
     }
 
-    if (needsTexture("SheenColorTexture")) {
+    if (needsTexture(ArchiveFeatureId::SheenColorTexture)) {
         mi->setParameter("sheenColorMap", mDummyTexture, sampler);
     }
 
-    if (needsTexture("SheenRoughnessTexture")) {
+    if (needsTexture(ArchiveFeatureId::SheenRoughnessTexture)) {
         mi->setParameter("sheenRoughnessMap", mDummyTexture, sampler);
     }
 
@@ -366,11 +365,11 @@ MaterialInstance* UbershaderProvider::createMaterialInstance(MaterialKey* config
         mi->setParameter("reflectance", 0.5f);
     }
 
-    if (needsTexture("SpecularTexture")) {
+    if (needsTexture(ArchiveFeatureId::SpecularTexture)) {
         mi->setParameter("specularMap", mDummyTexture, sampler);
     }
 
-    if (needsTexture("SpecularColorTexture")) {
+    if (needsTexture(ArchiveFeatureId::SpecularColorTexture)) {
         mi->setParameter("specularColorMap", mDummyTexture, sampler);
     }
 
@@ -432,8 +431,10 @@ const char* toString(BlendingMode blendingMode) noexcept {
 io::ostream& operator<<(io::ostream& out, const ArchiveRequirements& reqs) {
     out << "    ShadingModel = " << toString(reqs.shadingModel) << '\n'
         << "    BlendingMode = " << toString(reqs.blendingMode) << '\n';
-    for (const auto& pair : reqs.features) {
-        out << "    " << pair.first.c_str() << " = " << (pair.second ? "true" : "false") << '\n';
+    for (uint8_t k = 0; k < static_cast<uint8_t>(ArchiveFeatureId::Count); ++k) {
+        const auto id = static_cast<ArchiveFeatureId>(k);
+        out << "    " << archiveFeatureName(id).data() << " = "
+            << (reqs.hasFeature(id) ? "true" : "false") << '\n';
     }
     return out;
 }

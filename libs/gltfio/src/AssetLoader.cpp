@@ -57,10 +57,11 @@
 #include <cgltf.h>
 #include <tsl/robin_map.h>
 
-#include <codecvt>
+#include <cstring>
 #include <limits>
-#include <locale>
 #include <memory>
+#include <string>
+#include <utility>
 #include <vector>
 
 using namespace filament;
@@ -93,7 +94,33 @@ constexpr cgltf_material kDefaultMat = {
     },
 };
 
-std::string getNodeName(cgltf_node const* node, char const* defaultNodeName) {
+struct NodeName {
+    const char* raw = nullptr;
+    std::string escaped;
+    const char* c_str() const noexcept { return raw ? raw : escaped.c_str(); }
+};
+
+int parseHexDigit(char c) noexcept {
+    if (c >= '0' && c <= '9') return c - '0';
+    if (c >= 'a' && c <= 'f') return 10 + (c - 'a');
+    if (c >= 'A' && c <= 'F') return 10 + (c - 'A');
+    return -1;
+}
+
+void appendUtf8Codepoint(std::string& out, uint32_t cp) {
+    if (cp <= 0x7Fu) {
+        out.push_back(static_cast<char>(cp));
+    } else if (cp <= 0x7FFu) {
+        out.push_back(static_cast<char>(0xC0u | (cp >> 6)));
+        out.push_back(static_cast<char>(0x80u | (cp & 0x3Fu)));
+    } else {
+        out.push_back(static_cast<char>(0xE0u | (cp >> 12)));
+        out.push_back(static_cast<char>(0x80u | ((cp >> 6) & 0x3Fu)));
+        out.push_back(static_cast<char>(0x80u | (cp & 0x3Fu)));
+    }
+}
+
+NodeName getNodeName(cgltf_node const* node, char const* defaultNodeName) {
     auto const getNameImpl = [node, defaultNodeName]() -> char const* {
         if (node->name) return node->name;
         if (node->mesh && node->mesh->name) return node->mesh->name;
@@ -103,48 +130,55 @@ std::string getNodeName(cgltf_node const* node, char const* defaultNodeName) {
         return "<unknown>";
     };
 
-    std::string strOrig(getNameImpl());
+    const char* const rawName = getNameImpl();
+
+    // Fast path: if there are no \uXXXX escape sequences, avoid any string allocations or copies.
+    const char* match = std::strstr(rawName, "\\u");
+    if (UTILS_LIKELY(match == nullptr)) {
+        return NodeName{ rawName, {} };
+    }
 
     // We handle the potential case of escaped characters in the JSON which should be properly
     // interpreted as unicode. See spec:
     // https://registry.khronos.org/glTF/specs/2.0/glTF-2.0.html#json-encoding
     // Also see spec for escaped strings in JSON (Section 2.5) https://www.ietf.org/rfc/rfc4627.txt
-
+    const size_t totalLen = std::strlen(rawName);
     std::string strEscaped;
-    size_t cur = 0, idx = 0;
-    std::wstring_convert<std::codecvt_utf8<char32_t>, char32_t> conv;
+    strEscaped.reserve(totalLen);
 
-    auto const addUnencodedSubstr = [&](size_t const cursor, size_t const nextPoint) {
-        assert_invariant(nextPoint >= cursor);
-        if (cursor == nextPoint) {
-            return;
-        }
-        strEscaped += strOrig.substr(cursor, nextPoint - cursor);
-    };
-
-    while ((idx = strOrig.find("\\u", cur)) != std::string::npos) {
-        if (idx + 6 > strOrig.length()) {
-            slog.w << "gltfio: Unable to interpret node name=" << strOrig
+    size_t cur = 0;
+    while (match != nullptr) {
+        const size_t idx = static_cast<size_t>(match - rawName);
+        if (idx + 6 > totalLen) {
+            slog.w << "gltfio: Unable to interpret node name=" << rawName
                           << " as proper unicode encoding." << io::endl;
-            return strOrig;
+            return NodeName{ rawName, {} };
         }
 
-        // Turns string of the form \u0062 to 0x0062
-        std::string const hexStr = strOrig.substr(idx + 2, 4);
-        if (hexStr.find_first_not_of("0123456789abcdefABCDEF") != std::string::npos) {
-            slog.w << "gltfio: Unable to interpret node name=" << strOrig
-                          << " as proper unicode encoding." << io::endl;
-            return strOrig;
+        uint32_t cp = 0;
+        for (size_t i = 0; i < 4; ++i) {
+            const int d = parseHexDigit(rawName[idx + 2 + i]);
+            if (d < 0) {
+                slog.w << "gltfio: Unable to interpret node name=" << rawName
+                              << " as proper unicode encoding." << io::endl;
+                return NodeName{ rawName, {} };
+            }
+            cp = (cp << 4) | static_cast<uint32_t>(d);
         }
 
-        addUnencodedSubstr(cur, idx);
-
-        strEscaped += conv.to_bytes((char32_t) std::stoul(hexStr, nullptr, 16));
+        if (idx > cur) {
+            strEscaped.append(rawName + cur, idx - cur);
+        }
+        appendUtf8Codepoint(strEscaped, cp);
         cur = idx + 6;
+        match = std::strstr(rawName + cur, "\\u");
     }
-    addUnencodedSubstr(cur, strOrig.length());
 
-    return strEscaped;
+    if (totalLen > cur) {
+        strEscaped.append(rawName + cur, totalLen - cur);
+    }
+
+    return NodeName{ nullptr, std::move(strEscaped) };
 }
 
 bool primitiveHasVertexColor(const cgltf_primitive& inPrim) {
@@ -331,7 +365,8 @@ private:
     // Methods used during the first traveral (creation of VertexBuffer, IndexBuffer, etc)
     FFilamentAsset* createRootAsset(const cgltf_data* srcAsset);
     void traversePrimitives(const cgltf_node* rootNode, FFilamentAsset* fAsset);
-    void createPrimitives(const cgltf_node* node, const char* name, FFilamentAsset* fAsset);
+    void createPrimitives(const cgltf_node* node, const char* name, const mat4f& worldTransform,
+            FFilamentAsset* fAsset);
     bool createPrimitive(const cgltf_primitive& inPrim, const char* name, Primitive* outPrim,
             FFilamentAsset* fAsset);
 
@@ -469,6 +504,9 @@ FilamentInstance* FAssetLoader::createInstance(FFilamentAsset* fAsset) {
         instance->mVariants.push_back({ .name = CString(srcAsset->variants[i].name) });
     }
 
+    fAsset->mEntities.reserve(fAsset->mEntities.size() + srcAsset->nodes_count);
+    instance->mEntities.reserve(srcAsset->nodes_count);
+
     // For each scene root, recursively create all entities.
     for (const auto& pair : fAsset->mRootNodes) {
         traverseEntities(pair.first, pair.second, instanceRoot, fAsset, instance);
@@ -488,8 +526,6 @@ FilamentInstance* FAssetLoader::createInstance(FFilamentAsset* fAsset) {
     instance->mBoundingBox = fAsset->mBoundingBox;
 
     mMaterialInstanceCache.flush(&instance->mMaterialInstances);
-
-    fAsset->mDependencyGraph.commitEdges();
 
     return instance;
 }
@@ -579,23 +615,39 @@ void FAssetLoader::traversePrimitives(const cgltf_node* rootNode, FFilamentAsset
     // Iterative pre-order traversal with an explicit stack. The node hierarchy can be
     // arbitrarily deep, so recursion here risks stack exhaustion on hostile assets.
     // Children are pushed in reverse order so they are visited in their original order.
-    std::vector<const cgltf_node*> stack;
-    stack.push_back(rootNode);
+    struct WorkItem {
+        const cgltf_node* node;
+        mat4f parentWorld;
+    };
+    mat4f rootParentWorld;
+    if (UTILS_UNLIKELY(rootNode->parent != nullptr)) {
+        cgltf_node_transform_world(rootNode->parent, &rootParentWorld[0][0]);
+    }
+    std::vector<WorkItem> stack;
+    stack.push_back({rootNode, rootParentWorld});
     while (!stack.empty()) {
-        const cgltf_node* node = stack.back();
+        WorkItem const work = stack.back();
         stack.pop_back();
+        const cgltf_node* node = work.node;
 
-        auto const nameStr = getNodeName(node, mDefaultNodeName);
-        const char* name = nameStr.c_str();
-        name = name ? name : "node";
+        if (node->mesh == nullptr && node->children_count == 0) {
+            continue;
+        }
+
+        mat4f localTransform;
+        cgltf_node_transform_local(node, &localTransform[0][0]);
+        const mat4f worldTransform = work.parentWorld * localTransform;
 
         if (node->mesh) {
-            createPrimitives(node, name, fAsset);
+            auto const nameStr = getNodeName(node, mDefaultNodeName);
+            const char* name = nameStr.c_str();
+            name = name ? name : "node";
+            createPrimitives(node, name, worldTransform, fAsset);
             fAsset->mRenderableCount++;
         }
 
         for (cgltf_size i = node->children_count; i > 0; --i) {
-            stack.push_back(node->children[i - 1]);
+            stack.push_back({node->children[i - 1], worldTransform});
         }
     }
 }
@@ -604,12 +656,18 @@ void FAssetLoader::createInstances(size_t const numInstances, FFilamentAsset* fA
     // Create a separate entity hierarchy for each instance. Note that MeshCache (vertex
     // buffers and index buffers) and MaterialInstanceCache (materials and textures) help avoid
     // needless duplication of resources.
+    const cgltf_data* srcAsset = fAsset->mSourceAsset ? fAsset->mSourceAsset->hierarchy : nullptr;
+    if (srcAsset && numInstances > 0) {
+        fAsset->mEntities.reserve(fAsset->mEntities.size() + numInstances * srcAsset->nodes_count);
+        fAsset->mInstances.reserve(fAsset->mInstances.size() + numInstances);
+    }
     for (size_t index = 0; index < numInstances; ++index) {
         if (createInstance(fAsset) == nullptr) {
             mError = true;
             break;
         }
     }
+    fAsset->mDependencyGraph.commitEdges();
 
     // Sort the entities so that the renderable ones come first. This allows us to expose
     // a "renderables only" pointer without storing a separate list.
@@ -654,8 +712,7 @@ void FAssetLoader::traverseEntities(const cgltf_node* node, SceneMask const scen
             float3 const* translation =
                     reinterpret_cast<float3 const*>(&currentNode->translation[0]);
             mTrsTransformManager.create(entity, *translation, *rotation, *scale);
-            localTransform = mTrsTransformManager.getTransform(
-                    mTrsTransformManager.getInstance(entity));
+            localTransform = composeMatrix(*translation, *rotation, *scale);
         }
 
         auto const parentTransform = mTransformManager.getInstance(currentParent);
@@ -665,7 +722,7 @@ void FAssetLoader::traverseEntities(const cgltf_node* node, SceneMask const scen
         const cgltf_size extras_size =
                 currentNode->extras.end_offset - currentNode->extras.start_offset;
         if (extras_size > 0) {
-            mNodeManager.setExtras(mNodeManager.getInstance(entity),
+            nm.setExtras(nodeInstance,
                     {srcAsset->json + currentNode->extras.start_offset, extras_size});
         }
 
@@ -711,7 +768,7 @@ void FAssetLoader::traverseEntities(const cgltf_node* node, SceneMask const scen
 }
 
 void FAssetLoader::createPrimitives(const cgltf_node* node, const char* name,
-        FFilamentAsset* fAsset) {
+        const mat4f& worldTransform, FFilamentAsset* fAsset) {
     cgltf_data* gltf = fAsset->mSourceAsset->hierarchy;
     const cgltf_mesh* mesh = node->mesh;
     assert_invariant(gltf != nullptr);
@@ -783,14 +840,11 @@ void FAssetLoader::createPrimitives(const cgltf_node* node, const char* name,
     // The spec requires that min < max for the bounding box but since we can skip bounding boxes
     // for empty primitives, the bounding box may not be valid and needs new validation here.
     if (all(lessThanEqual(aabb.min, aabb.max))) {
-        mat4f worldTransform;
-        cgltf_node_transform_world(node, &worldTransform[0][0]);
-
         const Aabb transformed = aabb.transform(worldTransform);
         fAsset->mBoundingBox.min = min(fAsset->mBoundingBox.min, transformed.min);
         fAsset->mBoundingBox.max = max(fAsset->mBoundingBox.max, transformed.max);
     }
- }
+}
 
 void FAssetLoader::createRenderable(const cgltf_node* node, Entity const entity, const char* name,
         FFilamentAsset* fAsset) {
@@ -2237,7 +2291,12 @@ FilamentAsset* AssetLoader::createInstancedAsset(const uint8_t* bytes, uint32_t 
 }
 
 FilamentInstance* AssetLoader::createInstance(FilamentAsset* asset) {
-    return downcast(this)->createInstance(downcast(asset));
+    FFilamentAsset* fAsset = downcast(asset);
+    FilamentInstance* instance = downcast(this)->createInstance(fAsset);
+    if (instance) {
+        fAsset->mDependencyGraph.commitEdges();
+    }
+    return instance;
 }
 
 void AssetLoader::enableDiagnostics(bool const enable) {
