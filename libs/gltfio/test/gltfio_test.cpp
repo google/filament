@@ -58,6 +58,7 @@
 #include <draco/mesh/mesh.h>
 #endif
 #include <gtest/gtest.h>
+#include <meshoptimizer.h>
 
 #include <algorithm>
 #include <array>
@@ -3604,6 +3605,58 @@ TEST_F(glTFIOTest, DependencyGraphMultiInstanceAndMultiMaterialReadiness) {
 
         assetLoader->destroyAsset(asset);
         AssetLoader::destroy(&assetLoader);
+    }
+}
+
+TEST_F(glTFIOTest, ParallelMeshoptDecoding) {
+    constexpr size_t kViewCount = 8;
+    constexpr size_t kVertexCount = 16;
+    constexpr size_t kStride = 12;
+
+    std::vector<std::vector<float>> expectedViews(kViewCount);
+    std::vector<std::vector<uint8_t>> encodedPayloads(kViewCount);
+    std::vector<cgltf_buffer> buffers(kViewCount);
+    std::vector<cgltf_buffer_view> views(kViewCount);
+
+    for (size_t i = 0; i < kViewCount; ++i) {
+        expectedViews[i].resize(kVertexCount * 3);
+        for (size_t v = 0; v < kVertexCount * 3; ++v) {
+            expectedViews[i][v] = float(i * 100 + v);
+        }
+        encodedPayloads[i].resize(meshopt_encodeVertexBufferBound(kVertexCount, kStride));
+        size_t const encodedSize = meshopt_encodeVertexBuffer(
+                encodedPayloads[i].data(), encodedPayloads[i].size(),
+                expectedViews[i].data(), kVertexCount, kStride);
+        ASSERT_GT(encodedSize, 0u);
+        encodedPayloads[i].resize(encodedSize);
+
+        buffers[i] = {};
+        buffers[i].data = encodedPayloads[i].data();
+        buffers[i].size = encodedPayloads[i].size();
+
+        views[i] = {};
+        views[i].has_meshopt_compression = true;
+        views[i].meshopt_compression.buffer = &buffers[i];
+        views[i].meshopt_compression.offset = 0;
+        views[i].meshopt_compression.size = encodedPayloads[i].size();
+        views[i].meshopt_compression.stride = kStride;
+        views[i].meshopt_compression.count = kVertexCount;
+        views[i].meshopt_compression.mode = cgltf_meshopt_compression_mode_attributes;
+        views[i].meshopt_compression.filter = cgltf_meshopt_compression_filter_none;
+    }
+
+    cgltf_data data{};
+    data.buffer_views = views.data();
+    data.buffer_views_count = views.size();
+
+    bool decoded = false;
+    ASSERT_TRUE(utility::decodeMeshoptCompression(&data, &decoded, &mEngine->getJobSystem()));
+    EXPECT_TRUE(decoded);
+
+    for (size_t i = 0; i < kViewCount; ++i) {
+        ASSERT_NE(views[i].data, nullptr);
+        EXPECT_EQ(std::memcmp(views[i].data, expectedViews[i].data(), kVertexCount * kStride), 0);
+        free(views[i].data);
     }
 }
 
