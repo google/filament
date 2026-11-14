@@ -30,10 +30,8 @@ val stageTextures = tasks.register<Sync>("stageSampleTextures") {
     into(generatedAssetsDir.map { it.dir("textures") })
     exclude("**/URL.txt", "**/CC0.html")
 }
-tasks.configureEach {
-    if (name.startsWith("generate") && name.endsWith("Assets")) {
-        dependsOn(stageTextures)
-    }
+tasks.named("filamentGenerateAssets") {
+    dependsOn(stageTextures)
 }
 
 val distDirProp = providers.gradleProperty("com.google.android.filament.dist-dir").get()

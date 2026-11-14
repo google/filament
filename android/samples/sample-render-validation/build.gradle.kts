@@ -17,10 +17,8 @@ val copyModels = tasks.register<Copy>("copyModels") {
     into(layout.buildDirectory.dir("generated/assets/filament/models"))
 }
 
-tasks.configureEach {
-    if (name.startsWith("generate") && name.endsWith("Assets")) {
-        dependsOn(copyModels)
-    }
+tasks.named("filamentGenerateAssets") {
+    dependsOn(copyModels)
 }
 
 android {

@@ -15,10 +15,8 @@ val copyBusterGltf = tasks.register<Copy>("copyBusterGltf") {
     into(layout.buildDirectory.dir("generated/assets/filament/models"))
 }
 
-tasks.configureEach {
-    if (name.startsWith("generate") && name.endsWith("Assets")) {
-        dependsOn(copyBusterGltf)
-    }
+tasks.named("filamentGenerateAssets") {
+    dependsOn(copyBusterGltf)
 }
 
 android {

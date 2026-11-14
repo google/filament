@@ -84,9 +84,18 @@ class FilamentPlugin : Plugin<Project> {
             })
         }
 
+        val generateAssets = project.tasks.register("filamentGenerateAssets") { task ->
+            task.dependsOn(compileMaterials, generateIbl, compileMesh)
+        }
+
         project.tasks.configureEach { task ->
-            if (task.name.startsWith("generate") && task.name.endsWith("Assets")) {
-                task.dependsOn(compileMaterials, generateIbl, compileMesh)
+            val name = task.name
+            if ((name.startsWith("generate") && name.endsWith("Assets")) ||
+                (name.startsWith("generate") && name.endsWith("Model") && name.contains("Lint")) ||
+                name.startsWith("lintAnalyze") ||
+                name.startsWith("lintVitalAnalyze")
+            ) {
+                task.dependsOn(generateAssets)
             }
         }
     }
