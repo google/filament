@@ -220,9 +220,8 @@ fvkmemory::resource_ptr<VulkanSemaphore> VulkanCommandBuffer::submit() {
              << " fence=" << getVkFence();
 #endif
 
-    UTILS_UNUSED_IN_RELEASE VkResult result =
+    VkResult const result =
         vkQueueSubmit(mQueue, 1, &submitInfo, getVkFence());
-    mFenceStatus->markSubmitted();
 
 #if FVK_ENABLED(FVK_DEBUG_COMMAND_BUFFER)
     if (result != VK_SUCCESS) {
@@ -231,6 +230,18 @@ fvkmemory::resource_ptr<VulkanSemaphore> VulkanCommandBuffer::submit() {
 #endif
     assert_invariant(result == VK_SUCCESS);
     mWaitSemaphores.clear();
+    mWaitSemaphoreStages.clear();
+    if (UTILS_UNLIKELY(result != VK_SUCCESS)) {
+        static bool sLoggedSubmitError = false;
+        if (!sLoggedSubmitError) {
+            sLoggedSubmitError = true;
+            FVK_LOGE << "vkQueueSubmit failed with error=" << static_cast<int32_t>(result)
+                     << "; dropping command buffer.";
+        }
+        mFenceStatus->fail(result < 0 ? result : VK_ERROR_UNKNOWN);
+        return {};
+    }
+    mFenceStatus->markSubmitted();
     return mSubmission;
 }
 
@@ -302,7 +313,8 @@ void CommandBufferPool::gc() {
     ActiveBuffers reclaimed;
     mSubmitted.forEachSetBit([this,&reclaimed] (size_t index) {
         auto& buffer = mBuffers[index];
-        if (buffer->getStatus() == VK_SUCCESS) {
+        VkResult const status = buffer->getStatus();
+        if (status == VK_SUCCESS || status < 0) {
             reclaimed.set(index, true);
             buffer->reset();
         }
@@ -326,9 +338,14 @@ fvkmemory::resource_ptr<VulkanSemaphore> CommandBufferPool::flush() {
     if (!isRecording()) {
         return {};
     }
-    auto submitSemaphore = mBuffers[mRecording]->submit();
-    mSubmitted.set(mRecording, true);
+    int8_t const recordingIndex = mRecording;
     mRecording = INVALID;
+    auto submitSemaphore = mBuffers[recordingIndex]->submit();
+    if (UTILS_LIKELY(submitSemaphore)) {
+        mSubmitted.set(recordingIndex, true);
+    } else {
+        mBuffers[recordingIndex]->reset();
+    }
     return submitSemaphore;
 }
 
@@ -339,7 +356,20 @@ void CommandBufferPool::wait() {
         fences[count++] = mBuffers[index]->getVkFence();
     });
     if (count) {
-        vkWaitForFences(mDevice, count, fences, VK_TRUE, UINT64_MAX);
+        VkResult const result = vkWaitForFences(mDevice, count, fences, VK_TRUE, UINT64_MAX);
+        assert_invariant(result == VK_SUCCESS);
+        if (UTILS_UNLIKELY(result != VK_SUCCESS)) {
+            static bool sLoggedWaitError = false;
+            if (!sLoggedWaitError) {
+                sLoggedWaitError = true;
+                FVK_LOGE << "vkWaitForFences failed with error=" << static_cast<int32_t>(result);
+            }
+            VkResult const err = result < 0 ? result : VK_ERROR_UNKNOWN;
+            mSubmitted.forEachSetBit([this, err](size_t index) {
+                mBuffers[index]->getFenceStatus()->fail(err);
+            });
+            return;
+        }
     }
     update();
 }
@@ -422,8 +452,7 @@ bool VulkanCommands::flush() {
     }
 
     VkSemaphore injectedDependency = mInjectedDependency;
-    fvkmemory::resource_ptr<VulkanSemaphore> dependency;
-    bool hasFlushed = false;
+    bool hasSubmitted = false;
 
     std::shared_ptr<VulkanCmdFence> flushedFenceStatus;
 
@@ -446,20 +475,19 @@ bool VulkanCommands::flush() {
             // vertex/fragment work).
             pool->waitFor(mLastSubmit->getVkSemaphore(),
                     VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT | VK_PIPELINE_STAGE_TRANSFER_BIT);
-            mLastSubmit = {};
         }
         flushedFenceStatus = pool->getRecording().getFenceStatus();
-        dependency = pool->flush();
-        hasFlushed = true;
-    }
-
-    if (hasFlushed) {
-        mInjectedDependency = VK_NULL_HANDLE;
-        mLastSubmit = dependency;
+        auto dependency = pool->flush();
+        if (UTILS_LIKELY(dependency)) {
+            injectedDependency = VK_NULL_HANDLE;
+            mInjectedDependency = VK_NULL_HANDLE;
+            mLastSubmit = dependency;
+            hasSubmitted = true;
+        }
         mLastFenceStatus = flushedFenceStatus;
     }
 
-    return true;
+    return hasSubmitted;
 }
 
 void VulkanCommands::wait() {

@@ -1314,5 +1314,43 @@ class TestExtractor(unittest.TestCase):
         self.assertEqual(constants["CONFIG_SRGB_COLORSPACE"], "0x10")
         self.assertEqual(constants["EFFICIENCY_LED"], "0.1171f")
 
+    def test_enum_constant_noapigen_and_cond_private(self):
+        """Verify that UTILS_NOAPIGEN and Doxygen \\cond PRIVATE skip individual enum constants in both direct enums and aliased enums."""
+        code = """
+        #define UTILS_NOAPIGEN [[clang::annotate("filament:apigen:skip")]]
+        #define UTILS_APIGEN_FLAGS [[clang::annotate("filament:apigen:flags")]]
+        typedef unsigned short uint16_t;
+
+        namespace backend {
+            enum class UTILS_APIGEN_FLAGS TextureUsage : uint16_t {
+                SAMPLEABLE = 0x01,
+                BLIT_SRC = 0x02,
+                //! \\cond PRIVATE
+                INTERNAL_PRIVATE_FLAG UTILS_NOAPIGEN = 0x04,
+                COND_ONLY_INTERNAL = 0x08,
+                //! \\endcond
+                ATTR_ONLY_INTERNAL UTILS_NOAPIGEN = 0x10,
+            };
+        }
+
+        class TextureAliasTest {
+        public:
+            using Usage = backend::TextureUsage;
+            enum class DirectEnum {
+                PUBLIC_A = 0,
+                HIDDEN_ATTR UTILS_NOAPIGEN = 1,
+                //! \\cond PRIVATE
+                HIDDEN_COND = 2,
+                //! \\endcond
+                PUBLIC_B = 3,
+            };
+        };
+        """
+        ex = self.parse_source(code)
+        cls = next(c for c in ex.output["classes"] if c["name"] == "TextureAliasTest")
+        enums = {e["name"]: [v["name"] for v in e["entries"]] for e in cls["enums"]}
+        self.assertEqual(enums["Usage"], ["SAMPLEABLE", "BLIT_SRC"])
+        self.assertEqual(enums["DirectEnum"], ["PUBLIC_A", "PUBLIC_B"])
+
 if __name__ == '__main__':
     unittest.main()

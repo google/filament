@@ -18,6 +18,7 @@ filament {
 // don't forget to update MainACtivity.kt when/if changing this.
 val copyBusterGltf = tasks.register<Copy>("copyBusterGltf") {
     from("../../../third_party/models/BusterDrone")
+    exclude("*.glb")
     into("src/main/assets/models")
 }
 
