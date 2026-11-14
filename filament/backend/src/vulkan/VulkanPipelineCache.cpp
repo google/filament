@@ -30,6 +30,7 @@
 #include <utils/Log.h>
 #include <utils/Panic.h>
 
+#include <algorithm>
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
@@ -859,15 +860,20 @@ void VulkanPipelineCache::gc() noexcept {
             return;
         }
 
-        // figure out which pipelines have exceeded their time to live.
+        // Figure out which pipelines have exceeded their time to live. Their keys are stored rather
+        // than iterators because tsl::robin_map::erase() invalidates every iterator.
+        struct ExpiredCandidate {
+            Timestamp lastUsed;
+            PipelineKey key;
+        };
         using PipeIterator = decltype(mPipelines)::iterator;
-        std::vector<PipeIterator> expiredCandidates;
+        std::vector<ExpiredCandidate> expiredCandidates;
         expiredCandidates.reserve(mPipelines.size());
 
         for (PipeIterator iter = mPipelines.begin(); iter != mPipelines.end(); ++iter) {
             const PipelineCacheEntry& cacheEntry = iter.value();
             if (cacheEntry.lastUsed + FVK_MAX_PIPELINE_AGE < mCurrentTime) {
-                expiredCandidates.push_back(iter);
+                expiredCandidates.push_back({ cacheEntry.lastUsed, iter->first });
             }
         }
 
@@ -876,20 +882,33 @@ void VulkanPipelineCache::gc() noexcept {
             return;
         }
 
-        // Sort expired piplines oldest first
-        std::sort(expiredCandidates.begin(), expiredCandidates.end(),
-                [](const PipeIterator& a, const PipeIterator& b) {
-                    return a.value().lastUsed < b.value().lastUsed;
-                });
-
         // Compute how many expired pipelines to evict to meet capacity requirements
         const size_t excessCount = mPipelines.size() - FVK_MAX_PIPELINE_COUNT;
         const size_t evictCount = std::min(excessCount, expiredCandidates.size());
 
-        for (size_t i = 0; i < evictCount; ++i) {
-            PipeIterator iter = expiredCandidates[i];
+        // Keep only the evictCount oldest candidates.
+        std::partial_sort(expiredCandidates.begin(), expiredCandidates.begin() + evictCount,
+                expiredCandidates.end(),
+                [](const ExpiredCandidate& a, const ExpiredCandidate& b) {
+                    return a.lastUsed < b.lastUsed;
+                });
+        expiredCandidates.erase(expiredCandidates.begin() + evictCount, expiredCandidates.end());
+
+        // Erase in place: the iterator returned by erase() is the only one that stays valid. It
+        // refers to the entry that was shifted back into the erased bucket, so nothing is skipped.
+        PipelineEqual const equal;
+        for (PipeIterator iter = mPipelines.begin();
+                iter != mPipelines.end() && !expiredCandidates.empty();) {
+            auto const candidate = std::find_if(expiredCandidates.begin(), expiredCandidates.end(),
+                    [&](const ExpiredCandidate& c) { return equal(c.key, iter->first); });
+            if (candidate == expiredCandidates.end()) {
+                ++iter;
+                continue;
+            }
+            *candidate = expiredCandidates.back();
+            expiredCandidates.pop_back();
             vkDestroyPipeline(mDevice, iter.value().handle, VKALLOC);
-            mPipelines.erase(iter);
+            iter = mPipelines.erase(iter);
         }
     } else {
         // Revert back to the previous behavior
