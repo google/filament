@@ -2391,8 +2391,33 @@ std::string buildPerfScheduleDescriptor(App const* app) {
     return std::string(buf);
 }
 
-void writeJson(App* app, std::vector<Record> const& records,
-        std::vector<BenchmarkSummary> const& summaries) {
+std::string computeDumpDirForJson(Path const& outputPath, Path const& dumpDirectory) {
+    if (dumpDirectory.isEmpty()) {
+        return {};
+    }
+    Path const absOutDir = outputPath.getAbsolutePath().getParent();
+    Path const absDump = dumpDirectory.getAbsolutePath();
+    std::string const outDirStr = absOutDir.getPath();
+    std::string const dumpStr = absDump.getPath();
+    if (dumpStr == outDirStr) {
+        return ".";
+    }
+    if (absOutDir.isAncestorOf(absDump) && dumpStr.size() > outDirStr.size()) {
+        size_t const offset = outDirStr.back() == '/' ? outDirStr.size() : outDirStr.size() + 1u;
+        if (offset < dumpStr.size()) {
+            return dumpStr.substr(offset);
+        }
+    }
+    Path const outGrandParent = absOutDir.getParent();
+    if (!outGrandParent.isEmpty() && outGrandParent.getPath() == absDump.getParent().getPath() &&
+            !absDump.getName().empty()) {
+        return std::string("../") + absDump.getName();
+    }
+    return dumpDirectory.getPath();
+}
+
+std::string serializeBenchmarkJson(App* app, std::vector<Record> const& records,
+        std::vector<BenchmarkSummary> const& summaries, std::string const& dumpDirField) {
     Options const& o = app->options;
     bool const hasQualitySchedule = o.benchmark || !o.perf;
     bool const hasPerfSchedule = o.perf;
@@ -2424,6 +2449,9 @@ void writeJson(App* app, std::vector<Record> const& records,
     }
     if (!o.label.empty()) {
         json << "  \"label\": \"" << escapeJson(o.label) << "\",\n";
+    }
+    if (!dumpDirField.empty()) {
+        json << "  \"dump_directory\": \"" << escapeJson(dumpDirField) << "\",\n";
     }
     json << "  \"benchmark\": " << (o.benchmark ? "true" : "false") << ",\n";
     json << "  \"perf\": " << (o.perf ? "true" : "false") << ",\n";
@@ -2529,10 +2557,26 @@ void writeJson(App* app, std::vector<Record> const& records,
              << r.value << " }" << (i + 1 < records.size() ? "," : "") << "\n";
     }
     json << "  ]\n}\n";
+    return json.str();
+}
+
+void writeJson(App* app, std::vector<Record> const& records,
+        std::vector<BenchmarkSummary> const& summaries) {
+    Options const& o = app->options;
+    std::string const dumpField = computeDumpDirForJson(o.output, o.dumpDirectory);
+    std::string const mainPayload = serializeBenchmarkJson(app, records, summaries, dumpField);
 
     std::ofstream out(o.output.c_str(), std::ios::trunc);
-    out << json.str();
+    out << mainPayload;
     printf("taa_harness: wrote %zu records to %s\n", records.size(), o.output.c_str());
+
+    if (!o.dumpDirectory.isEmpty()) {
+        Path const dumpJson = o.dumpDirectory.concat("results.json");
+        if (dumpJson.getAbsolutePath().getPath() != o.output.getAbsolutePath().getPath()) {
+            std::ofstream dumpOut(dumpJson.c_str(), std::ios::trunc);
+            dumpOut << serializeBenchmarkJson(app, records, summaries, ".");
+        }
+    }
 }
 
 // ------------------------------------------------------------------------------------------------

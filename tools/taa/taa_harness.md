@@ -81,6 +81,31 @@ $H --compare /tmp/bench_default.json,/tmp/bench_adaptive.json
 Pass `-F lanczos` explicitly with `-b` when you want an upscaler-neutral 256-sample true Lanczos-2
 reference instead of the fast 32-sample `-F box` default.
 
+### Interactive Browser Result Viewer (`taa_viewer.py`)
+
+When investigating artifacts or comparing two or more configurations visually, pass `-d <dump_dir>`
+to `taa_harness` (which automatically writes `<dump_dir>/results.json` and records `"dump_directory"`
+in any `-o` JSON) and launch the zero-dependency localhost web viewer:
+
+```bash
+H=./out/cmake-debug/tools/taa/taa_harness
+$H -b -a vulkan --label "Filament TAA" -d /tmp/dump_taa -o /tmp/bench_taa.json
+$H -b -a vulkan -s adaptive.json --label "TAA (Adaptive)" -d /tmp/dump_adaptive -o /tmp/bench_adaptive.json
+python3 tools/taa/taa_viewer.py /tmp/bench_taa.json /tmp/bench_adaptive.json
+```
+
+`taa_viewer.py` binds strictly to `127.0.0.1` using Python's standard library (`--port 8910`,
+`--no-browser`) and provides:
+- **Synchronized Multi-Engine Stage**: Lockstep pan, integer pixel-exact zoom (`1x..16x`), and
+  crosshairs across `Grid (N-up)`, draggable `Split A|B` curtain, and instant `Flip` (`1..9`, `R`, `B`).
+- **Live Compute Heatmaps & Overlays**: Interactive `Thresholded Error Heatmap` (`|Error| > tau`
+  over dimmed monochrome scene context, with `Auto Floor` seeded from `msaa_vs_reference_edge_rmse`),
+  `Signed Luma Bias (+/-)`, per-pixel `Temporal Flicker (sigma_t)` across the capture window,
+  silhouette `Mask` outline/gating, and `8x8` inner-core P95 hotspot cell overlays.
+- **Metric-Linked Scrubber & Pixel Loupe**: Interactive multi-engine per-frame metric plot marking
+  active motion vs static recovery and the 4-frame worst regression window `[t_start..t_end]`, plus
+  a `16x16` texel loupe and click-to-pin per-frame pixel luminance trace.
+
 ### Android APK (`:samples:sample-taa-harness`), ADPF Fixed Performance Mode & Systrace Verification
 
 On Android, `taa_harness` is built as a shared library (`libtaa_harness.so`) and packaged alongside
