@@ -536,6 +536,37 @@ std::vector<uint8_t> makeColorSeamMorphGlb(MorphMaterial material) {
     return assembleGlb(std::move(json), std::move(bin));
 }
 
+std::vector<uint8_t> makeStridedVec4MorphGlb(uint32_t byteStride) {
+    // The morph target bufferView holds three elements: the last one needs all of its 16 bytes.
+    uint32_t const morphByteLength = byteStride * 2u + 16u;
+    uint32_t const bufferByteLength = 36u + morphByteLength;
+
+    std::string const primitive =
+            R"({"attributes":{"POSITION":0},"mode":4,"targets":[{"POSITION":1}]})";
+    std::string json =
+            R"({"asset":{"version":"2.0"},"scene":0,"scenes":[{"nodes":[0]}],)"
+            R"("nodes":[{"mesh":0}],)"
+            R"("meshes":[{"primitives":[)" + primitive + "," + primitive + R"(]}],)"
+            R"("accessors":[)"
+            R"({"bufferView":0,"componentType":5126,"count":3,"type":"VEC3",)"
+            R"("min":[0,0,0],"max":[1,1,0]},)"
+            R"({"bufferView":1,"componentType":5126,"count":3,"type":"VEC4",)"
+            R"("min":[0,0,0,0],"max":[0,0,0,0]}],)"
+            R"("bufferViews":[{"buffer":0,"byteOffset":0,"byteLength":36},)"
+            R"({"buffer":0,"byteOffset":36,"byteLength":)" + std::to_string(morphByteLength) +
+            R"(,"byteStride":)" + std::to_string(byteStride) + R"(}],)"
+            R"("buffers":[{"byteLength":)" + std::to_string(bufferByteLength) + R"(}]})";
+
+    std::vector<uint8_t> bin(bufferByteLength, 0);
+    float* fbin = reinterpret_cast<float*>(bin.data());
+    // Base positions (3 x vec3) at float offset 0: (0,0,0), (1,0,0), (0,1,0).
+    fbin[3] = 1.0f;
+    fbin[7] = 1.0f;
+    // The morph position deltas are left at zero.
+
+    return assembleGlb(std::move(json), std::move(bin));
+}
+
 std::vector<uint8_t> makePositionlessPrimitiveGlb(bool includeValidSiblingPrimitive) {
     std::string primitives = R"({"attributes":{"TEXCOORD_0":0}})";
     if (includeValidSiblingPrimitive) {
@@ -563,6 +594,81 @@ std::vector<uint8_t> makePositionlessPrimitiveGlb(bool includeValidSiblingPrimit
     // POSITION (3 x vec3) at float offset 6: (0,0,0), (1,0,0), (0,1,0).
     fbin[9] = 1.0f;
     fbin[13] = 1.0f;
+
+    return assembleGlb(std::move(json), std::move(bin));
+}
+
+std::vector<uint8_t> makeNormalizedPositionGlb(int componentType, bool withMorphTarget,
+        bool normalized) {
+    bool const isSigned = componentType == 5120 || componentType == 5122;
+    bool const isShort = componentType == 5122 || componentType == 5123;
+    int32_t const hi = isShort ? (isSigned ? 32767 : 65535) : (isSigned ? 127 : 255);
+    int32_t const lo = isSigned ? -hi : 0;
+    uint32_t const componentSize = isShort ? 2u : 1u;
+    // VEC3 elements are padded to 4 components so that every element is 4-byte aligned.
+    uint32_t const stride = 4u * componentSize;
+    uint32_t const viewLength = 3u * stride;
+
+    std::vector<uint8_t> bin;
+    auto const appendComponent = [&](int32_t value) {
+        uint32_t const bits = uint32_t(value);
+        bin.push_back(uint8_t(bits & 0xffu));
+        if (isShort) {
+            bin.push_back(uint8_t((bits >> 8u) & 0xffu));
+        }
+    };
+    auto const appendVertex = [&](int32_t x, int32_t y, int32_t z) {
+        appendComponent(x);
+        appendComponent(y);
+        appendComponent(z);
+        appendComponent(0);
+    };
+
+    // Base positions: one vertex at each corner of the quantized range.
+    appendVertex(lo, lo, lo);
+    appendVertex(hi, hi, hi);
+    appendVertex(lo, hi, lo);
+
+    // Morph position deltas: only +X, by up to the full quantized range.
+    if (withMorphTarget) {
+        appendVertex(0, 0, 0);
+        appendVertex(hi, 0, 0);
+        appendVertex(0, 0, 0);
+    }
+
+    std::string const ctype = std::to_string(componentType);
+    std::string const sLo = std::to_string(lo);
+    std::string const sHi = std::to_string(hi);
+    std::string const sStride = std::to_string(stride);
+    std::string const sViewLength = std::to_string(viewLength);
+    std::string const sNormalized = normalized ? "true" : "false";
+
+    std::string accessors =
+            R"({"bufferView":0,"componentType":)" + ctype + R"(,"normalized":)" + sNormalized +
+            R"(,"count":3,"type":"VEC3","min":[)" + sLo + "," + sLo + "," + sLo +
+            R"(],"max":[)" + sHi + "," + sHi + "," + sHi + "]}";
+    std::string bufferViews = R"({"buffer":0,"byteOffset":0,"byteLength":)" + sViewLength +
+            R"(,"byteStride":)" + sStride + "}";
+    std::string targets;
+    if (withMorphTarget) {
+        accessors += R"(,{"bufferView":1,"componentType":)" + ctype + R"(,"normalized":)" +
+                sNormalized + R"(,"count":3,"type":"VEC3","min":[0,0,0],"max":[)" + sHi +
+                ",0,0]}";
+        bufferViews += R"(,{"buffer":0,"byteOffset":)" + sViewLength + R"(,"byteLength":)" +
+                sViewLength + R"(,"byteStride":)" + sStride + "}";
+        targets = R"(,"targets":[{"POSITION":1}])";
+    }
+
+    std::string json =
+            R"({"asset":{"version":"2.0"},)"
+            R"("extensionsUsed":["KHR_mesh_quantization"],)"
+            R"("extensionsRequired":["KHR_mesh_quantization"],)"
+            R"("scene":0,"scenes":[{"nodes":[0]}],"nodes":[{"mesh":0}],)"
+            R"("meshes":[{)" + std::string(withMorphTarget ? R"("weights":[0],)" : "") +
+            R"("primitives":[{"attributes":{"POSITION":0})" + targets + "}]}],"
+            R"("accessors":[)" + accessors + "],"
+            R"("bufferViews":[)" + bufferViews + "],"
+            R"("buffers":[{"byteLength":)" + std::to_string(bin.size()) + "}]}";
 
     return assembleGlb(std::move(json), std::move(bin));
 }
@@ -946,6 +1052,31 @@ std::vector<uint8_t> makeTranslationAnimationGlb(TranslationAnimationOptions con
   ],
   "scene": 0
 })";
+
+    return assembleGlb(std::move(json), std::move(bin));
+}
+
+std::vector<uint8_t> makeUnusableInverseBindMatricesGlb() {
+    std::string json =
+            R"({"asset":{"version":"2.0"},"scene":0,"scenes":[{"nodes":[0]}],)"
+            R"("nodes":[{"name":"root","children":[1,2]},{"name":"joint0"},{"name":"joint1"}],)"
+            R"("skins":[{"name":"skin0","joints":[1],"inverseBindMatrices":0},)"
+            R"({"name":"skin1","joints":[2],"inverseBindMatrices":1}],)"
+            R"("accessors":[)"
+            R"({"bufferView":0,"componentType":5123,"count":1,"type":"MAT4"},)"
+            R"({"bufferView":1,"componentType":5126,"count":1,"type":"MAT4"}],)"
+            R"("bufferViews":[{"buffer":0,"byteOffset":0,"byteLength":32},)"
+            R"({"buffer":0,"byteOffset":32,"byteLength":64}],)"
+            R"("buffers":[{"byteLength":96}]})";
+
+    std::vector<uint8_t> bin(96, 0);
+    // The matrix of "skin0" (16 x uint16) at byte offset 0 is left at zero.
+    // The matrix of "skin1" (16 x float, column-major) at byte offset 32.
+    float* matrix = reinterpret_cast<float*>(bin.data() + 32);
+    matrix[0] = matrix[5] = matrix[10] = matrix[15] = 1.0f;
+    matrix[12] = kSkinInverseBindTranslation.x;
+    matrix[13] = kSkinInverseBindTranslation.y;
+    matrix[14] = kSkinInverseBindTranslation.z;
 
     return assembleGlb(std::move(json), std::move(bin));
 }

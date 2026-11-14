@@ -7,6 +7,28 @@ A new header is inserted each time a *tag* is created.
 Instead, if you are authoring a PR for the main branch, add your release note to
 [NEW_RELEASE_NOTES.md](./NEW_RELEASE_NOTES.md).
 
+## v1.81.0
+
+- backend: added 16-bit normalized texture formats (`R16`, `RG16`, `RGB16`, `RGBA16`, and `*_SNORM`).
+- webgpu: preserve fragment depth writes and discard in depth-only render passes (#10717).
+- gltf: `KHR_materials_iridescence` is now supported
+- gltf: `KHR_materials_anisotropy` is now supported
+- gltf: `KHR_materials_diffuse_transmission` is now supported
+- materials: the new `diffuseTransmission` and `diffuseTransmissionColor` material properties can be
+  used in the lit (standard) shading model to create diffusely transmitting (translucent) surfaces
+- variant: completely remove FOG variant bit
+- android: `Engine.destroySwapChain()` releases the `ANativeWindow` taken from a `Surface`, fixing a
+  file descriptor leak. It now waits for the driver thread to run pending commands before returning.
+- opengl: key the program binary cache on the final shader source instead of the user material
+  code; remove the `MAT_UUID` material chunk. [⚠️ **Recompile Materials**]
+- engine: fix `RenderTarget` validation rejecting layers of 2D-array textures at mip levels above 0
+  (the layer count was halved per level as for 3D textures)
+- gltfio: lit materials without clear coat use ubershaders built without the clear coat lobe
+- metal: map the `SRGB8_ALPHA8_ASTC_*` texture formats to Metal's sRGB ASTC pixel formats on
+  Apple-family GPUs (they previously had no Metal mapping)
+- gl: on PowerVR Rogue GE9215, material-instance uniforms are no longer batched and buffer updates
+  no longer go through `glMapBufferRange`
+
 ## v1.80.1
 
 - engine: fix PCSS soft shadows of point and spot lights using the directional light's bulb radius

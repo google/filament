@@ -31,10 +31,13 @@
 #include <utils/compiler.h>
 #include <utils/debug.h>
 #include <utils/Logger.h>
+#include <utils/Mutex.h>
 #include <utils/Panic.h>
 #include <utils/trap.h>
 
 #include <math/scalar.h>
+
+#include <memory>
 
 #include <math.h>
 
@@ -447,15 +450,22 @@ void MetalSwapChain::scheduleFrameScheduledCallback(int64_t presentationTimeNs) 
                                     context.driver, flags, presentationTimeNs)];
 
     backend::CallbackHandler* handler = frameScheduled.handler;
-    MetalDriver* driver = context.driver;
+    std::weak_ptr<DriverLifetimeTracker> weakDriverLifetime = context.driverLifetimeTracker;
     [getPendingCommandBuffer(&context) addScheduledHandler:^(id<MTLCommandBuffer> cb) {
         Callback* user = static_cast<Callback*>(callback.p);
         [callback reset];
         if (flags & SwapChain::CALLBACK_DEFAULT_USE_METAL_COMPLETION_HANDLER) {
             Callback::func(user);
-        } else {
-            driver->scheduleCallback(handler, user, &Callback::func);
+            return;
         }
+        if (auto driverTracker = weakDriverLifetime.lock()) {
+            utils::LockGuard const lock(driverTracker->mutex);
+            if (driverTracker->driver) {
+                driverTracker->driver->scheduleCallback(handler, user, &Callback::func);
+                return;
+            }
+        }
+        delete user;
     }];
 }
 
@@ -480,11 +490,18 @@ void MetalSwapChain::scheduleFrameCompletedCallback() {
             [[ReleasablePointer alloc] initWithPointer:new Callback(frameCompleted.callback)];
 
     CallbackHandler* handler = frameCompleted.handler;
-    MetalDriver* driver = context.driver;
+    std::weak_ptr<DriverLifetimeTracker> weakDriverLifetime = context.driverLifetimeTracker;
     [getPendingCommandBuffer(&context) addCompletedHandler:^(id<MTLCommandBuffer> cb) {
         Callback* user = static_cast<Callback*>(callback.p);
         [callback reset];
-        driver->scheduleCallback(handler, user, &Callback::func);
+        if (auto driverTracker = weakDriverLifetime.lock()) {
+            utils::LockGuard const lock(driverTracker->mutex);
+            if (driverTracker->driver) {
+                driverTracker->driver->scheduleCallback(handler, user, &Callback::func);
+                return;
+            }
+        }
+        delete user;
     }];
 }
 
@@ -840,6 +857,8 @@ MTLPixelFormat MetalTexture::decidePixelFormat(MetalContext* context, TextureFor
         case TextureFormat::RGB8: return MTLPixelFormatRGBA8Unorm;
         case TextureFormat::SRGB8: return MTLPixelFormatRGBA8Unorm_sRGB;
         case TextureFormat::RGB8_SNORM: return MTLPixelFormatRGBA8Snorm;
+        case TextureFormat::RGB16: return MTLPixelFormatRGBA16Unorm;
+        case TextureFormat::RGB16_SNORM: return MTLPixelFormatRGBA16Snorm;
         case TextureFormat::RGB32F: return MTLPixelFormatRGBA32Float;
         case TextureFormat::RGB16F: return MTLPixelFormatRGBA16Float;
         case TextureFormat::RGB8UI: return MTLPixelFormatRGBA8Uint;
@@ -892,11 +911,25 @@ PixelBufferShape PixelBufferShape::compute(const PixelBufferDescriptor& data,
 
     result.totalBytes = result.bytesPerSlice * depth;
 
+    // The last row's trailing padding is never read, and the frontend does not require it.
+    const size_t rowBytes = width * result.bytesPerPixel;
+    uint32_t lastRowPadding = 0;
+    if (data.type != PixelDataType::COMPRESSED && rowBytes < result.bytesPerRow) {
+        lastRowPadding = result.bytesPerRow - rowBytes;
+    }
+    result.sourceBytes =
+            result.totalBytes > lastRowPadding ? result.totalBytes - lastRowPadding : 0;
+
     return result;
 }
 
 void MetalTexture::loadImage(id<MTLCommandBuffer> cmdBuffer, uint32_t level, MTLRegion region,
         PixelBufferDescriptor& p) noexcept {
+    // The frontend skips its size checks for empty regions, and there is nothing to copy.
+    if (region.size.width == 0 || region.size.height == 0 || region.size.depth == 0) {
+        return;
+    }
+
     PixelBufferDescriptor* data = &p;
     PixelBufferDescriptor reshapedData;
     if(reshape(p, reshapedData)) {
@@ -946,8 +979,9 @@ void MetalTexture::loadSlice(id<MTLCommandBuffer> cmdBuffer, uint32_t level, MTL
         uint32_t byteOffset, uint32_t slice, PixelBufferDescriptor const& data) noexcept {
     const PixelBufferShape shape = PixelBufferShape::compute(data, format, region.size, byteOffset);
 
-    FILAMENT_CHECK_PRECONDITION(data.size >= shape.totalBytes)
-            << "Expected buffer size of at least " << shape.totalBytes
+    const size_t requiredSize = size_t(shape.sourceOffset) + shape.sourceBytes;
+    FILAMENT_CHECK_PRECONDITION(data.size >= requiredSize)
+            << "Expected buffer size of at least " << requiredSize
             << " but received PixelBufferDescriptor with size " << data.size << ".";
 
     // Earlier versions of iOS don't have the maxBufferLength query, but 256 MB is a safe bet.
@@ -984,7 +1018,7 @@ void MetalTexture::loadWithCopyBuffer(id<MTLCommandBuffer> blitCommandBuffer, ui
     auto entry = context.bufferPool->acquireBuffer(stagingBufferSize);
     memcpy(entry->buffer.get().contents,
             static_cast<uint8_t*>(data.buffer) + shape.sourceOffset,
-            stagingBufferSize);
+            shape.sourceBytes);
     id<MTLBlitCommandEncoder> blitCommandEncoder = [blitCommandBuffer blitCommandEncoder];
     blitCommandEncoder.label = @"Texture upload buffer blit";
     [blitCommandEncoder copyFromBuffer:entry->buffer.get()
@@ -997,11 +1031,17 @@ void MetalTexture::loadWithCopyBuffer(id<MTLCommandBuffer> blitCommandBuffer, ui
                       destinationLevel:level
                      destinationOrigin:region.origin];
     // We must ensure we only capture a pointer to bufferPool, not "this", as this texture could
-    // be deallocated before the completion handler runs. The MetalBufferPool is guaranteed to
-    // outlive the completion handler.
+    // be deallocated before the completion handler runs. Use DriverLifetimeTracker to ensure the
+    // driver and MetalBufferPool have not been destroyed.
     MetalBufferPool* bufferPool = this->context.bufferPool;
+    std::weak_ptr<DriverLifetimeTracker> weakDriverLifetime = this->context.driverLifetimeTracker;
     [blitCommandBuffer addCompletedHandler:^(id<MTLCommandBuffer> cb) {
-        bufferPool->releaseBuffer(entry);
+        if (auto driverTracker = weakDriverLifetime.lock()) {
+            utils::LockGuard const lock(driverTracker->mutex);
+            if (driverTracker->driver) {
+                bufferPool->releaseBuffer(entry);
+            }
+        }
     }];
     [blitCommandEncoder endEncoding];
 }
@@ -1194,9 +1234,12 @@ void MetalRenderTarget::setUpRenderPassAttachments(MTLRenderPassDescriptor* desc
             continue;
         }
 
+        // For 3D textures, Metal selects the target z-plane via depthPlane; slice must be 0.
+        const bool is3D = attachment.getTexture().textureType == MTLTextureType3D;
         descriptor.colorAttachments[i].texture = attachment.getTexture();
         descriptor.colorAttachments[i].level = attachment.getLevel();
-        descriptor.colorAttachments[i].slice = attachment.getLayer();
+        descriptor.colorAttachments[i].slice = is3D ? 0 : attachment.getLayer();
+        descriptor.colorAttachments[i].depthPlane = is3D ? attachment.getLayer() : 0;
         descriptor.colorAttachments[i].loadAction = getLoadAction(params, getTargetBufferFlagsAt(i));
         descriptor.colorAttachments[i].storeAction = getStoreAction(params,
                 getTargetBufferFlagsAt(i));
@@ -1219,11 +1262,13 @@ void MetalRenderTarget::setUpRenderPassAttachments(MTLRenderPassDescriptor* desc
             descriptor.colorAttachments[i].texture = attachment.getMsaaTexture();
             descriptor.colorAttachments[i].level = 0;
             descriptor.colorAttachments[i].slice = 0;
+            descriptor.colorAttachments[i].depthPlane = 0;
             const bool discard = any(discardFlags & getTargetBufferFlagsAt(i));
             if (!discard) {
                 descriptor.colorAttachments[i].resolveTexture = attachment.getTexture();
                 descriptor.colorAttachments[i].resolveLevel = attachment.getLevel();
-                descriptor.colorAttachments[i].resolveSlice = attachment.getLayer();
+                descriptor.colorAttachments[i].resolveSlice = is3D ? 0 : attachment.getLayer();
+                descriptor.colorAttachments[i].resolveDepthPlane = is3D ? attachment.getLayer() : 0;
                 descriptor.colorAttachments[i].storeAction = MTLStoreActionMultisampleResolve;
             }
         }

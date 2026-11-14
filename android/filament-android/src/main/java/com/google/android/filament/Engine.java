@@ -297,7 +297,10 @@ public class Engine {
 
 
     public void destroySwapChain(@NonNull SwapChain swapChain) {
-        assertDestroy(nDestroySwapChain(getNativeObject(), swapChain.getNativeObject()));
+        // Only SwapChains from createSwapChain(Object) hold a native window reference.
+        boolean releaseNativeWindow = Platform.get().validateSurface(swapChain.getNativeWindow());
+        assertDestroy(nDestroySwapChain(getNativeObject(), swapChain.getNativeObject(),
+                releaseNativeWindow));
         swapChain.clearNativeObject();
     }
 
@@ -1520,7 +1523,7 @@ public class Engine {
     private static native boolean nDestroySkinningBuffer(long nativeEngine, long nativeSkinningBuffer);
     private static native boolean nDestroySkybox(long nativeEngine, long nativeSkybox);
     private static native boolean nDestroyStream(long nativeEngine, long nativeStream);
-    private static native boolean nDestroySwapChain(long nativeEngine, long nativeSwapChain);
+    private static native boolean nDestroySwapChain(long nativeEngine, long nativeSwapChain, boolean releaseNativeWindow);
     private static native boolean nDestroyTexture(long nativeEngine, long nativeTexture);
     private static native boolean nDestroyVertexBuffer(long nativeEngine, long nativeVertexBuffer);
     private static native boolean nDestroyView(long nativeEngine, long nativeView);

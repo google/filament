@@ -16,6 +16,7 @@
 
 #include <filagui/ImGuiHelper.h>
 
+#include <algorithm>
 #include <vector>
 #include <unordered_map>
 
@@ -46,104 +47,11 @@ namespace filagui {
 
 #include "generated/resources/filagui_resources.h"
 
-namespace {
-
-void setDarkPastelImGuiStyle() {
-    ImGuiStyle& style = ImGui::GetStyle();
-    ImVec4* colors = style.Colors;
-
-    // Backgrounds 
-    colors[ImGuiCol_WindowBg]             = ImVec4(0.10f, 0.11f, 0.12f, 1.00f);
-    colors[ImGuiCol_ChildBg]              = ImVec4(0.12f, 0.14f, 0.16f, 1.00f);
-    colors[ImGuiCol_PopupBg]              = ImVec4(0.10f, 0.10f, 0.12f, 0.95f);
-    colors[ImGuiCol_Border]               = ImVec4(0.30f, 0.33f, 0.42f, 0.40f);
-
-    //Text 
-    colors[ImGuiCol_Text]                 = ImVec4(0.90f, 0.93f, 0.95f, 1.00f);
-    colors[ImGuiCol_TextDisabled]         = ImVec4(0.60f, 0.65f, 0.70f, 1.00f);
-
-    // Headers 
-    colors[ImGuiCol_Header]               = ImVec4(0.36f, 0.42f, 0.55f, 0.60f);
-    colors[ImGuiCol_HeaderHovered]        = ImVec4(0.44f, 0.50f, 0.68f, 0.80f);
-    colors[ImGuiCol_HeaderActive]         = ImVec4(0.46f, 0.55f, 0.75f, 1.00f);
-
-    // Buttons 
-    colors[ImGuiCol_Button]               = ImVec4(0.28f, 0.34f, 0.48f, 0.70f);
-    colors[ImGuiCol_ButtonHovered]        = ImVec4(0.36f, 0.45f, 0.65f, 0.85f);
-    colors[ImGuiCol_ButtonActive]         = ImVec4(0.40f, 0.50f, 0.70f, 1.00f);
-
-    // Frames 
-    colors[ImGuiCol_FrameBg]              = ImVec4(0.20f, 0.22f, 0.28f, 1.00f);
-    colors[ImGuiCol_FrameBgHovered]       = ImVec4(0.28f, 0.32f, 0.42f, 1.00f);
-    colors[ImGuiCol_FrameBgActive]        = ImVec4(0.32f, 0.38f, 0.50f, 1.00f);
-
-    // Tabs 
-    colors[ImGuiCol_Tab]                  = ImVec4(0.26f, 0.30f, 0.42f, 0.80f);
-    colors[ImGuiCol_TabHovered]           = ImVec4(0.36f, 0.42f, 0.58f, 1.00f);
-    colors[ImGuiCol_TabActive]            = ImVec4(0.42f, 0.50f, 0.68f, 1.00f);
-    colors[ImGuiCol_TabUnfocused]         = ImVec4(0.20f, 0.24f, 0.32f, 0.80f);
-    colors[ImGuiCol_TabUnfocusedActive]   = ImVec4(0.30f, 0.36f, 0.50f, 1.00f);
-
-    // Titles 
-    colors[ImGuiCol_TitleBg]              = ImVec4(0.20f, 0.25f, 0.30f, 1.00f);
-    colors[ImGuiCol_TitleBgActive]        = ImVec4(0.25f, 0.30f, 0.40f, 1.00f);
-    colors[ImGuiCol_TitleBgCollapsed]     = ImVec4(0.10f, 0.12f, 0.15f, 0.75f);
-
-    // Scrollbars 
-    colors[ImGuiCol_ScrollbarBg]          = ImVec4(0.13f, 0.14f, 0.18f, 1.00f);
-    colors[ImGuiCol_ScrollbarGrab]        = ImVec4(0.25f, 0.30f, 0.38f, 0.60f);
-    colors[ImGuiCol_ScrollbarGrabHovered] = ImVec4(0.35f, 0.40f, 0.50f, 0.80f);
-    colors[ImGuiCol_ScrollbarGrabActive]  = ImVec4(0.45f, 0.50f, 0.65f, 1.00f);
-
-    // Checkboxes / Radios 
-    colors[ImGuiCol_CheckMark]            = ImVec4(0.80f, 0.85f, 1.00f, 1.00f);
-
-    // Sliders 
-    colors[ImGuiCol_SliderGrab]           = ImVec4(0.50f, 0.65f, 0.90f, 1.00f);
-    colors[ImGuiCol_SliderGrabActive]     = ImVec4(0.60f, 0.75f, 1.00f, 1.00f);
-
-    // Resize Grip 
-    colors[ImGuiCol_ResizeGrip]           = ImVec4(0.30f, 0.40f, 0.50f, 0.60f);
-    colors[ImGuiCol_ResizeGripHovered]    = ImVec4(0.40f, 0.50f, 0.60f, 0.80f);
-    colors[ImGuiCol_ResizeGripActive]     = ImVec4(0.50f, 0.60f, 0.80f, 1.00f);
-
-    // Separator 
-    colors[ImGuiCol_Separator]            = ImVec4(0.35f, 0.40f, 0.48f, 0.7f);
-    colors[ImGuiCol_SeparatorHovered]     = ImVec4(0.50f, 0.60f, 0.72f, 0.9f);
-    colors[ImGuiCol_SeparatorActive]      = ImVec4(0.65f, 0.70f, 0.85f, 1.0f);
-
-    // Menus and Tooltips 
-    colors[ImGuiCol_MenuBarBg]            = ImVec4(0.14f, 0.15f, 0.17f, 1.00f);
-
-    // Drag & Drop 
-    colors[ImGuiCol_DragDropTarget]       = ImVec4(0.50f, 0.85f, 1.00f, 0.90f);
-
-    // Style Metrics 
-    style.WindowRounding    = 8.0f;
-    style.ChildRounding     = 6.0f;
-    style.FrameRounding     = 5.0f;
-    style.PopupRounding     = 6.0f;
-    style.ScrollbarRounding = 6.0f;
-    style.GrabRounding      = 4.0f;
-    style.TabRounding       = 5.0f;
-
-    style.WindowBorderSize  = 0.0f;
-    style.FrameBorderSize   = 0.0f;
-    style.PopupBorderSize   = 1.0f;
-
-    style.WindowPadding     = ImVec2(16, 16);
-    style.FramePadding      = ImVec2(10, 6);
-    style.ItemSpacing       = ImVec2(10, 10);
-    style.ItemInnerSpacing  = ImVec2(6, 4);
-    style.IndentSpacing     = 16.0f;
-}
-
-} // namespace anonymous
-
 ImGuiHelper::ImGuiHelper(Engine* engine, filament::View* view, const Path& fontPath,
         ImGuiContext *imGuiContext)
         : mEngine(engine), mView(view), mScene(engine->createScene()),
         mImGuiContext(imGuiContext ? imGuiContext : ImGui::CreateContext()) {
+    ImGui::SetCurrentContext(mImGuiContext);
     ImGuiIO& io = ImGui::GetIO();
     mSettingsPath.setPath(
             Path::getUserSettingsDirectory() +
@@ -192,7 +100,100 @@ ImGuiHelper::ImGuiHelper(Engine* engine, filament::View* view, const Path& fontP
     mRenderable = em.create();
     mScene->addEntity(mRenderable);
 
-    setDarkPastelImGuiStyle();
+    if (!imGuiContext) {
+        ImGui::StyleColorsDark();
+    }
+}
+
+void ImGuiHelper::applyDarkPastelStyle() {
+    ImGui::SetCurrentContext(mImGuiContext);
+    ImGuiStyle& style = ImGui::GetStyle();
+    ImVec4* colors = style.Colors;
+
+    // Backgrounds
+    colors[ImGuiCol_WindowBg]             = ImVec4(0.10f, 0.11f, 0.12f, 1.00f);
+    colors[ImGuiCol_ChildBg]              = ImVec4(0.12f, 0.14f, 0.16f, 1.00f);
+    colors[ImGuiCol_PopupBg]              = ImVec4(0.10f, 0.10f, 0.12f, 0.95f);
+    colors[ImGuiCol_Border]               = ImVec4(0.30f, 0.33f, 0.42f, 0.40f);
+
+    // Text
+    colors[ImGuiCol_Text]                 = ImVec4(0.90f, 0.93f, 0.95f, 1.00f);
+    colors[ImGuiCol_TextDisabled]         = ImVec4(0.60f, 0.65f, 0.70f, 1.00f);
+
+    // Headers
+    colors[ImGuiCol_Header]               = ImVec4(0.36f, 0.42f, 0.55f, 0.60f);
+    colors[ImGuiCol_HeaderHovered]        = ImVec4(0.44f, 0.50f, 0.68f, 0.80f);
+    colors[ImGuiCol_HeaderActive]         = ImVec4(0.46f, 0.55f, 0.75f, 1.00f);
+
+    // Buttons
+    colors[ImGuiCol_Button]               = ImVec4(0.28f, 0.34f, 0.48f, 0.70f);
+    colors[ImGuiCol_ButtonHovered]        = ImVec4(0.36f, 0.45f, 0.65f, 0.85f);
+    colors[ImGuiCol_ButtonActive]         = ImVec4(0.40f, 0.50f, 0.70f, 1.00f);
+
+    // Frames
+    colors[ImGuiCol_FrameBg]              = ImVec4(0.20f, 0.22f, 0.28f, 1.00f);
+    colors[ImGuiCol_FrameBgHovered]       = ImVec4(0.28f, 0.32f, 0.42f, 1.00f);
+    colors[ImGuiCol_FrameBgActive]        = ImVec4(0.32f, 0.38f, 0.50f, 1.00f);
+
+    // Tabs
+    colors[ImGuiCol_Tab]                  = ImVec4(0.26f, 0.30f, 0.42f, 0.80f);
+    colors[ImGuiCol_TabHovered]           = ImVec4(0.36f, 0.42f, 0.58f, 1.00f);
+    colors[ImGuiCol_TabActive]            = ImVec4(0.42f, 0.50f, 0.68f, 1.00f);
+    colors[ImGuiCol_TabUnfocused]         = ImVec4(0.20f, 0.24f, 0.32f, 0.80f);
+    colors[ImGuiCol_TabUnfocusedActive]   = ImVec4(0.30f, 0.36f, 0.50f, 1.00f);
+
+    // Titles
+    colors[ImGuiCol_TitleBg]              = ImVec4(0.20f, 0.25f, 0.30f, 1.00f);
+    colors[ImGuiCol_TitleBgActive]        = ImVec4(0.25f, 0.30f, 0.40f, 1.00f);
+    colors[ImGuiCol_TitleBgCollapsed]     = ImVec4(0.10f, 0.12f, 0.15f, 0.75f);
+
+    // Scrollbars
+    colors[ImGuiCol_ScrollbarBg]          = ImVec4(0.13f, 0.14f, 0.18f, 1.00f);
+    colors[ImGuiCol_ScrollbarGrab]        = ImVec4(0.25f, 0.30f, 0.38f, 0.60f);
+    colors[ImGuiCol_ScrollbarGrabHovered] = ImVec4(0.35f, 0.40f, 0.50f, 0.80f);
+    colors[ImGuiCol_ScrollbarGrabActive]  = ImVec4(0.45f, 0.50f, 0.65f, 1.00f);
+
+    // Checkboxes / Radios
+    colors[ImGuiCol_CheckMark]            = ImVec4(0.80f, 0.85f, 1.00f, 1.00f);
+
+    // Sliders
+    colors[ImGuiCol_SliderGrab]           = ImVec4(0.50f, 0.65f, 0.90f, 1.00f);
+    colors[ImGuiCol_SliderGrabActive]     = ImVec4(0.60f, 0.75f, 1.00f, 1.00f);
+
+    // Resize Grip
+    colors[ImGuiCol_ResizeGrip]           = ImVec4(0.30f, 0.40f, 0.50f, 0.60f);
+    colors[ImGuiCol_ResizeGripHovered]    = ImVec4(0.40f, 0.50f, 0.60f, 0.80f);
+    colors[ImGuiCol_ResizeGripActive]     = ImVec4(0.50f, 0.60f, 0.80f, 1.00f);
+
+    // Separator
+    colors[ImGuiCol_Separator]            = ImVec4(0.35f, 0.40f, 0.48f, 0.7f);
+    colors[ImGuiCol_SeparatorHovered]     = ImVec4(0.50f, 0.60f, 0.72f, 0.9f);
+    colors[ImGuiCol_SeparatorActive]      = ImVec4(0.65f, 0.70f, 0.85f, 1.0f);
+
+    // Menus and Tooltips
+    colors[ImGuiCol_MenuBarBg]            = ImVec4(0.14f, 0.15f, 0.17f, 1.00f);
+
+    // Drag & Drop
+    colors[ImGuiCol_DragDropTarget]       = ImVec4(0.50f, 0.85f, 1.00f, 0.90f);
+
+    // Style Metrics
+    style.WindowRounding    = 8.0f;
+    style.ChildRounding     = 6.0f;
+    style.FrameRounding     = 5.0f;
+    style.PopupRounding     = 6.0f;
+    style.ScrollbarRounding = 6.0f;
+    style.GrabRounding      = 4.0f;
+    style.TabRounding       = 5.0f;
+
+    style.WindowBorderSize  = 0.0f;
+    style.FrameBorderSize   = 0.0f;
+    style.PopupBorderSize   = 1.0f;
+
+    style.WindowPadding     = ImVec2(16, 16);
+    style.FramePadding      = ImVec2(10, 6);
+    style.ItemSpacing       = ImVec2(10, 10);
+    style.ItemInnerSpacing  = ImVec2(6, 4);
+    style.IndentSpacing     = 16.0f;
 }
 
 void ImGuiHelper::createAtlasTexture(Engine* engine) {
@@ -336,11 +337,28 @@ void ImGuiHelper::processImGuiCommands(ImDrawData* commands, const ImGuiIO& io) 
     auto& rcm = mEngine->getRenderableManager();
 
     // Avoid rendering when minimized and scale coordinates for retina displays.
-    int fbwidth = (int)(io.DisplaySize.x * io.DisplayFramebufferScale.x);
-    int fbheight = (int)(io.DisplaySize.y * io.DisplayFramebufferScale.y);
-    if (fbwidth == 0 || fbheight == 0)
+    int const fbwidth = (int)(commands->DisplaySize.x * commands->FramebufferScale.x);
+    int const fbheight = (int)(commands->DisplaySize.y * commands->FramebufferScale.y);
+    if (fbwidth <= 0 || fbheight <= 0)
         return;
-    commands->ScaleClipRects(io.DisplayFramebufferScale);
+
+    // Update projection dynamically based on viewport's DisplayPos and DisplaySize.
+    ImVec2 const displayPos = commands->DisplayPos;
+    ImVec2 const displaySize = commands->DisplaySize;
+
+    double bottom = displayPos.y + double(displaySize.y);
+    double top = displayPos.y;
+
+    if (mFlipVertical) {
+        top = bottom;
+        bottom = displayPos.y;
+    }
+
+    mCamera->setProjection(Camera::Projection::ORTHO,
+            displayPos.x, displayPos.x + double(displaySize.x), bottom, top, 0.0, 1.0);
+
+    ImVec2 const clipOff = commands->DisplayPos;
+    ImVec2 const clipScale = commands->FramebufferScale;
 
     // Ensure that we have enough vertex buffers and index buffers.
     createBuffers(commands->CmdListsCount);
@@ -387,11 +405,23 @@ void ImGuiHelper::processImGuiCommands(ImDrawData* commands, const ImGuiIO& io) 
                     materialInstance = mMaterial2dInstances[material2dIndex++];
                 }
 
-                auto scissorLeft = static_cast<uint32_t>(std::max(0.0f, pcmd.ClipRect.x));
-                auto scissorBottom = static_cast<uint32_t>(std::max(0.0f,
-                        mFlipVertical ? pcmd.ClipRect.y : (fbheight - pcmd.ClipRect.w)));
-                auto scissorWidth = static_cast<uint32_t>(pcmd.ClipRect.z - pcmd.ClipRect.x);
-                auto scissorHeight = static_cast<uint32_t>(pcmd.ClipRect.w - pcmd.ClipRect.y);
+                // Project scissor/clipping rectangles into framebuffer space.
+                float clipMinX = (pcmd.ClipRect.x - clipOff.x) * clipScale.x;
+                float clipMaxX = (pcmd.ClipRect.z - clipOff.x) * clipScale.x;
+                float clipMinY = (pcmd.ClipRect.y - clipOff.y) * clipScale.y;
+                float clipMaxY = (pcmd.ClipRect.w - clipOff.y) * clipScale.y;
+
+                clipMinX = std::clamp(clipMinX, 0.0f, float(fbwidth));
+                clipMaxX = std::clamp(clipMaxX, 0.0f, float(fbwidth));
+                clipMinY = std::clamp(clipMinY, 0.0f, float(fbheight));
+                clipMaxY = std::clamp(clipMaxY, 0.0f, float(fbheight));
+
+                auto const scissorLeft = static_cast<uint32_t>(clipMinX);
+                auto const scissorWidth = static_cast<uint32_t>(std::max(0.0f, clipMaxX - clipMinX));
+                auto const scissorBottom = static_cast<uint32_t>(
+                        mFlipVertical ? clipMinY : (float(fbheight) - clipMaxY));
+                auto const scissorHeight = static_cast<uint32_t>(std::max(0.0f, clipMaxY - clipMinY));
+
                 materialInstance->setScissor(scissorLeft, scissorBottom, scissorWidth, scissorHeight);
                 if (texture) {
                     TextureSampler sampler(MinFilter::LINEAR, MagFilter::LINEAR);
