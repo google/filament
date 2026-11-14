@@ -3369,6 +3369,37 @@ TEST(glTFIOTangentsJob, GeneratesExpectedQuatsAcrossAllModes) {
     }
 }
 
+TEST_F(glTFIOTest, UbershaderBitmaskLookupMatchesFeatureCombinations) {
+    MaterialKey const cases[] = {
+        { .unlit = true, .hasBaseColorTexture = true },
+        { .hasBaseColorTexture = true, .hasNormalTexture = true, .alphaMode = AlphaMode::MASK },
+        { .alphaMode = AlphaMode::BLEND, .hasClearCoatTexture = true,
+                .hasClearCoatRoughnessTexture = true, .hasClearCoatNormalTexture = true,
+                .hasClearCoat = true },
+        { .hasTransmission = true, .hasTransmissionTexture = true,
+                .hasVolumeThicknessTexture = true, .hasIOR = true, .hasVolume = true,
+                .hasDispersion = true },
+        { .hasSheenColorTexture = true, .hasSheenRoughnessTexture = true, .hasSheen = true,
+                .hasSpecular = true, .hasSpecularTexture = true },
+        { .hasBaseColorTexture = true, .useSpecularGlossiness = true,
+                .hasMetallicRoughnessTexture = true },
+    };
+
+    for (MaterialKey key : cases) {
+        UvMap uvmap{};
+        Material* mat = mMaterialProvider->getMaterial(&key, &uvmap, "test_mat");
+        ASSERT_NE(mat, nullptr);
+
+        MaterialKey instanceKey = key;
+        UvMap instanceUvmap{};
+        MaterialInstance* mi = mMaterialProvider->createMaterialInstance(
+                &instanceKey, &instanceUvmap, "test_mi");
+        ASSERT_NE(mi, nullptr);
+        EXPECT_EQ(mi->getMaterial(), mat);
+        mEngine->destroy(mi);
+    }
+}
+
 #undef EXPECT_FLOAT3_EQ
 
 int main(int argc, char** argv) {
