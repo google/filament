@@ -1,5 +1,5 @@
 diff --git a/third_party/cgltf/cgltf.h b/third_party/cgltf/cgltf.h
-index 78ea905f0..ac8b016c6 100644
+index 78ea905f02..1fdd0f36ff 100644
 --- a/third_party/cgltf/cgltf.h
 +++ b/third_party/cgltf/cgltf.h
 @@ -536,6 +536,12 @@ typedef struct cgltf_dispersion
@@ -62,7 +62,28 @@ index 78ea905f0..ac8b016c6 100644
  	cgltf_size bound = 0;
  
  	switch (component_type)
-@@ -1612,8 +1633,19 @@ cgltf_result cgltf_validate(cgltf_data* data)
+@@ -1600,9 +1621,19 @@ cgltf_result cgltf_validate(cgltf_data* data)
+ 
+ 		cgltf_size element_size = cgltf_calc_size(accessor->type, accessor->component_type);
+ 
++		CGLTF_ASSERT_IF(accessor->count == 0, cgltf_result_invalid_gltf);
++
+ 		if (accessor->buffer_view)
+ 		{
+-			cgltf_size req_size = accessor->offset + accessor->stride * (accessor->count - 1) + element_size;
++			cgltf_size req_size;
++
++			/* Guard the dense extent calculation against unsigned wraparound, matching
++			 * the sparse checks below; otherwise a huge stride or offset wraps req_size
++			 * past SIZE_MAX and passes the buffer_view bounds check. */
++			CGLTF_ASSERT_IF(accessor->offset > SIZE_MAX - element_size, cgltf_result_data_too_short);
++			CGLTF_ASSERT_IF(accessor->stride && (accessor->count - 1) > (SIZE_MAX - accessor->offset - element_size) / accessor->stride, cgltf_result_data_too_short);
++
++			req_size = accessor->offset + accessor->stride * (accessor->count - 1) + element_size;
+ 
+ 			CGLTF_ASSERT_IF(accessor->buffer_view->size < req_size, cgltf_result_data_too_short);
+ 		}
+@@ -1612,8 +1643,19 @@ cgltf_result cgltf_validate(cgltf_data* data)
  			cgltf_accessor_sparse* sparse = &accessor->sparse;
  
  			cgltf_size indices_component_size = cgltf_component_size(sparse->indices_component_type);
@@ -84,7 +105,7 @@ index 78ea905f0..ac8b016c6 100644
  
  			CGLTF_ASSERT_IF(sparse->indices_buffer_view->size < indices_req_size ||
  							sparse->values_buffer_view->size < values_req_size, cgltf_result_data_too_short);
-@@ -1622,7 +1654,7 @@ cgltf_result cgltf_validate(cgltf_data* data)
+@@ -1622,7 +1664,7 @@ cgltf_result cgltf_validate(cgltf_data* data)
  							sparse->indices_component_type != cgltf_component_type_r_16u &&
  							sparse->indices_component_type != cgltf_component_type_r_32u, cgltf_result_invalid_gltf);
  
@@ -93,7 +114,33 @@ index 78ea905f0..ac8b016c6 100644
  			{
  				cgltf_size index_bound = cgltf_calc_index_bound(sparse->indices_buffer_view, sparse->indices_byte_offset, sparse->indices_component_type, sparse->count);
  
-@@ -1709,7 +1741,7 @@ cgltf_result cgltf_validate(cgltf_data* data)
+@@ -1633,7 +1675,11 @@ cgltf_result cgltf_validate(cgltf_data* data)
+ 
+ 	for (cgltf_size i = 0; i < data->buffer_views_count; ++i)
+ 	{
+-		cgltf_size req_size = data->buffer_views[i].offset + data->buffer_views[i].size;
++		cgltf_size req_size;
++
++		CGLTF_ASSERT_IF(data->buffer_views[i].size > SIZE_MAX - data->buffer_views[i].offset, cgltf_result_data_too_short);
++
++		req_size = data->buffer_views[i].offset + data->buffer_views[i].size;
+ 
+ 		CGLTF_ASSERT_IF(data->buffer_views[i].buffer && data->buffer_views[i].buffer->size < req_size, cgltf_result_data_too_short);
+ 
+@@ -1641,10 +1687,12 @@ cgltf_result cgltf_validate(cgltf_data* data)
+ 		{
+ 			cgltf_meshopt_compression* mc = &data->buffer_views[i].meshopt_compression;
+ 
++			CGLTF_ASSERT_IF(mc->size > SIZE_MAX - mc->offset, cgltf_result_data_too_short);
+ 			CGLTF_ASSERT_IF(mc->buffer == NULL || mc->buffer->size < mc->offset + mc->size, cgltf_result_data_too_short);
+ 
+ 			CGLTF_ASSERT_IF(data->buffer_views[i].stride && mc->stride != data->buffer_views[i].stride, cgltf_result_invalid_gltf);
+ 
++			CGLTF_ASSERT_IF(mc->stride && mc->count > SIZE_MAX / mc->stride, cgltf_result_invalid_gltf);
+ 			CGLTF_ASSERT_IF(data->buffer_views[i].size != mc->stride * mc->count, cgltf_result_invalid_gltf);
+ 
+ 			CGLTF_ASSERT_IF(mc->mode == cgltf_meshopt_compression_mode_invalid, cgltf_result_invalid_gltf);
+@@ -1709,7 +1757,7 @@ cgltf_result cgltf_validate(cgltf_data* data)
  			CGLTF_ASSERT_IF(indices && indices->type != cgltf_type_scalar, cgltf_result_invalid_gltf);
  			CGLTF_ASSERT_IF(indices && indices->stride != cgltf_component_size(indices->component_type), cgltf_result_invalid_gltf);
  
@@ -102,7 +149,7 @@ index 78ea905f0..ac8b016c6 100644
  			{
  				cgltf_size index_bound = cgltf_calc_index_bound(indices->buffer_view, indices->offset, indices->component_type, indices->count);
  
-@@ -2255,12 +2287,19 @@ static cgltf_float cgltf_component_read_float(const void* in, cgltf_component_ty
+@@ -2255,12 +2303,19 @@ static cgltf_float cgltf_component_read_float(const void* in, cgltf_component_ty
  		switch (component_type)
  		{
  			// note: glTF spec doesn't currently define normalized conversions for 32-bit integers
@@ -124,7 +171,7 @@ index 78ea905f0..ac8b016c6 100644
  			case cgltf_component_type_r_8u:
  				return *((const uint8_t*) in) / (cgltf_float)255;
  			default:
-@@ -2433,9 +2472,14 @@ cgltf_size cgltf_accessor_unpack_floats(const cgltf_accessor* accessor, cgltf_fl
+@@ -2433,9 +2488,14 @@ cgltf_size cgltf_accessor_unpack_floats(const cgltf_accessor* accessor, cgltf_fl
  		reader_head += sparse->values_byte_offset;
  
  		cgltf_size index_stride = cgltf_component_size(sparse->indices_component_type);
@@ -140,7 +187,7 @@ index 78ea905f0..ac8b016c6 100644
  			float* writer_head = out + writer_index * floats_per_element;
  
  			if (!cgltf_element_read_float(reader_head, accessor->type, accessor->component_type, accessor->normalized, writer_head, floats_per_element))
-@@ -2512,7 +2556,7 @@ cgltf_bool cgltf_accessor_read_uint(const cgltf_accessor* accessor, cgltf_size i
+@@ -2512,7 +2572,7 @@ cgltf_bool cgltf_accessor_read_uint(const cgltf_accessor* accessor, cgltf_size i
  	{
  		return 0;
  	}
@@ -149,7 +196,7 @@ index 78ea905f0..ac8b016c6 100644
  	return cgltf_element_read_uint(element, accessor->type, accessor->component_type, out, element_size);
  }
  
-@@ -2531,7 +2575,7 @@ cgltf_size cgltf_accessor_read_index(const cgltf_accessor* accessor, cgltf_size
+@@ -2531,7 +2591,7 @@ cgltf_size cgltf_accessor_read_index(const cgltf_accessor* accessor, cgltf_size
  	{
  		return 0; // This is an error case, but we can't communicate the error with existing interface.
  	}
@@ -158,7 +205,7 @@ index 78ea905f0..ac8b016c6 100644
  	return cgltf_component_read_index(element, accessor->component_type);
  }
  
-@@ -4436,6 +4480,41 @@ static int cgltf_parse_json_dispersion(jsmntok_t const* tokens, int i, const uin
+@@ -4436,6 +4496,41 @@ static int cgltf_parse_json_dispersion(jsmntok_t const* tokens, int i, const uin
  	return i;
  }
  
@@ -200,7 +247,7 @@ index 78ea905f0..ac8b016c6 100644
  static int cgltf_parse_json_image(cgltf_options* options, jsmntok_t const* tokens, int i, const uint8_t* json_chunk, cgltf_image* out_image)
  {
  	CGLTF_CHECK_TOKTYPE(tokens[i], JSMN_OBJECT);
-@@ -4867,6 +4946,11 @@ static int cgltf_parse_json_material(cgltf_options* options, jsmntok_t const* to
+@@ -4867,6 +4962,11 @@ static int cgltf_parse_json_material(cgltf_options* options, jsmntok_t const* to
  					out_material->has_dispersion = 1;
  					i = cgltf_parse_json_dispersion(tokens, i + 1, json_chunk, &out_material->dispersion);
  				}
@@ -212,7 +259,7 @@ index 78ea905f0..ac8b016c6 100644
  				else
  				{
  					i = cgltf_parse_json_unprocessed_extension(options, tokens, i, json_chunk, &(out_material->extensions[out_material->extensions_count++]));
-@@ -6724,6 +6808,8 @@ static int cgltf_fixup_pointers(cgltf_data* data)
+@@ -6724,6 +6824,8 @@ static int cgltf_fixup_pointers(cgltf_data* data)
  		CGLTF_PTRFIXUP(data->materials[i].diffuse_transmission.diffuse_transmission_color_texture.texture, data->textures, data->textures_count);
  
  		CGLTF_PTRFIXUP(data->materials[i].anisotropy.anisotropy_texture.texture, data->textures, data->textures_count);

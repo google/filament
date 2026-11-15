@@ -269,11 +269,14 @@ namespace filament::backend {
         case TextureFormat::RGB32F:                  return wgpu::TextureFormat::RGBA32Float;
         case TextureFormat::RGB32UI:                 return wgpu::TextureFormat::RGBA32Uint;
         case TextureFormat::RGB32I:                  return wgpu::TextureFormat::RGBA32Sint;
-        case TextureFormat::DXT1_RGB:                return wgpu::TextureFormat::BC1RGBAUnorm;
+        // WebGPU has no 3-channel BC1 format. BC1RGBAUnorm decodes selector 3 of a 3-color block
+        // (color0 <= color1) as transparent black (A=0) instead of opaque black (A=1), so these
+        // formats are rejected, as on Metal.
+        case TextureFormat::DXT1_RGB:                return wgpu::TextureFormat::Undefined;
         case TextureFormat::DXT1_RGBA:               return wgpu::TextureFormat::BC1RGBAUnorm;
         case TextureFormat::DXT3_RGBA:               return wgpu::TextureFormat::BC2RGBAUnorm;
         case TextureFormat::DXT5_RGBA:               return wgpu::TextureFormat::BC3RGBAUnorm;
-        case TextureFormat::DXT1_SRGB:               return wgpu::TextureFormat::BC1RGBAUnormSrgb;
+        case TextureFormat::DXT1_SRGB:               return wgpu::TextureFormat::Undefined;
         case TextureFormat::DXT1_SRGBA:              return wgpu::TextureFormat::BC1RGBAUnormSrgb;
         case TextureFormat::DXT3_SRGBA:              return wgpu::TextureFormat::BC2RGBAUnormSrgb;
         case TextureFormat::DXT5_SRGBA:              return wgpu::TextureFormat::BC3RGBAUnormSrgb;
@@ -463,6 +466,14 @@ namespace filament::backend {
             // All other formats are uncompressed and have a 1x1 block size.
             return { .width = 1, .height = 1 };
     }
+}
+
+/**
+ * @return true if the format is a block-compressed texture format (BC, ETC2/EAC, or ASTC).
+ */
+[[nodiscard]] constexpr bool isCompressedTextureFormat(wgpu::TextureFormat const format) {
+    wgpu::Extent2D const blockSize = getBlockSize(format);
+    return blockSize.width > 1 || blockSize.height > 1;
 }
 
 [[nodiscard]] constexpr size_t getWGPUTextureFormatPixelSize(const wgpu::TextureFormat format) {
