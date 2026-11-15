@@ -410,7 +410,8 @@ VulkanTexture::VulkanTexture(VkDevice device, VkPhysicalDevice physicalDevice,
         VulkanContext const& context, VmaAllocator allocator,
         fvkmemory::ResourceManager* resourceManager, VulkanCommands* commands, SamplerType target,
         uint8_t levels, TextureFormat tformat, uint8_t samples, uint32_t w, uint32_t h,
-        uint32_t depth, TextureUsage tusage, VulkanStagePool& stagePool)
+        uint32_t depth, TextureUsage tusage, VulkanStagePool& stagePool,
+        VulkanSmallImagePool const& smallImagePool)
      : HwTexture(target, levels, samples, w, h, depth, tformat, tusage, false) {
     // Create an appropriately-sized device-only VkImage, but do not fill it yet.
     VkFormat const vkFormat = fvkutils::getVkFormat(tformat);
@@ -508,9 +509,31 @@ VulkanTexture::VulkanTexture(VkDevice device, VkPhysicalDevice physicalDevice,
         (isProtected ? VK_MEMORY_PROPERTY_PROTECTED_BIT : 0U);
     assert_invariant(!isProtected || context.isProtectedMemorySupported());
 
-    VkMemoryRequirements memReqs;
-    vkGetImageMemoryRequirements(device, textureImage, &memReqs);
-    bool const useDedicatedMemory = memReqs.size >= DEDICATED_ALLOCATION_THRESHOLD;
+    VkMemoryDedicatedRequirements dedicatedReqs = {
+        .sType = VK_STRUCTURE_TYPE_MEMORY_DEDICATED_REQUIREMENTS,
+    };
+    VkMemoryRequirements2 memReqs2 = {
+        .sType = VK_STRUCTURE_TYPE_MEMORY_REQUIREMENTS_2,
+        .pNext = &dedicatedReqs,
+    };
+    VkImageMemoryRequirementsInfo2 const imageReqsInfo = {
+        .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_REQUIREMENTS_INFO_2,
+        .image = textureImage,
+    };
+    vkGetImageMemoryRequirements2(device, &imageReqsInfo, &memReqs2);
+    VkMemoryRequirements const& memReqs = memReqs2.memoryRequirements;
+
+    // Intentionally ignore prefersDedicatedAllocation so < 2 MiB images continue suballocating.
+    bool const requiresDedicatedAllocation = dedicatedReqs.requiresDedicatedAllocation != VK_FALSE;
+    bool const useDedicatedMemory = memReqs.size >= DEDICATED_ALLOCATION_THRESHOLD ||
+            (!useTransientAttachment && requiresDedicatedAllocation);
+
+    // Small, suballocated, non-transient, non-protected images may go to a pool with smaller
+    // blocks than VMA's default pool.
+    bool const canUseSmallImagePool = !requiresDedicatedAllocation && !useDedicatedMemory &&
+            !useTransientAttachment && !isProtected;
+    VmaPool const pool = canUseSmallImagePool ? smallImagePool.getPool(memReqs.memoryTypeBits)
+                                              : VK_NULL_HANDLE;
 
     VmaAllocationCreateInfo const allocCreateInfo = {
         .flags = useDedicatedMemory ? VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT
@@ -519,6 +542,7 @@ VulkanTexture::VulkanTexture(VkDevice device, VkPhysicalDevice physicalDevice,
         .usage = useTransientAttachment ? VMA_MEMORY_USAGE_GPU_LAZILY_ALLOCATED
                                         : VMA_MEMORY_USAGE_UNKNOWN,
         .requiredFlags = requiredMemoryFlags,
+        .pool = pool,
     };
     VmaAllocation textureImageAllocation = VK_NULL_HANDLE;
     result = vmaAllocateMemoryForImage(allocator, textureImage, &allocCreateInfo,

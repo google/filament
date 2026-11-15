@@ -277,6 +277,7 @@ VulkanDriver::VulkanDriver(VulkanPlatform* platform, VulkanContext& context,
           mStagePool(mAllocator, &mResourceManager, &mCommands, mPlatform->getPhysicalDevice(),
                   &mContext.getPhysicalDeviceLimits()),
           mBufferCache(mContext, mResourceManager, mAllocator),
+          mSmallImagePool(mAllocator, mContext),
           mFramebufferCache(mPlatform->getDevice(),
                   mPlatform->getCustomization().timeBeforeEvictionFbo),
           mYcbcrConversionCache(mPlatform->getDevice()),
@@ -450,6 +451,10 @@ void VulkanDriver::terminate() {
 #if FVK_ENABLED(FVK_DEBUG_RESOURCE_LEAK)
     mResourceManager.print();
 #endif
+
+    // All textures must have been destroyed by now so that their allocations have been returned to
+    // the pool. The pool must be destroyed before the allocator.
+    mSmallImagePool.terminate();
 
     vmaDestroyAllocator(mAllocator);
 
@@ -854,7 +859,7 @@ void VulkanDriver::createTextureCommon(Handle<HwTexture> th, SamplerType target,
         TextureUsage usage, bool asynchronous, utils::ImmutableCString&& tag) {
     auto texture = resource_ptr<VulkanTexture>::make(&mResourceManager, th, mPlatform->getDevice(),
             mPlatform->getPhysicalDevice(), mContext, mAllocator, &mResourceManager, &mCommands,
-            target, levels, format, samples, w, h, depth, usage, mStagePool);
+            target, levels, format, samples, w, h, depth, usage, mStagePool, mSmallImagePool);
 
     // Do transition to default layout.
     VulkanCommandBuffer& commandsBuf = mCommands.get();
@@ -881,7 +886,7 @@ void VulkanDriver::createTextureAsyncR(Handle<HwTexture> th, SamplerType target,
         void* user, utils::ImmutableCString&& tag) {
     FVK_SYSTRACE_SCOPE();
 
-    // This directly allocate GPU memory (not via VMA) and is executed on the backend thread for now.
+    // Executed on the backend thread for now.
     // NOTE: We could improve this by using the JobQueue in Phase 2.
     createTextureCommon(th, target, levels, format, samples, w, h, depth, usage,
             /* asynchronous = */ true, std::move(tag));
@@ -1194,7 +1199,8 @@ void VulkanDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
 
     auto rt = resource_ptr<VulkanRenderTarget>::make(&mResourceManager, rth, mPlatform->getDevice(),
             mPlatform->getPhysicalDevice(), mContext, &mResourceManager, mAllocator, &mCommands,
-            width, height, samples, colorTargets, depthStencil, mStagePool, layerCount);
+            width, height, samples, colorTargets, depthStencil, mStagePool, mSmallImagePool,
+            layerCount);
     rt.inc();
 
     mResourceManager.associateHandle(rth.getId(), std::move(tag));
