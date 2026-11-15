@@ -25,6 +25,7 @@
 
 #include <utils/Panic.h>
 
+#include <algorithm>
 #include <limits>
 
 static constexpr uint32_t TIME_BEFORE_EVICTION = 3;
@@ -83,6 +84,12 @@ fvkmemory::resource_ptr<VulkanStage::Segment> VulkanStagePool::acquireStage(size
     assert_invariant(alignedBytes <= std::numeric_limits<uint32_t>::max());
     uint32_t const numBytes = uint32_t(alignedBytes);
 
+    if (numBytes > STAGE_SIZE) {
+        // Large stages always place their single segment at offset 0, which satisfies any
+        // alignment.
+        return acquireLargeStage(numBytes);
+    }
+
     // First check if a stage segment exists whose capacity is greater than or
     // equal to the requested size.
     auto iter = mStages.lower_bound(numBytes);
@@ -109,7 +116,7 @@ fvkmemory::resource_ptr<VulkanStage::Segment> VulkanStagePool::acquireStage(size
     }
 
     if (!pStage) {
-        pStage = allocateNewStage(std::max(numBytes, STAGE_SIZE));
+        pStage = allocateNewStage(STAGE_SIZE);
     }
 
     // Note: this allocation updates `currentOffset` and `segments` within
@@ -125,6 +132,50 @@ fvkmemory::resource_ptr<VulkanStage::Segment> VulkanStagePool::acquireStage(size
     return pSegment;
 }
 
+fvkmemory::resource_ptr<VulkanStage::Segment> VulkanStagePool::acquireLargeStage(
+        uint32_t numBytes) {
+    assert_invariant(numBytes > STAGE_SIZE);
+
+    // Candidates for reuse are the free large stages that fit, with capacity slack capped at 2x
+    // so that a one-off large allocation is not pinned by smaller recurring uploads. In the map,
+    // they form the key range [numBytes, 2 * numBytes].
+    auto const first = mFreeLargeStages.lower_bound(numBytes);
+    auto const last = mFreeLargeStages.upper_bound(uint32_t(
+            std::min<uint64_t>(2 * uint64_t(numBytes), std::numeric_limits<uint32_t>::max())));
+
+    // Among the candidates, reuse the most recently released stage (largest lastUsed), not the
+    // first one in the range. Within a key, a multimap keeps insertion order, so the first entry
+    // is the oldest one. Picking it would make a single recurring upload rotate through all
+    // surplus stages left over from a burst, refreshing each one's lastUsed so that gc() never
+    // evicts any of them. Always picking the most recent stage instead keeps reusing the same
+    // stage, and lets the surplus stages sit idle until gc() evicts them.
+    // On a tie (released in the same frame), prefer the smaller capacity (the earlier key), and
+    // within one capacity the later insertion, i.e. the stage released last.
+    // The free list holds few large stages, so a linear scan is cheap.
+    auto best = last;
+    for (auto iter = first; iter != last; ++iter) {
+        if (best == last || iter->second.lastUsed > best->second.lastUsed ||
+                (iter->second.lastUsed == best->second.lastUsed && iter->first == best->first)) {
+            best = iter;
+        }
+    }
+
+    VulkanStage* pStage = nullptr;
+    if (best != last) {
+        pStage = best->second.stage;
+        mFreeLargeStages.erase(best);
+    } else {
+        pStage = allocateNewStage(numBytes);
+    }
+
+    // The segment is not tracked by the stage's segment list; instead, its release returns the
+    // whole stage to the free map.
+    return fvkmemory::resource_ptr<VulkanStage::Segment>::construct(mResManager, pStage,
+            numBytes, 0, [this, pStage](uint32_t) {
+                mFreeLargeStages.insert({ pStage->capacity(), { pStage, mCurrentFrame } });
+            });
+}
+
 VkDeviceSize VulkanStagePool::alignToNonCoherentAtomSize(VkDeviceSize bytes) {
     VkDeviceSize alignment = mDeviceLimits->nonCoherentAtomSize;
     return alignValue(bytes, alignment);
@@ -136,11 +187,23 @@ VulkanStage* VulkanStagePool::allocateNewStage(uint32_t capacity) {
         .size = alignToNonCoherentAtomSize(capacity),
         .usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
     };
-    VmaAllocationCreateInfo allocInfo { .usage = VMA_MEMORY_USAGE_CPU_ONLY };
-    VkBuffer buffer;
-    VmaAllocation memory;
+    // Give large stages a dedicated VkDeviceMemory so that vmaDestroyBuffer() returns the memory
+    // directly to the driver on eviction instead of leaving a large empty VMA block retained in
+    // the pool. Fall back to a standard VMA allocation if dedicated allocation fails.
+    VmaAllocationCreateInfo allocInfo{
+        .flags = capacity > STAGE_SIZE
+                ? VmaAllocationCreateFlags(VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT)
+                : 0,
+        .usage = VMA_MEMORY_USAGE_CPU_ONLY,
+    };
+    VkBuffer buffer = VK_NULL_HANDLE;
+    VmaAllocation memory = nullptr;
     VkResult result =
             vmaCreateBuffer(mAllocator, &bufferInfo, &allocInfo, &buffer, &memory, nullptr);
+    if (result != VK_SUCCESS && allocInfo.flags != 0) {
+        allocInfo.flags = 0;
+        result = vmaCreateBuffer(mAllocator, &bufferInfo, &allocInfo, &buffer, &memory, nullptr);
+    }
 
 #if FVK_ENABLED(FVK_DEBUG_STAGING_ALLOCATION)
     if (result != VK_SUCCESS) {
@@ -304,6 +367,21 @@ void VulkanStagePool::gc() noexcept {
         }
     }
 
+    // Keep free large stages only while recently used, so that recurring large uploads reuse
+    // their allocations without pinning one-off spikes.
+    for (auto iter = mFreeLargeStages.begin(); iter != mFreeLargeStages.end();) {
+        if (iter->second.lastUsed < evictionTime) {
+#if FVK_ENABLED(FVK_DEBUG_STAGING_ALLOCATION)
+            FVK_LOGD << "Destroying a large staging buffer with hndl "
+                     << iter->second.stage->buffer() << utils::io::endl;
+#endif
+            destroyStage(iter->second.stage);
+            iter = mFreeLargeStages.erase(iter);
+        } else {
+            ++iter;
+        }
+    }
+
     // Destroy images that have not been used for several frames.
     decltype(mFreeImages) freeImages;
     freeImages.swap(mFreeImages);
@@ -324,6 +402,11 @@ void VulkanStagePool::terminate() noexcept {
         destroyStage(pair.second);
     }
     mStages.clear();
+
+    for (auto& pair : mFreeLargeStages) {
+        destroyStage(pair.second.stage);
+    }
+    mFreeLargeStages.clear();
 
     for (auto image : mFreeImages) {
         vmaDestroyImage(mAllocator, image->image(), image->memory());
