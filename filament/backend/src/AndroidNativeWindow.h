@@ -36,7 +36,7 @@ struct NativeWindow {
 
     // is valid query enum value
     enum {
-        QUEUES_TO_WINDOW_COMPOSER = 7,
+        QUEUES_TO_WINDOW_COMPOSER = 4,
         IS_VALID                = 17,
         FRAME_TIMESTAMPS_SUPPORTS_PRESENT = 18,
         GET_NEXT_FRAME_ID       = 24,
