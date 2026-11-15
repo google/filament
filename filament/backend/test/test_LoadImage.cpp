@@ -28,10 +28,13 @@
 #include <backend/DriverEnums.h>
 #include <backend/Handle.h>
 
+#include <array>
 #include <vector>
 
 #include <stddef.h>
 #include <stdint.h>
+#include <stdlib.h>
+#include <string.h>
 
 using namespace filament;
 using namespace filament::backend;
@@ -612,6 +615,187 @@ TEST_F(LoadImageTest, UpdateImage3D) {
     }
 
     api.stopCapture();
+}
+
+TEST_F(LoadImageTest, UpdateImageCompressedMipLevels) {
+    auto& driver = getDriver();
+    for (TextureFormat const fmt : {
+                 TextureFormat::DXT1_RGBA,
+                 TextureFormat::DXT1_SRGBA,
+                 TextureFormat::DXT5_SRGBA,
+                 TextureFormat::ETC2_EAC_RGBA8,
+                 TextureFormat::ETC2_EAC_SRGBA8,
+                 TextureFormat::RGBA_ASTC_4x4,
+                 TextureFormat::SRGB8_ALPHA8_ASTC_4x4,
+                 TextureFormat::RGBA_ASTC_6x6,
+         }) {
+        EXPECT_FALSE(driver.isTextureFormatMipmappable(fmt));
+    }
+
+    struct CompressedFormatCase {
+        TextureFormat textureFormat;
+        CompressedPixelDataType pixelType;
+        size_t bytesPerBlock;
+        std::array<uint8_t, 16> redBlock;
+        std::array<uint8_t, 16> greenBlock;
+        std::array<uint8_t, 16> blueBlock;
+        std::array<uint8_t, 16> whiteBlock;
+    };
+
+    std::array<CompressedFormatCase, 3> const cases = {{
+        {
+            .textureFormat = TextureFormat::DXT1_RGBA,
+            .pixelType = CompressedPixelDataType::DXT1_RGBA,
+            .bytesPerBlock = 8,
+            // BC1/DXT1 opaque 4-color blocks (color0 > color1, all indices = 0 -> color0).
+            .redBlock   = { 0x00, 0xF8, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 },
+            .greenBlock = { 0xE0, 0x07, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 },
+            .blueBlock  = { 0x1F, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 },
+            .whiteBlock = { 0xFF, 0xFF, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 },
+        },
+        {
+            .textureFormat = TextureFormat::DXT1_SRGBA,
+            .pixelType = CompressedPixelDataType::DXT1_SRGBA,
+            .bytesPerBlock = 8,
+            .redBlock   = { 0x00, 0xF8, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 },
+            .greenBlock = { 0xE0, 0x07, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 },
+            .blueBlock  = { 0x1F, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 },
+            .whiteBlock = { 0xFF, 0xFF, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 },
+        },
+        {
+            .textureFormat = TextureFormat::RGBA_ASTC_4x4,
+            .pixelType = CompressedPixelDataType::RGBA_ASTC_4x4,
+            .bytesPerBlock = 16,
+            // ASTC LDR UNORM16 void-extent blocks with constant RGBA values.
+            .redBlock   = { 0xFC, 0xFD, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+                            0xFF, 0xFF, 0x00, 0x00, 0x00, 0x00, 0xFF, 0xFF },
+            .greenBlock = { 0xFC, 0xFD, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+                            0x00, 0x00, 0xFF, 0xFF, 0x00, 0x00, 0xFF, 0xFF },
+            .blueBlock  = { 0xFC, 0xFD, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+                            0x00, 0x00, 0x00, 0x00, 0xFF, 0xFF, 0xFF, 0xFF },
+            .whiteBlock = { 0xFC, 0xFD, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+                            0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF },
+        },
+    }};
+
+    std::string const fragmentAllMips = R"(#version 450 core
+
+layout(location = 0) out vec4 fragColor;
+layout(binding = 0, set = 0) uniform sampler2D test_tex;
+
+void main() {
+    vec2 uv = vec2(0.5);
+    float m0 = textureLod(test_tex, uv, 0.0).r;
+    float m1 = textureLod(test_tex, uv, 1.0).g;
+    float m2 = textureLod(test_tex, uv, 2.0).b;
+    float m3 = textureLod(test_tex, uv, 3.0).r;
+    fragColor = vec4(m0, m1, m2, m3);
+}
+)";
+
+    auto& api = getDriverApi();
+    bool testedAny = false;
+    constexpr uint32_t kBaseSize = 8;
+    constexpr uint8_t kLevels = 4; // 8x8, 4x4, 2x2, 1x1
+
+    auto swapChain = addCleanup(api.createSwapChainHeadless(kBaseSize, kBaseSize, 0));
+    api.makeCurrent(swapChain, swapChain);
+
+    TrianglePrimitive fsTriangle(api);
+    math::float2 const fsVertices[3] = { { -1.0f, -1.0f }, { 3.0f, -1.0f }, { -1.0f, 3.0f } };
+    fsTriangle.updateVertices(fsVertices);
+
+    filament::SamplerInterfaceBlock::SamplerInfo samplerInfo = { "test", "tex", 0,
+        SamplerType::SAMPLER_2D, SamplerFormat::FLOAT, Precision::HIGH, false };
+    Shader shader(api, *mCleanup, ShaderConfig{
+        .vertexShader = mVertexShader,
+        .fragmentShader = fragmentAllMips,
+        .uniforms = {{ "test_tex", DescriptorType::SAMPLER_2D_FLOAT, samplerInfo }},
+    });
+
+    for (auto const& c : cases) {
+        if (!driver.isTextureFormatSupported(c.textureFormat)) {
+            continue;
+        }
+        testedAny = true;
+
+        Handle<HwTexture> const texture = addCleanup(api.createTexture(SamplerType::SAMPLER_2D,
+                kLevels, c.textureFormat, 1, kBaseSize, kBaseSize, 1,
+                TextureUsage::SAMPLEABLE | TextureUsage::UPLOADABLE));
+
+        std::array<std::array<uint8_t, 16> const*, kLevels> const mipBlocks = {
+            &c.redBlock, &c.greenBlock, &c.blueBlock, &c.whiteBlock
+        };
+        for (uint8_t level = 0; level < kLevels; ++level) {
+            uint32_t const mipDim = std::max(1u, kBaseSize >> level);
+            uint32_t const blocksPerSide = (mipDim + 3u) / 4u;
+            uint32_t const blockCount = blocksPerSide * blocksPerSide;
+            size_t const dataSize = blockCount * c.bytesPerBlock;
+            auto* data = static_cast<uint8_t*>(malloc(dataSize));
+            for (uint32_t b = 0; b < blockCount; ++b) {
+                memcpy(data + b * c.bytesPerBlock, mipBlocks[level]->data(), c.bytesPerBlock);
+            }
+            PixelBufferDescriptor descriptor(data, dataSize, c.pixelType,
+                    static_cast<uint32_t>(dataSize),
+                    [](void* buf, size_t, void*) { free(buf); }, nullptr);
+            api.update3DImage(texture, level, 0, 0, 0, mipDim, mipDim, 1, std::move(descriptor));
+        }
+
+        Handle<HwTexture> const rtTex = addCleanup(api.createTexture(SamplerType::SAMPLER_2D, 1,
+                TextureFormat::RGBA8, 1, kBaseSize, kBaseSize, 1,
+                TextureUsage::COLOR_ATTACHMENT | TextureUsage::SAMPLEABLE |
+                        TextureUsage::BLIT_SRC));
+        Handle<HwRenderTarget> const rt = addCleanup(api.createRenderTarget(
+                TargetBufferFlags::COLOR, kBaseSize, kBaseSize, 1, 0, {{ rtTex, 0 }}, {}, {}));
+
+        DescriptorSetHandle descriptorSet = shader.createDescriptorSet(api);
+        api.updateDescriptorSetTexture(descriptorSet, 0, texture, SamplerParams{
+                .filterMag = SamplerMagFilter::NEAREST,
+                .filterMin = SamplerMinFilter::NEAREST_MIPMAP_NEAREST,
+        });
+
+        RenderPassParams params = getClearColorDepthRenderPass(math::double4(0, 0, 0, 0));
+        params.viewport.width = kBaseSize;
+        params.viewport.height = kBaseSize;
+        PipelineState state = getColorWritePipelineState();
+        shader.addProgramToPipelineState(state);
+        state.primitiveType = PrimitiveType::TRIANGLES;
+        state.vertexBufferInfo = fsTriangle.getVertexBufferInfo();
+
+        api.beginFrame(0, 0, 0);
+        api.bindDescriptorSet(descriptorSet, 0, {});
+        api.beginRenderPass(rt, params);
+        api.bindPipeline(state);
+        api.bindRenderPrimitive(fsTriangle.getRenderPrimitive());
+        api.draw2(0, 3, 1);
+        api.endRenderPass();
+
+        size_t const readSize = kBaseSize * kBaseSize * 4;
+        void* readBuf = calloc(1, readSize);
+        bool finished = false;
+        PixelBufferDescriptor readDesc(readBuf, readSize, PixelDataFormat::RGBA,
+                PixelDataType::UBYTE, 1, 0, 0, kBaseSize,
+                [](void* buf, size_t size, void* user) {
+                    *static_cast<bool*>(user) = true;
+                    auto const* pixels = static_cast<uint8_t const*>(buf);
+                    EXPECT_GE(size, 4u);
+                    EXPECT_EQ(pixels[0], 255);
+                    EXPECT_EQ(pixels[1], 255);
+                    EXPECT_EQ(pixels[2], 255);
+                    EXPECT_EQ(pixels[3], 255);
+                    free(buf);
+                },
+                &finished);
+        api.readTexture(rtTex, 0, 0, 0, 0, kBaseSize, kBaseSize, std::move(readDesc));
+        api.commit(swapChain);
+        api.endFrame(0);
+        flushAndWait();
+        EXPECT_TRUE(finished);
+    }
+
+    if (!testedAny) {
+        GTEST_SKIP() << "Neither DXT1_RGBA nor RGBA_ASTC_4x4 is supported on this device.";
+    }
 }
 
 } // namespace test

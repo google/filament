@@ -18,6 +18,7 @@
 
 #include <geometry/SurfaceOrientation.h>
 
+#include <algorithm>
 #include <cstdlib>
 #include <memory>
 
@@ -47,7 +48,7 @@ void TangentsJob::run(Params* params) {
     std::unique_ptr<float3[]> unpackedPositions;
     std::unique_ptr<float2[]> unpackedTexCoords;
     std::unique_ptr<uint3[]> unpackedTriangles;
-    std::unique_ptr<float3[]> morphDeltas;
+    std::unique_ptr<float[]> morphDeltas;
 
     // Build a mapping from cgltf_attribute_type to cgltf_accessor.
     const int NUM_ATTRIBUTES = cgltf_attribute_type_max_enum;
@@ -78,21 +79,31 @@ void TangentsJob::run(Params* params) {
     geometry::SurfaceOrientation::Builder sob;
     sob.vertexCount(vertexCount);
 
-    // Allocate scratch space to store morph deltas.
+    // Allocate scratch space to store morph deltas when bulk unpacking is used.
     if (isMorphTarget) {
-        morphDeltas.reset(new float3[vertexCount]);
+        auto const* mtPos = morphTargetAccessors[cgltf_attribute_type_position];
+        bool const needsVec3Scratch =
+                morphTargetAccessors[cgltf_attribute_type_normal] != nullptr ||
+                morphTargetAccessors[cgltf_attribute_type_tangent] != nullptr ||
+                (mtPos && mtPos->type == cgltf_type_vec3);
+        bool const needsVec4Scratch = mtPos && mtPos->type == cgltf_type_vec4 && mtPos->is_sparse;
+        if (needsVec4Scratch || needsVec3Scratch) {
+            morphDeltas.reset(new float[vertexCount * (needsVec4Scratch ? 4 : 3)]());
+        }
     }
 
     // Convert normals into packed floats.
     if (auto baseNormalsInfo = baseAccessors[cgltf_attribute_type_normal]; baseNormalsInfo) {
         assert(baseNormalsInfo->count == vertexCount);
         assert(baseNormalsInfo->type == cgltf_type_vec3);
-        unpackedNormals.reset(new float3[vertexCount]);
+        unpackedNormals.reset(new float3[vertexCount]());
         cgltf_accessor_unpack_floats(baseNormalsInfo, &unpackedNormals[0].x, vertexCount * 3);
-        if (auto mtNormalsInfo = morphTargetAccessors[cgltf_attribute_type_normal]) {
-            cgltf_accessor_unpack_floats(mtNormalsInfo, &morphDeltas[0].x, vertexCount * 3);
+        if (auto mtNormalsInfo = morphTargetAccessors[cgltf_attribute_type_normal];
+                mtNormalsInfo && mtNormalsInfo->type == cgltf_type_vec3) {
+            cgltf_accessor_unpack_floats(mtNormalsInfo, morphDeltas.get(), vertexCount * 3);
             for (cgltf_size i = 0; i < vertexCount; i++) {
-                unpackedNormals[i] += morphDeltas[i];
+                float const* d = morphDeltas.get() + i * 3;
+                unpackedNormals[i] += float3{ d[0], d[1], d[2] };
             }
         }
         sob.normals(unpackedNormals.get());
@@ -101,12 +112,14 @@ void TangentsJob::run(Params* params) {
     // Convert tangents into packed floats.
     if (auto baseTangentsInfo = baseAccessors[cgltf_attribute_type_tangent]; baseTangentsInfo) {
         assert(baseTangentsInfo->count == vertexCount);
-        unpackedTangents.reset(new float4[vertexCount]);
+        unpackedTangents.reset(new float4[vertexCount]());
         cgltf_accessor_unpack_floats(baseTangentsInfo, &unpackedTangents[0].x, vertexCount * 4);
-        if (auto mtTangentsInfo = morphTargetAccessors[cgltf_attribute_type_tangent]) {
-            cgltf_accessor_unpack_floats(mtTangentsInfo, &morphDeltas[0].x, vertexCount * 3);
+        if (auto mtTangentsInfo = morphTargetAccessors[cgltf_attribute_type_tangent];
+                mtTangentsInfo && mtTangentsInfo->type == cgltf_type_vec3) {
+            cgltf_accessor_unpack_floats(mtTangentsInfo, morphDeltas.get(), vertexCount * 3);
             for (cgltf_size i = 0; i < vertexCount; i++) {
-                unpackedTangents[i].xyz += morphDeltas[i];
+                float const* d = morphDeltas.get() + i * 3;
+                unpackedTangents[i].xyz += float3{ d[0], d[1], d[2] };
             }
         }
         sob.tangents(unpackedTangents.get());
@@ -114,13 +127,33 @@ void TangentsJob::run(Params* params) {
 
     if (auto basePosInfo = baseAccessors[cgltf_attribute_type_position]; basePosInfo) {
         assert(basePosInfo->count == vertexCount && basePosInfo->type == cgltf_type_vec3);
-        unpackedPositions.reset(new float3[vertexCount]);
+        unpackedPositions.reset(new float3[vertexCount]());
         cgltf_accessor_unpack_floats(basePosInfo, &unpackedPositions[0].x, vertexCount * 3);
         sob.positions(unpackedPositions.get());
         if (auto mtPositionsInfo = morphTargetAccessors[cgltf_attribute_type_position]) {
-            cgltf_accessor_unpack_floats(mtPositionsInfo, &morphDeltas[0].x, vertexCount * 3);
-            for (cgltf_size i = 0; i < vertexCount; i++) {
-                unpackedPositions[i] += morphDeltas[i];
+            if (mtPositionsInfo->type == cgltf_type_vec3) {
+                cgltf_accessor_unpack_floats(mtPositionsInfo, morphDeltas.get(), vertexCount * 3);
+                for (cgltf_size i = 0; i < vertexCount; i++) {
+                    float const* d = morphDeltas.get() + i * 3;
+                    unpackedPositions[i] += float3{ d[0], d[1], d[2] };
+                }
+            } else if (mtPositionsInfo->type == cgltf_type_vec4) {
+                if (!mtPositionsInfo->is_sparse) {
+                    float4 delta{};
+                    cgltf_size const count = std::min(vertexCount, mtPositionsInfo->count);
+                    for (cgltf_size i = 0; i < count; i++) {
+                        if (cgltf_accessor_read_float(mtPositionsInfo, i, &delta.x, 4)) {
+                            unpackedPositions[i] += delta.xyz;
+                        }
+                    }
+                } else {
+                    cgltf_accessor_unpack_floats(mtPositionsInfo, morphDeltas.get(),
+                            vertexCount * 4);
+                    for (cgltf_size i = 0; i < vertexCount; i++) {
+                        float const* d = morphDeltas.get() + i * 4;
+                        unpackedPositions[i] += float3{ d[0], d[1], d[2] };
+                    }
+                }
             }
         }
     }

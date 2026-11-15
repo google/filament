@@ -46,6 +46,7 @@
 #include <utils/EntityManager.h>
 #include <utils/FixedCapacityVector.h>
 #include <utils/Log.h>
+#include <utils/Logger.h>
 #include <utils/NameComponentManager.h>
 #include <utils/Panic.h>
 
@@ -894,7 +895,6 @@ void FAssetLoader::createRenderable(const cgltf_node* node, Entity const entity,
                 outputPrim->morphTargetBuffer = morphTargetBuffer;
             }
 
-            UTILS_UNUSED_IN_RELEASE cgltf_accessor const* previous = nullptr;
             // createPrimitives() caps the per-primitive morph-target count at MAX_MORPH_TARGETS and
             // sizes slotIndices accordingly; iterate only over the slots that exist so a mesh with
             // more morph targets than the cap does not index slotIndices out of bounds.
@@ -906,12 +906,10 @@ void FAssetLoader::createRenderable(const cgltf_node* node, Entity const entity,
                     const cgltf_accessor* accessor = attribute.data;
                     const cgltf_attribute_type atype = attribute.type;
                     if (atype == cgltf_attribute_type_position) {
-                        // All position attributes must have the same number of components.
-                        assert_invariant(!previous || previous->type == accessor->type);
-                        previous = accessor;
-
                         if (std::holds_alternative<FFilamentAsset::ResourceInfo>(
                                 fAsset->mResourceInfo)) {
+                            assert_invariant(accessor->type == cgltf_type_vec3 ||
+                                    accessor->type == cgltf_type_vec4);
                             using BufferSlot = FFilamentAsset::ResourceInfo::BufferSlot;
                             auto& slots = std::get<FFilamentAsset::ResourceInfo>(
                                     fAsset->mResourceInfo).mBufferSlots;
@@ -1032,6 +1030,11 @@ void FAssetLoader::createMaterialVariants(const cgltf_mesh* mesh, Entity const e
         }
         for (size_t i = 0, m = srcPrim.mappings_count; i < m; i++) {
             const size_t variantIndex = srcPrim.mappings[i].variant;
+            if (variantIndex >= instance->mVariants.size()) {
+                LOG(WARNING) << "Material variant index " << variantIndex
+                             << " out of bounds in entity " << entity.getId();
+                continue;
+            }
             const cgltf_material* material = srcPrim.mappings[i].material;
             const bool hasVertexColor = primitiveHasVertexColor(srcPrim);
             MaterialInstance* mi =
@@ -1239,7 +1242,14 @@ bool FAssetLoader::createPrimitive(const cgltf_primitive& inPrim, const char* na
             slog.e << "Unsupported accessor type in " << name << io::endl;
             return false;
         }
-        const int stride = (fatype == actualType) ? innerAccessor->stride : 0;
+        if (fatype == actualType &&
+                (innerAccessor->stride > std::numeric_limits<uint8_t>::max() ||
+                        (innerAccessor->stride & 0x3u) != 0)) {
+            LOG(ERROR) << "Invalid vertex attribute stride (" << innerAccessor->stride << ") in "
+                       << name;
+            return false;
+        }
+        const uint8_t stride = (fatype == actualType) ? uint8_t(innerAccessor->stride) : 0;
 
         // The cgltf library provides a stride value for all accessors, even though they do not
         // exist in the glTF file. It is computed from the type and the stride of the buffer view.
@@ -1278,26 +1288,32 @@ bool FAssetLoader::createPrimitive(const cgltf_primitive& inPrim, const char* na
             const cgltf_attribute_type atype = attribute.type;
 
             // The glTF normal and tangent data are ignored here (honored in ResourceLoader), but
-            // we still validate the accessor's element type. Without this, an unsupported type
-            // (e.g. a matrix type) slips through to ResourceLoader's tangent-space computation,
-            // where it is unpacked into a fixed 3-float-per-vertex buffer writing more floats
-            // per element than the buffer holds (heap out-of-bounds write).
+            // we still validate the accessor's element type and dimension (VEC3).
             if (atype == cgltf_attribute_type_normal || atype == cgltf_attribute_type_tangent) {
-                if (innerAccessor != nullptr) {
-                    VertexBuffer::AttributeType fatype;
-                    VertexBuffer::AttributeType actualType;
-                    if (!getElementType(innerAccessor->type, innerAccessor->component_type,
-                            &fatype, &actualType)) {
-                        slog.e << "Unsupported morph target accessor type in " << name << io::endl;
-                        return false;
-                    }
+                VertexBuffer::AttributeType fatype;
+                VertexBuffer::AttributeType actualType;
+                if (!innerAccessor || innerAccessor->type != cgltf_type_vec3 ||
+                        !getElementType(innerAccessor->type, innerAccessor->component_type,
+                                &fatype, &actualType)) {
+                    LOG(ERROR) << "Unsupported morph target accessor type in " << name;
+                    return false;
                 }
                 continue;
             }
 
             if (atype != cgltf_attribute_type_position) {
-                slog.e << "Only positions, normals, and tangents can be morphed."
-                        << io::endl;
+                LOG(ERROR) << "Only positions, normals, and tangents can be morphed.";
+                return false;
+            }
+
+            VertexBuffer::AttributeType fatype;
+            VertexBuffer::AttributeType actualType;
+            if (!innerAccessor ||
+                    (innerAccessor->type != cgltf_type_vec3 &&
+                            innerAccessor->type != cgltf_type_vec4) ||
+                    !getElementType(innerAccessor->type, innerAccessor->component_type, &fatype,
+                            &actualType)) {
+                LOG(ERROR) << "Unsupported morph target position accessor type in " << name;
                 return false;
             }
 
@@ -1313,13 +1329,6 @@ bool FAssetLoader::createPrimitive(const cgltf_primitive& inPrim, const char* na
 
             outPrim->aabb.min = min(outPrim->aabb.min, targetAabb.min);
             outPrim->aabb.max = max(outPrim->aabb.max, targetAabb.max);
-
-            VertexBuffer::AttributeType fatype;
-            VertexBuffer::AttributeType actualType;
-            if (!getElementType(innerAccessor->type, innerAccessor->component_type, &fatype, &actualType)) {
-                slog.e << "Unsupported accessor type in " << name << io::endl;
-                return false;
-            }
         }
     }
 
@@ -1385,7 +1394,6 @@ bool FAssetLoader::createPrimitive(const cgltf_primitive& inPrim, const char* na
     }
 
     if (targetsCount > 0) {
-        UTILS_UNUSED_IN_RELEASE cgltf_accessor const* previous = nullptr;
         outPrim->slotIndices.resize(targetsCount);
         for (int tindex = 0; tindex < targetsCount; ++tindex) {
             const cgltf_morph_target& inTarget = inPrim.targets[tindex];
@@ -1394,9 +1402,8 @@ bool FAssetLoader::createPrimitive(const cgltf_primitive& inPrim, const char* na
                 const cgltf_accessor* innerAccessor = attribute.data;
                 const cgltf_attribute_type atype = attribute.type;
                 if (atype == cgltf_attribute_type_position) {
-                    // All position attributes must have the same number of components.
-                    assert_invariant(!previous || previous->type == innerAccessor->type);
-                    previous = innerAccessor;
+                    assert_invariant(innerAccessor->type == cgltf_type_vec3 ||
+                            innerAccessor->type == cgltf_type_vec4);
                     BufferSlot innerSlot = { .accessor = innerAccessor };
                     outPrim->slotIndices[tindex] = slots->size();
                     addBufferSlot(innerSlot);

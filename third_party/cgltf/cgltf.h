@@ -1621,9 +1621,19 @@ cgltf_result cgltf_validate(cgltf_data* data)
 
 		cgltf_size element_size = cgltf_calc_size(accessor->type, accessor->component_type);
 
+		CGLTF_ASSERT_IF(accessor->count == 0, cgltf_result_invalid_gltf);
+
 		if (accessor->buffer_view)
 		{
-			cgltf_size req_size = accessor->offset + accessor->stride * (accessor->count - 1) + element_size;
+			cgltf_size req_size;
+
+			/* Guard the dense extent calculation against unsigned wraparound, matching
+			 * the sparse checks below; otherwise a huge stride or offset wraps req_size
+			 * past SIZE_MAX and passes the buffer_view bounds check. */
+			CGLTF_ASSERT_IF(accessor->offset > SIZE_MAX - element_size, cgltf_result_data_too_short);
+			CGLTF_ASSERT_IF(accessor->stride && (accessor->count - 1) > (SIZE_MAX - accessor->offset - element_size) / accessor->stride, cgltf_result_data_too_short);
+
+			req_size = accessor->offset + accessor->stride * (accessor->count - 1) + element_size;
 
 			CGLTF_ASSERT_IF(accessor->buffer_view->size < req_size, cgltf_result_data_too_short);
 		}
@@ -1665,7 +1675,11 @@ cgltf_result cgltf_validate(cgltf_data* data)
 
 	for (cgltf_size i = 0; i < data->buffer_views_count; ++i)
 	{
-		cgltf_size req_size = data->buffer_views[i].offset + data->buffer_views[i].size;
+		cgltf_size req_size;
+
+		CGLTF_ASSERT_IF(data->buffer_views[i].size > SIZE_MAX - data->buffer_views[i].offset, cgltf_result_data_too_short);
+
+		req_size = data->buffer_views[i].offset + data->buffer_views[i].size;
 
 		CGLTF_ASSERT_IF(data->buffer_views[i].buffer && data->buffer_views[i].buffer->size < req_size, cgltf_result_data_too_short);
 
@@ -1673,10 +1687,12 @@ cgltf_result cgltf_validate(cgltf_data* data)
 		{
 			cgltf_meshopt_compression* mc = &data->buffer_views[i].meshopt_compression;
 
+			CGLTF_ASSERT_IF(mc->size > SIZE_MAX - mc->offset, cgltf_result_data_too_short);
 			CGLTF_ASSERT_IF(mc->buffer == NULL || mc->buffer->size < mc->offset + mc->size, cgltf_result_data_too_short);
 
 			CGLTF_ASSERT_IF(data->buffer_views[i].stride && mc->stride != data->buffer_views[i].stride, cgltf_result_invalid_gltf);
 
+			CGLTF_ASSERT_IF(mc->stride && mc->count > SIZE_MAX / mc->stride, cgltf_result_invalid_gltf);
 			CGLTF_ASSERT_IF(data->buffer_views[i].size != mc->stride * mc->count, cgltf_result_invalid_gltf);
 
 			CGLTF_ASSERT_IF(mc->mode == cgltf_meshopt_compression_mode_invalid, cgltf_result_invalid_gltf);
