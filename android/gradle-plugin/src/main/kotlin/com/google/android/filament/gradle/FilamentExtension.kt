@@ -26,12 +26,18 @@ import org.gradle.api.provider.Property
 open class FilamentExtension @Inject constructor(project: Project) {
     val tools: ToolsLocator = ToolsLocator(project)
     open val materialInputDir: DirectoryProperty = project.objects.directoryProperty()
-    open val materialOutputDir: DirectoryProperty = project.objects.directoryProperty()
+    open val materialOutputDir: DirectoryProperty = project.objects.directoryProperty().convention(
+        project.layout.buildDirectory.dir("generated/assets/filament/materials")
+    )
     open val cmgenArgs: Property<String> = project.objects.property(String::class.java)
     open val iblInputFile: RegularFileProperty = project.objects.fileProperty()
-    open val iblOutputDir: DirectoryProperty = project.objects.directoryProperty()
+    open val iblOutputDir: DirectoryProperty = project.objects.directoryProperty().convention(
+        project.layout.buildDirectory.dir("generated/assets/filament/envs")
+    )
     open val meshInputFile: RegularFileProperty = project.objects.fileProperty()
-    open val meshOutputDir: DirectoryProperty = project.objects.directoryProperty()
+    open val meshOutputDir: DirectoryProperty = project.objects.directoryProperty().convention(
+        project.layout.buildDirectory.dir("generated/assets/filament/models")
+    )
 
     fun matc(action: Action<in ToolsLocator.ToolConfig>) {
         action.execute(tools.matc)

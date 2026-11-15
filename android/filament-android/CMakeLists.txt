@@ -190,6 +190,14 @@ target_link_libraries(filament-jni
 # Force a relink when the version script is changed:
 set_target_properties(filament-jni PROPERTIES LINK_DEPENDS ${VERSION_SCRIPT})
 
+add_custom_command(TARGET filament-jni POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E make_directory
+        "${CMAKE_CURRENT_SOURCE_DIR}/build/jni/${CMAKE_BUILD_TYPE}/${ANDROID_ABI}"
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        $<TARGET_FILE:filament-jni>
+        "${CMAKE_CURRENT_SOURCE_DIR}/build/jni/${CMAKE_BUILD_TYPE}/${ANDROID_ABI}/libfilament-jni.so"
+)
+
 if (FILAMENT_SUPPORTS_VULKAN)
     add_definitions(-DFILAMENT_SUPPORTS_VULKAN=1)
 else()

@@ -23,10 +23,12 @@ gradlePlugin {
 }
 
 repositories {
+    google()
     mavenCentral()
     gradlePluginPortal()
 }
 
 dependencies {
+    compileOnly(libs.android.gradle.plugin)
     implementation(libs.osdetector.gradle.plugin)
 }

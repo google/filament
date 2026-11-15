@@ -12,7 +12,17 @@ set(CMAKE_CXX_STANDARD 20)
 set(FILAMENT_DIR ${FILAMENT_DIST_DIR})
 set(IMAGEIO_DIR ../../libs/imageio)
 
-add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../gltfio-android ${CMAKE_CURRENT_BINARY_DIR}/gltfio-android)
+add_library(filament-jni SHARED IMPORTED)
+set_target_properties(filament-jni PROPERTIES IMPORTED_LOCATION
+        ${CMAKE_CURRENT_SOURCE_DIR}/../filament-android/build/jni/${CMAKE_BUILD_TYPE}/${ANDROID_ABI}/libfilament-jni.so)
+
+add_library(gltfio-jni SHARED IMPORTED)
+set_target_properties(gltfio-jni PROPERTIES IMPORTED_LOCATION
+        ${CMAKE_CURRENT_SOURCE_DIR}/../gltfio-android/build/jni/${CMAKE_BUILD_TYPE}/${ANDROID_ABI}/libgltfio-jni.so)
+
+add_library(geometry STATIC IMPORTED)
+set_target_properties(geometry PROPERTIES IMPORTED_LOCATION
+        ${FILAMENT_DIR}/lib/${ANDROID_ABI}/libgeometry.a)
 
 add_library(camutils STATIC IMPORTED)
 set_target_properties(camutils PROPERTIES IMPORTED_LOCATION
@@ -114,6 +124,7 @@ target_link_libraries(filament-utils-jni
         PRIVATE filamentapp-resources
         PRIVATE stb
         PRIVATE filament-jni
+        PRIVATE geometry
         PRIVATE ktxreader
         PRIVATE viewer
         PRIVATE imagediff

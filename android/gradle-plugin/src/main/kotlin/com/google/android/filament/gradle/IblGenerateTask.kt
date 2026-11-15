@@ -26,6 +26,7 @@ import org.gradle.api.file.FileType
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.model.ObjectFactory
 import org.gradle.api.provider.Property
+import org.gradle.api.tasks.CacheableTask
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.InputFiles
@@ -36,22 +37,23 @@ import org.gradle.api.tasks.PathSensitivity
 import org.gradle.api.tasks.TaskAction
 import org.gradle.process.ExecOperations
 import org.gradle.work.ChangeType
-import org.gradle.work.DisableCachingByDefault
 import org.gradle.work.Incremental
 import org.gradle.work.InputChanges
 
-@DisableCachingByDefault
+@CacheableTask
 abstract class IblGenerateTask : DefaultTask() {
 
     @get:Input
     @get:Optional
     abstract val cmgenArgs: Property<String>
 
+    @get:Optional
     @get:Incremental
     @get:InputFile
     @get:PathSensitive(PathSensitivity.RELATIVE)
     abstract val inputFile: RegularFileProperty
 
+    @get:Optional
     @get:OutputDirectory
     abstract val outputDir: DirectoryProperty
 
