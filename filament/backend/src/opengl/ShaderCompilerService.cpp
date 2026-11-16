@@ -1214,18 +1214,18 @@ highp uint packHalf2x16(vec2 v) {
 highp uint packUnorm4x8(mediump vec4 v) {
     v = round(clamp(v, 0.0, 1.0) * 255.0);
     highp uint a = uint(v.x);
-    highp uint b = uint(v.y) <<  8;
-    highp uint c = uint(v.z) << 16;
-    highp uint d = uint(v.w) << 24;
-    return (a|b|c|d);
+    highp uint b = uint(v.y);
+    highp uint c = uint(v.z);
+    highp uint d = uint(v.w);
+    return (a | (b << 8u) | (c << 16u) | (d << 24u));
 }
 highp uint packSnorm4x8(mediump vec4 v) {
     v = round(clamp(v, -1.0, 1.0) * 127.0);
-    highp uint a = uint((int(v.x) & 0xff));
-    highp uint b = uint((int(v.y) & 0xff)) <<  8;
-    highp uint c = uint((int(v.z) & 0xff)) << 16;
-    highp uint d = uint((int(v.w) & 0xff)) << 24;
-    return (a|b|c|d);
+    highp uint a = uint(int(v.x) & 0xff);
+    highp uint b = uint(int(v.y) & 0xff);
+    highp uint c = uint(int(v.z) & 0xff);
+    highp uint d = uint(int(v.w) & 0xff);
+    return (a | (b << 8u) | (c << 16u) | (d << 24u));
 }
 mediump vec4 unpackUnorm4x8(highp uint v) {
     return vec4(float((v & 0x000000ffu)      ),
@@ -1234,10 +1234,10 @@ mediump vec4 unpackUnorm4x8(highp uint v) {
                 float((v & 0xff000000u) >> 24)) / 255.0;
 }
 mediump vec4 unpackSnorm4x8(highp uint v) {
-    int a = int(((v       ) & 0xffu) << 24u) >> 24 ;
-    int b = int(((v >>  8u) & 0xffu) << 24u) >> 24 ;
-    int c = int(((v >> 16u) & 0xffu) << 24u) >> 24 ;
-    int d = int(((v >> 24u) & 0xffu) << 24u) >> 24 ;
+    highp int a = int(((v       ) & 0xffu) << 24u) >> 24 ;
+    highp int b = int(((v >>  8u) & 0xffu) << 24u) >> 24 ;
+    highp int c = int(((v >> 16u) & 0xffu) << 24u) >> 24 ;
+    highp int d = int(((v >> 24u) & 0xffu) << 24u) >> 24 ;
     return clamp(vec4(float(a), float(b), float(c), float(d)) / 127.0, -1.0, 1.0);
 }
 )"sv;
@@ -1251,18 +1251,18 @@ mediump vec4 unpackSnorm4x8(highp uint v) {
 highp uint packUnorm4x8(mediump vec4 v) {
     v = round(clamp(v, 0.0, 1.0) * 255.0);
     highp uint a = uint(v.x);
-    highp uint b = uint(v.y) <<  8;
-    highp uint c = uint(v.z) << 16;
-    highp uint d = uint(v.w) << 24;
-    return (a|b|c|d);
+    highp uint b = uint(v.y);
+    highp uint c = uint(v.z);
+    highp uint d = uint(v.w);
+    return (a | (b << 8u) | (c << 16u) | (d << 24u));
 }
 highp uint packSnorm4x8(mediump vec4 v) {
     v = round(clamp(v, -1.0, 1.0) * 127.0);
-    highp uint a = uint((int(v.x) & 0xff));
-    highp uint b = uint((int(v.y) & 0xff)) <<  8;
-    highp uint c = uint((int(v.z) & 0xff)) << 16;
-    highp uint d = uint((int(v.w) & 0xff)) << 24;
-    return (a|b|c|d);
+    highp uint a = uint(int(v.x) & 0xff);
+    highp uint b = uint(int(v.y) & 0xff);
+    highp uint c = uint(int(v.z) & 0xff);
+    highp uint d = uint(int(v.w) & 0xff);
+    return (a | (b << 8u) | (c << 16u) | (d << 24u));
 }
 mediump vec4 unpackUnorm4x8(highp uint v) {
     return vec4(float((v & 0x000000ffu)      ),
@@ -1271,10 +1271,10 @@ mediump vec4 unpackUnorm4x8(highp uint v) {
                 float((v & 0xff000000u) >> 24)) / 255.0;
 }
 mediump vec4 unpackSnorm4x8(highp uint v) {
-    int a = int(((v       ) & 0xffu) << 24u) >> 24 ;
-    int b = int(((v >>  8u) & 0xffu) << 24u) >> 24 ;
-    int c = int(((v >> 16u) & 0xffu) << 24u) >> 24 ;
-    int d = int(((v >> 24u) & 0xffu) << 24u) >> 24 ;
+    highp int a = int(((v       ) & 0xffu) << 24u) >> 24 ;
+    highp int b = int(((v >>  8u) & 0xffu) << 24u) >> 24 ;
+    highp int c = int(((v >> 16u) & 0xffu) << 24u) >> 24 ;
+    highp int d = int(((v >> 24u) & 0xffu) << 24u) >> 24 ;
     return clamp(vec4(float(a), float(b), float(c), float(d)) / 127.0, -1.0, 1.0);
 }
 )"sv;

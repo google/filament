@@ -62,6 +62,11 @@ struct PixelParams {
     float retroreflection;
 #endif
 
+#if defined(MATERIAL_HAS_DIFFUSE_TRANSMISSION)
+    float diffuseTransmission;
+    vec3 diffuseTransmissionColor;
+#endif
+
 #if defined(SHADING_MODEL_SUBSURFACE) || defined(MATERIAL_HAS_REFRACTION)
     float thickness;
 #endif

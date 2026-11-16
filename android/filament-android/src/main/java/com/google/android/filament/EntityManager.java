@@ -201,11 +201,11 @@ public class EntityManager {
     }
 
     /**
-     * Use carefully, several entities can have the same index.
+     * Use carefully, several entities can have the same index across time (never        simultaneously while alive or pending EBR reclamation).
      *
      * @param e The entity to query.
      *
-     * @return The entity index.
+     * @return The 17-bit entity index.
      */
     @IntRange(from = 0)
     public static int getIndex(@Entity int e) {

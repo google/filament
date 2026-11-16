@@ -41,6 +41,7 @@
 #include <utils/ImmutableCString.h>
 #include <utils/Invocable.h>
 #include <utils/Logger.h>
+#include <utils/Mutex.h>
 #include <utils/Panic.h>
 #include <utils/sstream.h>
 
@@ -131,8 +132,7 @@ MetalDriver::MetalDriver(PlatformMetal* platform,
           mStereoscopicType(driverConfig.stereoscopicType),
           mAsynchronousMode(driverConfig.asynchronousMode) {
     mContext->driver = this;
-    mContext->driverLifetimeTracker = std::make_shared<DriverLifetimeTracker>();
-    mContext->driverLifetimeTracker->driver = this;
+    mContext->driverLifetimeTracker = std::make_shared<DriverLifetimeTracker>(this);
 
     TrackedMetalBuffer::setPlatform(platform);
     ScopedAllocationTimer::setPlatform(platform);
@@ -1660,7 +1660,6 @@ void MetalDriver::updateIndexBufferAsyncR(AsyncCallId jobId, Handle<HwIndexBuffe
     FILAMENT_CHECK_PRECONDITION(data.buffer)
             << "updateIndexBufferAsyncR called with a null buffer.";
 
-    id<MTLCommandBuffer> cmdBuffer = [mContext->commandQueue commandBuffer];
     auto* ib = promoteToAsync(handle_cast<MetalIndexBuffer>(ibh));
     auto tag = mHandleAllocator.getHandleTag(ibh.getId());
 
@@ -1669,17 +1668,32 @@ void MetalDriver::updateIndexBufferAsyncR(AsyncCallId jobId, Handle<HwIndexBuffe
     // could each fire the callback, so the job and the block share ownership of one instead. If
     // the job is canceled or dropped, its reference is the last one and the destructor reports
     // CANCELED; otherwise the block outlives the job and reports COMPLETED once the GPU is done.
+    //
+    // The job takes its command buffer when it runs. The queue hands out a limited number of
+    // command buffers that are not yet committed, and blocks once they are all out; the
+    // AmortizationWorker runs the jobs on this thread, so command buffers taken here, one per
+    // queued job, would block it before it got to the jobs that commit them.
     getJobQueue()->push(
-            [this, cmdBuffer, ib, byteOffset,
+            [this, ib, byteOffset,
                     bufferRelease = AsyncBufferRelease(this, std::move(data)),
                     completion = std::make_shared<AsyncCompletion>(this, handler, callback, user),
                     tag = std::move(tag)]() mutable {
+                id<MTLCommandBuffer> cmdBuffer = [mContext->commandQueue commandBuffer];
                 BufferDescriptor&& data = bufferRelease.detach();
                 ib->buffer.copyIntoBuffer(cmdBuffer, data.buffer, data.size, byteOffset,
                         [&tag]() { return tag.c_str_safe(); });
 
+                std::weak_ptr<DriverLifetimeTracker> weakDriverLifetime =
+                        mContext->driverLifetimeTracker;
                 [cmdBuffer addCompletedHandler:^(id<MTLCommandBuffer> cb) {
-                  completion->schedule(AsyncCallStatus::COMPLETED);
+                  if (auto driverTracker = weakDriverLifetime.lock()) {
+                      utils::LockGuard const lock(driverTracker->mutex);
+                      if (driverTracker->driver) {
+                          completion->schedule(AsyncCallStatus::COMPLETED);
+                          return;
+                      }
+                  }
+                  completion->abandon();
                 }];
 
                 [cmdBuffer commit];
@@ -1713,22 +1727,32 @@ void MetalDriver::updateBufferObjectAsyncR(AsyncCallId jobId, Handle<HwBufferObj
             << "updateBufferObjectAsyncR called with a null buffer. tag="
             << mHandleAllocator.getHandleTag(boh.getId()).c_str_safe();
 
-    id<MTLCommandBuffer> cmdBuffer = [mContext->commandQueue commandBuffer];
     auto* bo = promoteToAsync(handle_cast<MetalBufferObject>(boh));
     auto tag = mHandleAllocator.getHandleTag(boh.getId());
 
-    // The completion is shared with the completed handler, see updateIndexBufferAsyncR.
+    // The completion is shared with the completed handler, and the job takes its command buffer
+    // when it runs, see updateIndexBufferAsyncR.
     getJobQueue()->push(
-            [this, cmdBuffer, bo, byteOffset,
+            [this, bo, byteOffset,
                     bufferRelease = AsyncBufferRelease(this, std::move(data)),
                     completion = std::make_shared<AsyncCompletion>(this, handler, callback, user),
                     tag = std::move(tag)]() mutable {
+                id<MTLCommandBuffer> cmdBuffer = [mContext->commandQueue commandBuffer];
                 BufferDescriptor&& data = bufferRelease.detach();
                 bo->getBuffer()->copyIntoBuffer(cmdBuffer, data.buffer, data.size, byteOffset,
                         [&tag]() { return tag.c_str_safe(); });
 
+                std::weak_ptr<DriverLifetimeTracker> weakDriverLifetime =
+                        mContext->driverLifetimeTracker;
                 [cmdBuffer addCompletedHandler:^(id<MTLCommandBuffer> cb) {
-                  completion->schedule(AsyncCallStatus::COMPLETED);
+                  if (auto driverTracker = weakDriverLifetime.lock()) {
+                      utils::LockGuard const lock(driverTracker->mutex);
+                      if (driverTracker->driver) {
+                          completion->schedule(AsyncCallStatus::COMPLETED);
+                          return;
+                      }
+                  }
+                  completion->abandon();
                 }];
 
                 [cmdBuffer commit];
@@ -1796,7 +1820,6 @@ void MetalDriver::update3DImageAsyncR(AsyncCallId jobId, Handle<HwTexture> th, u
             << "update3DImageAsyncR must be called outside of a render pass.";
     FILAMENT_CHECK_PRECONDITION(data.buffer) << "update3DImageAsyncR called with a null buffer.";
 
-    id<MTLCommandBuffer> cmdBuffer = [mContext->commandQueue commandBuffer];
     auto* tex = promoteToAsync(handle_cast<MetalTexture>(th));
     auto tag = mHandleAllocator.getHandleTag(th.getId());
 
@@ -1805,18 +1828,29 @@ void MetalDriver::update3DImageAsyncR(AsyncCallId jobId, Handle<HwTexture> th, u
               "%d, height = %d, depth = %d, data = ?)\n",
             th.getId(), level, xoffset, yoffset, zoffset, width, height, depth);
 
-    // The completion is shared with the completed handler, see updateIndexBufferAsyncR.
+    // The completion is shared with the completed handler, and the job takes its command buffer
+    // when it runs, see updateIndexBufferAsyncR.
     getJobQueue()->push(
-            [this, cmdBuffer, tex, level, xoffset, yoffset, zoffset, width, height, depth,
+            [this, tex, level, xoffset, yoffset, zoffset, width, height, depth,
                     bufferRelease = AsyncBufferRelease(this, std::move(data)),
                     completion = std::make_shared<AsyncCompletion>(this, handler, callback, user),
                     tag = std::move(tag)]() mutable {
+                id<MTLCommandBuffer> cmdBuffer = [mContext->commandQueue commandBuffer];
                 PixelBufferDescriptor&& data = bufferRelease.detach();
                 tex->loadImage(cmdBuffer, level,
                         MTLRegionMake3D(xoffset, yoffset, zoffset, width, height, depth), data);
 
+                std::weak_ptr<DriverLifetimeTracker> weakDriverLifetime =
+                        mContext->driverLifetimeTracker;
                 [cmdBuffer addCompletedHandler:^(id<MTLCommandBuffer> cb) {
-                  completion->schedule(AsyncCallStatus::COMPLETED);
+                  if (auto driverTracker = weakDriverLifetime.lock()) {
+                      utils::LockGuard const lock(driverTracker->mutex);
+                      if (driverTracker->driver) {
+                          completion->schedule(AsyncCallStatus::COMPLETED);
+                          return;
+                      }
+                  }
+                  completion->abandon();
                 }];
 
                 [cmdBuffer commit];
@@ -2151,20 +2185,28 @@ void MetalDriver::readTextureCommon(id<MTLTexture> srcTexture, uint8_t level, ui
 #endif
 
     PixelBufferDescriptor* p = new PixelBufferDescriptor(std::move(data));
+    std::weak_ptr<DriverLifetimeTracker> weakDriverLifetime = mContext->driverLifetimeTracker;
     [getPendingCommandBuffer(mContext) addCompletedHandler:^(id<MTLCommandBuffer> cb) {
-        size_t stride = p->stride ? p->stride : width;
-        size_t bpp = PixelBufferDescriptor::computeDataSize(p->format, p->type, 1, 1, 1);
-        size_t bpr = PixelBufferDescriptor::computeDataSize(p->format, p->type, stride, 1, p->alignment);
-        // Metal's texture coordinates have (0, 0) at the top-left of the texture, but readPixels
-        // assumes (0, 0) at bottom-left.
-        MTLRegion srcRegion = MTLRegionMake2D(x, readPixelsTexture.height - y - height, width, height);
-        const uint8_t* bufferStart = (const uint8_t*) p->buffer + (p->left * bpp) +
-                                                                  (p->top * bpr);
+        const size_t stride = p->stride ? p->stride : width;
+        const size_t bpp = PixelBufferDescriptor::computeDataSize(p->format, p->type, 1, 1, 1);
+        const size_t bpr = PixelBufferDescriptor::computeDataSize(
+                p->format, p->type, stride, 1, p->alignment);
+        // Metal's texture coordinates have (0, 0) at the top-left of the texture, but
+        // readPixels assumes (0, 0) at bottom-left.
+        const MTLRegion srcRegion =
+                MTLRegionMake2D(x, readPixelsTexture.height - y - height, width, height);
+        const uint8_t* const bufferStart =
+                (const uint8_t*) p->buffer + (p->left * bpp) + (p->top * bpr);
         [readPixelsTexture getBytes:(void*) bufferStart
                         bytesPerRow:bpr
                          fromRegion:srcRegion
                         mipmapLevel:0];
-        scheduleDestroy(std::move(*p));
+        if (auto driverTracker = weakDriverLifetime.lock()) {
+            utils::LockGuard const lock(driverTracker->mutex);
+            if (driverTracker->driver) {
+                driverTracker->driver->scheduleDestroy(std::move(*p));
+            }
+        }
         delete p;
     }];
 }

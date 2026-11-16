@@ -89,6 +89,15 @@ bool EntityManager::isAlive(Entity const e) const noexcept {
     return static_cast<EntityManagerImpl const *>(this)->isAlive(e);
 }
 
+Entity EntityManager::getEntity(Entity::Type const index) const noexcept {
+    return static_cast<EntityManagerImpl const *>(this)->getEntity(index);
+}
+
+void EntityManager::intersectCurrentGarbage(
+        PagedArenaBitset& out, PagedArenaBitset const& filter) noexcept {
+    static_cast<EntityManagerImpl *>(this)->intersectCurrentGarbage(out, filter);
+}
+
 PagedArenaBitset EntityManager::getAliveEntities() const noexcept {
     auto const* impl = static_cast<EntityManagerImpl const*>(this);
     LockGuard const lock(impl->mDestructionLock);

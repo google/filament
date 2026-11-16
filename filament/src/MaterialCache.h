@@ -31,6 +31,8 @@
 #include <utils/Invocable.h>
 #include <utils/RefCountedMap.h>
 
+#include <cstdint>
+
 namespace filament {
 
 class Material;
@@ -102,6 +104,10 @@ public:
 
     void releaseProgram(FEngine& engine, ProgramSpecialization const& key) noexcept;
 
+    // Never reused, so program cache keys can't alias a freed definition.
+    // Main thread only, like material creation.
+    uint64_t allocateDefinitionId() noexcept { return ++mNextDefinitionId; }
+
 private:
     // TODO: investigate using custom allocators for the below data structures?
 
@@ -115,6 +121,8 @@ private:
     utils::InternPool<backend::Program::SpecializationConstant> mSpecializationConstantsInternPool;
 
     ProgramCache mPrograms;
+
+    uint64_t mNextDefinitionId = 0;
 };
 
 } // namespace filament

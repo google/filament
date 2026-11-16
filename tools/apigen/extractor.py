@@ -602,7 +602,21 @@ def get_type_info(t):
             category = "object"
     elif kind == TypeKind.ENUM:
         category = "enum"
-        
+
+    is_flags = False
+    if kind == TypeKind.ENUM:
+        decl = t.get_declaration()
+        if decl:
+            enum_attrs = extract_attributes(decl)
+            if any(
+                a in (
+                    "filament:apigen:flags", "filament:flags", "apigen:flags", "flags",
+                    "filament:apigen:bitmask", "filament:bitmask", "apigen:bitmask", "bitmask",
+                )
+                for a in enum_attrs
+            ):
+                is_flags = True
+
     # Fixup for const char* which clang might report as Pointer -> Char_S
     if is_pointer:
         pointee = t.get_pointee()
@@ -615,7 +629,7 @@ def get_type_info(t):
     elif "_Nonnull" in cpp_name:
         nullability = "nonnull"
 
-    return {
+    res_info = {
         "cpp_name": cpp_name,
         "qualified_name": qualified_name,
         "category": category,
@@ -625,6 +639,9 @@ def get_type_info(t):
         "is_move_reference": is_move_reference,
         "nullability": nullability
     }
+    if is_flags:
+        res_info["is_flags"] = True
+    return res_info
 
 # -----------------------------------------------------------------------------
 # Visitor

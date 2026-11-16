@@ -49,7 +49,7 @@ namespace utils {
  *    The L2 Directory is NOT part of this chain in the other direction: a valid-looking
  *    directory entry does NOT imply that the page exists. clear() (and therefore every
  *    static operation, which calls out->clear()) resets the masks and the arena but leaves
- *    the 64 KiB directory untouched, and copyFrom() copies it verbatim. Such stale entries
+ *    the L2 directory untouched, and copyFrom() copies it verbatim. Such stale entries
  *    may alias a live page or index past the end of the arena. Code MUST test the L1 bit
  *    before reading a directory entry, and MUST NEVER branch on
  *    `mDirectory[i] == INVALID_PAGE` to decide whether a page exists.
@@ -80,8 +80,8 @@ namespace utils {
 
 UTILS_NOINLINE
 PagedArenaBitset::PagedArenaBitset()
-    : mSummaryMask(MASK_WORDS, 0),          // All bits 0 (512 * u64 ->  4KiB)
-      mDirectory(DIR_SIZE, INVALID_PAGE),   // All entries 0xFFFF (32768 * u16 -> 64KiB)
+    : mSummaryMask(MASK_WORDS, 0),          // All bits 0 (MASK_WORDS * u64 ->  8 B)
+      mDirectory(DIR_SIZE, INVALID_PAGE),   // All entries 0xFFFF (DIR_SIZE * u16 -> 64 B)
       mMasterMask({})
 {
     // Place these near the top of PagedArenaBitset.cpp
@@ -229,7 +229,7 @@ bool PagedArenaBitset::fetchAdd(uint32_t const index) {
 
 UTILS_NOINLINE
 void PagedArenaBitset::add(Slice<const uint32_t> const indices,
-        PagedArenaBitset const* const filter) {
+        PagedArenaBitset const* const filter, uint32_t const indexMask) {
     assert(mSummaryMask.size() == MASK_WORDS &&
             "FATAL: Attempted to use a moved-from PagedArenaBitset!");
     assert((!filter || filter->mSummaryMask.size() == MASK_WORDS) &&
@@ -251,7 +251,7 @@ void PagedArenaBitset::add(Slice<const uint32_t> const indices,
     uint32_t addedSize = 0;
 
     for (size_t i = 0; i < count; ++i) {
-        uint32_t const index = ptr[i];
+        uint32_t const index = ptr[i] & indexMask;
         assert(index < (1ULL << DOMAIN_BITS) && "Index out of bounds");
 
         if (filter && !(*filter)[index]) {

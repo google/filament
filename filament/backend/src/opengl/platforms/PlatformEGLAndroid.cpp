@@ -113,6 +113,7 @@ struct PlatformEGLAndroid::SwapChainEGLAndroid : public SwapChainEGL {
     void terminate(PlatformEGLAndroid& platform);
     bool setPresentFrameId(uint64_t frameId) const noexcept;
     uint64_t getFrameId(uint64_t frameId) const noexcept;
+    bool frameTimestampsEnabled = false;
     bool compositorTimingSupported = false;
     mutable std::atomic<bool> frameTimestampsSupported{false};
     mutable std::atomic<bool> frameTimestampsEverRetrieved{false};
@@ -421,7 +422,7 @@ bool PlatformEGLAndroid::queryFrameTimestamps(SwapChain const* swapchain, uint64
 
 Platform::SwapChain* PlatformEGLAndroid::createSwapChain(void* nativeWindow, uint64_t const flags) {
     auto* const sc = new(std::nothrow) SwapChainEGLAndroid(*this, nativeWindow, flags);
-    if (UTILS_LIKELY(ext.egl.ANDROID_get_frame_timestamps)) {
+    if (UTILS_LIKELY(sc->frameTimestampsEnabled)) {
         EGLDisplay const dpy = getEglDisplay();
         sc->compositorTimingSupported =
                 eglGetCompositorTimingSupportedANDROID(dpy, sc->sur,
@@ -850,9 +851,14 @@ PlatformEGLAndroid::SwapChainEGLAndroid::SwapChainEGLAndroid(PlatformEGLAndroid 
     }
 
     if (UTILS_LIKELY(platform.ext.egl.ANDROID_get_frame_timestamps)) {
-        if (sur != EGL_NO_SURFACE) {
+        // Frame timestamps only mean something for windows SurfaceFlinger composites. Enabling
+        // them on other consumers, such as a MediaCodec input surface, can crash the codec
+        // process and the app.
+        if (sur != EGL_NO_SURFACE && NativeWindow::queuesToWindowComposer(
+                static_cast<ANativeWindow*>(nativeWindow))) {
             // we ignore the result, it doesn't matter much if it fails
             eglSurfaceAttrib(platform.getEglDisplay(), sur, EGL_TIMESTAMPS_ANDROID, EGL_TRUE);
+            frameTimestampsEnabled = true;
         }
     }
 }

@@ -21,8 +21,8 @@ fi
 # Unless explicitly specified, NDK version will be selected as highest available version within same major release chain
 FILAMENT_NDK_VERSION=$(cat `dirname $0`/../common/versions | grep GITHUB_NDK_VERSION | sed s/GITHUB_NDK_VERSION=//g)
 
-(! grep "${FILAMENT_NDK_VERSION}" `dirname $0`/../../android/build.gradle > /dev/null) &&
-    echo "Mismatch of NDK versions: want ${FILAMENT_NDK_VERSION} and not found in android/build.gradle" &&
+(! grep "${FILAMENT_NDK_VERSION}" `dirname $0`/../../android/gradle/libs.versions.toml > /dev/null) &&
+    echo "Mismatch of NDK versions: want ${FILAMENT_NDK_VERSION} and not found in android/gradle/libs.versions.toml" &&
     exit 1
 
 # Install the required NDK version specifically (if not present)

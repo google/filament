@@ -15,9 +15,11 @@
  */
 
 #include "Allocators.h"
+#include "Culler.h"
 #include "Froxelizer.h"
 #include "MaterialParser.h"
 #include "RenderPrimitive.h"
+#include "ShadowMapManager.h"
 #include "UniformBuffer.h"
 
 #include "components/RenderableManager.h"
@@ -29,10 +31,12 @@
 #include "details/Material.h"
 #include "details/MaterialInstance.h"
 #include "details/Renderer.h"
+#include "details/Scene.h"
 #include "details/SkinningBuffer.h"
 #include "details/View.h"
 
 #include <private/filament/BufferInterfaceBlock.h>
+#include <private/filament/UibStructs.h>
 
 #include <filament/Box.h>
 #include <filament/BufferObject.h>
@@ -60,6 +64,7 @@
 
 #include <utils/Entity.h>
 #include <utils/EntityManager.h>
+#include <utils/memalign.h>
 #include <utils/NameComponentManager.h>
 #include <utils/PagedArenaBitset.h>
 #include <utils/Slice.h>
@@ -80,6 +85,7 @@
 #include <chrono>
 #include <cmath>
 #include <cstddef>
+#include <cstdint>
 #include <functional>
 #include <initializer_list>
 #include <iostream>
@@ -87,8 +93,12 @@
 #include <random>
 #include <thread>
 #include <type_traits>
+#include <unordered_set>
 #include <utility>
 #include <vector>
+
+#include <stdint.h>
+#include <string.h>
 
 using namespace filament;
 using namespace filament::math;
@@ -2077,6 +2087,307 @@ TEST(FilamentTest, SphereCulling) {
     EXPECT_TRUE(frustum.intersects(float4{ 0, 0, 0, 200 }));
 }
 
+static void makeTwelvePlanes(Frustum const& frustum, float3 slabMin, float3 slabMax,
+        float4 planes[12]) {
+    frustum.getNormalizedPlanes(planes);
+    planes[6]  = { -1,  0,  0,  slabMin.x };
+    planes[7]  = {  1,  0,  0, -slabMax.x };
+    planes[8]  = {  0, -1,  0,  slabMin.y };
+    planes[9]  = {  0,  1,  0, -slabMax.y };
+    planes[10] = {  0,  0, -1,  slabMin.z };
+    planes[11] = {  0,  0,  1, -slabMax.z };
+}
+
+static bool referenceVisible12(float4 const* planes, float3 const c, float3 const e) {
+    for (size_t j = 0; j < 12; j++) {
+        bool allCornersOutside = true;
+        for (int corner = 0; corner < 8; corner++) {
+            float3 const p = {
+                    c.x + ((corner & 1) ? e.x : -e.x),
+                    c.y + ((corner & 2) ? e.y : -e.y),
+                    c.z + ((corner & 4) ? e.z : -e.z) };
+            if (planes[j].x * p.x + planes[j].y * p.y + planes[j].z * p.z + planes[j].w < 0.0f) {
+                allCornersOutside = false;
+                break;
+            }
+        }
+        if (allCornersOutside) {
+            return false;
+        }
+    }
+    return true;
+}
+
+static float referenceMargin12(float4 const* planes, float3 const c, float3 const e) {
+    float smallest = std::numeric_limits<float>::max();
+    for (size_t j = 0; j < 12; j++) {
+        float const d = planes[j].x * c.x + planes[j].y * c.y + planes[j].z * c.z + planes[j].w -
+                        (std::abs(planes[j].x) * e.x + std::abs(planes[j].y) * e.y +
+                                std::abs(planes[j].z) * e.z);
+        smallest = std::min(smallest, std::abs(d));
+    }
+    return smallest;
+}
+
+TEST(FilamentTest, BoxCulling12Planes) {
+    Frustum const frustum(mat4f::frustum(-1, 1, -1, 1, 1, 100));
+
+    // The slab clips the frustum to -5 < x < 5, -5 < y < 5, -50 < z < -2.
+    float4 planes[12];
+    makeTwelvePlanes(frustum, { -5, -5, -50 }, { 5, 5, -2 }, planes);
+
+    // Culler reads and writes round(count) elements; COUNT already is a multiple of MODULO.
+    constexpr size_t COUNT = 8;
+    ASSERT_EQ(Culler::round(COUNT), COUNT);
+
+    float cx[COUNT] = {}, cy[COUNT] = {}, cz[COUNT] = {};
+    float ex[COUNT] = {}, ey[COUNT] = {}, ez[COUNT] = {};
+    Culler::result_type results[COUNT] = {};
+
+    auto const setBox = [&](size_t const i, float3 const c, float3 const e) {
+        cx[i] = c.x; cy[i] = c.y; cz[i] = c.z;
+        ex[i] = e.x; ey[i] = e.y; ez[i] = e.z;
+    };
+
+    // 0: well inside both the frustum and the slab
+    setBox(0, { 0, 0, -10 }, { 0.5f, 0.5f, 0.5f });
+    // 1: inside the frustum but beyond the slab's far plane
+    setBox(1, { 0, 0, -80 }, { 0.5f, 0.5f, 0.5f });
+    // 2: inside the frustum but in front of the slab's near plane
+    setBox(2, { 0, 0, -1.5f }, { 0.1f, 0.1f, 0.1f });
+    // 3: inside the slab's z range but pushed out sideways past the slab's +x plane
+    setBox(3, { 8, 0, -10 }, { 0.5f, 0.5f, 0.5f });
+    // 4: straddles the slab's +x plane, so still visible
+    setBox(4, { 5, 0, -10 }, { 1.0f, 1.0f, 1.0f });
+    // 5: behind the camera, rejected by the frustum rather than the slab
+    setBox(5, { 0, 0, 10 }, { 0.5f, 0.5f, 0.5f });
+    // 6: large enough to enclose the whole clipped volume
+    setBox(6, { 0, 0, -10 }, { 500, 500, 500 });
+    // 7: outside the frustum's left plane for its depth
+    setBox(7, { -40, 0, -10 }, { 0.5f, 0.5f, 0.5f });
+
+    Culler::Test::intersects(results, planes, cx, cy, cz, ex, ey, ez, COUNT);
+
+    EXPECT_TRUE(results[0] & 1u)  << "box fully inside the clipped volume";
+    EXPECT_FALSE(results[1] & 1u) << "box beyond the slab far plane";
+    EXPECT_FALSE(results[2] & 1u) << "box in front of the slab near plane";
+    EXPECT_FALSE(results[3] & 1u) << "box past the slab +x plane";
+    EXPECT_TRUE(results[4] & 1u)  << "box straddling the slab +x plane";
+    EXPECT_FALSE(results[5] & 1u) << "box behind the camera";
+    EXPECT_TRUE(results[6] & 1u)  << "box enclosing the clipped volume";
+    EXPECT_FALSE(results[7] & 1u) << "box outside the frustum left plane";
+
+    // Every result must agree with the independent corner-based reference.
+    for (size_t i = 0; i < COUNT; i++) {
+        EXPECT_EQ(bool(results[i] & 1u),
+                referenceVisible12(planes, { cx[i], cy[i], cz[i] }, { ex[i], ey[i], ez[i] }))
+                << "box " << i;
+    }
+}
+
+TEST(FilamentTest, BoxCulling12PlanesMatchesReference) {
+    Frustum const frustum(mat4f::frustum(-1, 1, -1, 1, 1, 100));
+    float4 planes[12];
+    makeTwelvePlanes(frustum, { -20, -20, -60 }, { 20, 20, -3 }, planes);
+
+    // Not a multiple of MODULO: the kernel rounds up, so the buffers must hold ROUNDED elements.
+    constexpr size_t COUNT = 1021;
+    size_t const ROUNDED = Culler::round(COUNT);
+    ASSERT_GT(ROUNDED, COUNT);
+
+    std::vector<float> cx(ROUNDED), cy(ROUNDED), cz(ROUNDED);
+    std::vector<float> ex(ROUNDED), ey(ROUNDED), ez(ROUNDED);
+    std::vector<Culler::result_type> results(ROUNDED, 0);
+
+    std::default_random_engine gen(42); // NOLINT
+    std::uniform_real_distribution<float> position(-40.0f, 40.0f);
+    std::uniform_real_distribution<float> depth(-80.0f, 5.0f);
+    std::uniform_real_distribution<float> size(0.05f, 12.0f);
+    for (size_t i = 0; i < ROUNDED; i++) {
+        cx[i] = position(gen); cy[i] = position(gen); cz[i] = depth(gen);
+        ex[i] = size(gen);     ey[i] = size(gen);     ez[i] = size(gen);
+    }
+
+    Culler::Test::intersects(results.data(), planes, cx.data(), cy.data(), cz.data(), ex.data(),
+            ey.data(), ez.data(), COUNT);
+
+    // Boxes within a few ULP of a plane can legitimately classify differently; skip them, but
+    // assert they stay rare enough to not mask a regression.
+    constexpr float EPSILON = 1e-3f;
+    size_t skipped = 0;
+    size_t visible = 0;
+    for (size_t i = 0; i < COUNT; i++) {
+        float3 const c = { cx[i], cy[i], cz[i] };
+        float3 const e = { ex[i], ey[i], ez[i] };
+        if (referenceMargin12(planes, c, e) < EPSILON) {
+            skipped++;
+            continue;
+        }
+        ASSERT_EQ(bool(results[i] & 1u), referenceVisible12(planes, c, e))
+                << "box " << i << " at (" << c.x << ", " << c.y << ", " << c.z << ")";
+        visible += bool(results[i] & 1u);
+    }
+
+    EXPECT_LT(skipped, COUNT / 100) << "too many boxes skipped as near-boundary";
+    // Guards against a degenerate data set that would make the comparison above vacuous.
+    EXPECT_GT(visible, 0u);
+    EXPECT_LT(visible, COUNT - skipped);
+}
+
+TEST(FilamentTest, BoxCulling12PlanesBitHandling) {
+    Frustum const frustum(mat4f::frustum(-1, 1, -1, 1, 1, 100));
+    float4 planes[12];
+    makeTwelvePlanes(frustum, { -5, -5, -50 }, { 5, 5, -2 }, planes);
+
+    constexpr size_t COUNT = 16;
+    float cx[COUNT] = {}, cy[COUNT] = {}, cz[COUNT] = {};
+    float ex[COUNT] = {}, ey[COUNT] = {}, ez[COUNT] = {};
+
+    // Alternate visible and culled boxes so both branches of the bit update are exercised.
+    for (size_t i = 0; i < COUNT; i++) {
+        cz[i] = (i & 1u) ? -10.0f : -80.0f;
+        ex[i] = ey[i] = ez[i] = 0.5f;
+    }
+
+    for (size_t bit = 0; bit < 8; bit++) {
+        // Seed with the complement of the bit under test, so a kernel that never writes the bit,
+        // or writes it inverted, cannot pass.
+        Culler::result_type const mask = Culler::result_type(1u << bit);
+        Culler::result_type const other = Culler::result_type(~mask);
+        std::vector<Culler::result_type> results(COUNT, other);
+
+        Culler::intersects(results.data(), planes, cx, cy, cz, ex, ey, ez, COUNT, bit);
+
+        for (size_t i = 0; i < COUNT; i++) {
+            bool const expected =
+                    referenceVisible12(planes, { cx[i], cy[i], cz[i] }, { ex[i], ey[i], ez[i] });
+            EXPECT_EQ(bool(results[i] & mask), expected)
+                    << "bit " << bit << ", box " << i;
+            // Every other bit must survive untouched.
+            EXPECT_EQ(results[i] & ~mask, other & ~mask)
+                    << "bit " << bit << " leaked into other bits at box " << i;
+        }
+    }
+}
+
+// ------------------------------------------------------------------------------------------------
+// Shadow caster volume: ShadowMapManager::findSilhouette()
+// ------------------------------------------------------------------------------------------------
+
+TEST(FilamentTest, ShadowCasterVolume) {
+    // The volume must contain the camera frustum swept towards the light, otherwise a caster that
+    // shadows the visible area could be culled, and must exclude what lies downstream of the
+    // frustum, otherwise it doesn't cull anything. Degenerate light directions, parallel to a
+    // frustum edge or plane, are included because the plane classification is ambiguous there.
+    auto const view = [](float3 const eye, float3 const center, float3 const up) {
+        return inverse(mat4f::lookAt(eye, center, up));
+    };
+    struct {
+        char const* name;
+        mat4f pv;
+    } const cameras[] = {
+            { "perspective 60deg 16:9",
+                    mat4f::perspective(60.0f, 16.0f / 9.0f, 0.1f, 100.0f) *
+                    view({ 1, 2, 3 }, { 10, 0, -5 }, { 0, 1, 0 }) },
+            { "perspective 20deg rolled",
+                    mat4f::perspective(20.0f, 1.0f, 1.0f, 500.0f) *
+                    view({ -4, 10, 2 }, { 0, 0, 0 }, { 0.3f, 1, 0 }) },
+            { "perspective 110deg 1:2",
+                    mat4f::perspective(110.0f, 0.5f, 0.05f, 50.0f) *
+                    view({ 0, 1, 0 }, { 0, 1, -1 }, { 0, 1, 0 }) },
+            { "orthographic",
+                    mat4f::ortho(-10.0f, 10.0f, -5.0f, 5.0f, 0.5f, 50.0f) *
+                    view({ 3, 7, -2 }, { 0, 0, -20 }, { 0, 1, 0 }) },
+    };
+
+    std::default_random_engine gen(7); // NOLINT
+    std::uniform_real_distribution<double> weight(0.0, 1.0);
+
+    for (auto const& camera : cameras) {
+        // Corners in the same order as ShadowMapManager: 0-3 on the far plane, 4-7 on the near
+        // plane, bit 0 selects +x and bit 1 selects +y in clip space.
+        mat4 const clipToWorld = inverse(mat4(camera.pv));
+        std::array<double3, 8> corners;
+        double3 centroid{};
+        for (size_t i = 0; i < 8; i++) {
+            double4 const p = clipToWorld * double4{
+                    (i & 1u) ? 1.0 : -1.0, (i & 2u) ? 1.0 : -1.0, (i & 4u) ? -1.0 : 1.0, 1.0 };
+            corners[i] = p.xyz / p.w;
+            centroid += corners[i] / 8.0;
+        }
+        double diameter = 0.0;
+        for (double3 const& a : corners) {
+            for (double3 const& b : corners) {
+                diameter = std::max(diameter, length(b - a));
+            }
+        }
+
+        // Directions spread over the sphere, plus the degenerate ones.
+        std::vector<double3> directions;
+        constexpr size_t SPHERE_DIRECTION_COUNT = 256;
+        for (size_t i = 0; i < SPHERE_DIRECTION_COUNT; i++) {
+            double const y = 1.0 - 2.0 * (double(i) + 0.5) / double(SPHERE_DIRECTION_COUNT);
+            double const r = std::sqrt(1.0 - y * y);
+            double const phi = double(i) * d::PI * (3.0 - std::sqrt(5.0));
+            directions.push_back({ std::cos(phi) * r, y, std::sin(phi) * r });
+        }
+        for (size_t a = 0; a < 8; a++) {
+            for (size_t const b : { a ^ 1u, a ^ 2u, a ^ 4u }) {
+                directions.push_back(normalize(corners[b] - corners[a])); // along each edge
+            }
+        }
+        float4 frustumPlanes[6];
+        Frustum(camera.pv).getNormalizedPlanes(frustumPlanes);
+        for (float4 const& plane : frustumPlanes) {
+            for (size_t a = 0; a < 8; a++) {
+                double3 const t = cross(double3(plane.xyz), corners[a ^ 1u] - corners[a]);
+                if (length(t) > 0.0) {
+                    directions.push_back(normalize(t)); // within each frustum plane
+                }
+            }
+        }
+
+        for (size_t i = 0; i < directions.size(); i++) {
+            double3 const lightDir = directions[i];
+            auto const planes = ShadowMapManager::findSilhouette(camera.pv, float3(lightDir), 0.0f);
+            auto const distance = [](float4 const& plane, double3 const& p) {
+                return dot(double3(plane.xyz), p) + double(plane.w);
+            };
+
+            for (float4 const& plane : planes) {
+                ASSERT_TRUE(std::isfinite(plane.x) && std::isfinite(plane.y) &&
+                            std::isfinite(plane.z) && !std::isnan(plane.w))
+                        << camera.name << ", direction " << i;
+            }
+
+            // Random points of the frustum, swept towards the light, must be inside every plane.
+            for (size_t s = 0; s < 64; s++) {
+                double3 p{};
+                double total = 0.0;
+                for (double3 const& c : corners) {
+                    double const w = weight(gen);
+                    p += c * w;
+                    total += w;
+                }
+                p /= total;
+                for (double const t : { 0.0, 1.0, 10.0, 100.0, 1000.0 }) {
+                    double3 const q = p - lightDir * t;
+                    for (float4 const& plane : planes) {
+                        ASSERT_LE(distance(plane, q), 1e-4 * (1.0 + length(q)))
+                                << camera.name << ", direction " << i << ", sweep " << t;
+                    }
+                }
+            }
+
+            // A point far downstream of the frustum can't shadow it and must be culled.
+            double3 const downstream = centroid + lightDir * (10.0 * diameter);
+            EXPECT_TRUE(std::any_of(planes.begin(), planes.end(), [&](float4 const& plane) {
+                return distance(plane, downstream) > 0.0;
+            })) << camera.name << ", direction " << i;
+        }
+    }
+}
+
 TEST(FilamentTest, ColorConversion) {
     // Linear to Gamma
     // 0.0 stays 0.0
@@ -3314,6 +3625,49 @@ TEST(FilamentTest, CompressedFormatsHaveBlockInfo) {
     }
 }
 
+TEST(FilamentTest, Norm16TextureFormats) {
+    using backend::PixelDataFormat;
+    using backend::PixelDataType;
+    using backend::TextureFormat;
+    using backend::TextureType;
+
+    struct Norm16FormatSpec {
+        TextureFormat format;
+        size_t expectedSize;
+        size_t expectedComponents;
+        PixelDataFormat expectedPixelFormat;
+        PixelDataType expectedPixelType;
+        bool expectedIsColor;
+    };
+
+    constexpr Norm16FormatSpec kSpecs[] = {
+        { TextureFormat::R16,          2, 1, PixelDataFormat::R,    PixelDataType::USHORT, true  },
+        { TextureFormat::R16_SNORM,    2, 1, PixelDataFormat::R,    PixelDataType::SHORT,  false },
+        { TextureFormat::RG16,         4, 2, PixelDataFormat::RG,   PixelDataType::USHORT, true  },
+        { TextureFormat::RG16_SNORM,   4, 2, PixelDataFormat::RG,   PixelDataType::SHORT,  false },
+        { TextureFormat::RGB16,        6, 3, PixelDataFormat::RGB,  PixelDataType::USHORT, true  },
+        { TextureFormat::RGB16_SNORM,  6, 3, PixelDataFormat::RGB,  PixelDataType::SHORT,  false },
+        { TextureFormat::RGBA16,       8, 4, PixelDataFormat::RGBA, PixelDataType::USHORT, true  },
+        { TextureFormat::RGBA16_SNORM, 8, 4, PixelDataFormat::RGBA, PixelDataType::SHORT,  false },
+    };
+
+    for (auto const& spec : kSpecs) {
+        EXPECT_FALSE(backend::isCompressedFormat(spec.format));
+        EXPECT_FALSE(backend::isUnsignedIntFormat(spec.format));
+        EXPECT_FALSE(backend::isSignedIntFormat(spec.format));
+        EXPECT_EQ(backend::isColorFormat(spec.format), spec.expectedIsColor);
+        EXPECT_EQ(backend::getFormatSize(spec.format), spec.expectedSize);
+        EXPECT_EQ(backend::getFormatComponentCount(spec.format), spec.expectedComponents);
+        EXPECT_EQ(backend::getTextureType(spec.format), TextureType::FLOAT);
+        EXPECT_TRUE(FTexture::validatePixelFormatAndType(
+                spec.format, spec.expectedPixelFormat, spec.expectedPixelType));
+        EXPECT_FALSE(FTexture::validatePixelFormatAndType(
+                spec.format, PixelDataFormat::RGBA_INTEGER, spec.expectedPixelType));
+        EXPECT_FALSE(FTexture::validatePixelFormatAndType(
+                spec.format, spec.expectedPixelFormat, PixelDataType::UBYTE));
+    }
+}
+
 TEST(FilamentTest, TextureSetImageCompressedSizeValidation) {
     Engine* engine = Engine::create(Engine::Backend::NOOP);
 
@@ -3543,6 +3897,27 @@ TEST(FilamentTest, MultipleDirectionalLights) {
     Engine::destroy((Engine**)&engine);
 }
 
+TEST(FilamentTest, SceneCacheUboRowsAreZeroed) {
+    FScene::SceneCacheData cache;
+    size_t const capacity = 16;
+    size_t const bufferSize = FScene::RenderableSoa::getNeededSize(capacity);
+
+    // Leave a dirty block of the same size on the heap, so the allocation below likely reuses it.
+    void* const dirty = utils::aligned_alloc(bufferSize,
+            std::max(alignof(std::max_align_t), alignof(PerRenderableData)));
+    ASSERT_NE(dirty, nullptr);
+    memset(dirty, 0xAB, bufferSize);
+    utils::aligned_free(dirty);
+
+    cache.resize(1, 1);
+    ASSERT_EQ(capacity, cache.renderableData.capacity());
+
+    auto const* const p = reinterpret_cast<uint8_t const*>(
+            cache.renderableData.data<FScene::UBO>());
+    size_t const size = capacity * sizeof(PerRenderableData);
+    EXPECT_TRUE(std::all_of(p, p + size, [](uint8_t const b) { return b == 0; }));
+}
+
 namespace {
 
 class SceneCacheTest : public testing::Test {
@@ -3699,7 +4074,7 @@ protected:
     }
 
     static bool hasDirectionalLight(View* view, Entity e) {
-        return downcast(view)->getSceneCache()->directionalLights[e.getId()];
+        return downcast(view)->getSceneCache()->directionalLights[EntityManager::getIndex(e)];
     }
 
     void cleanupTrackedResources() {
@@ -3836,33 +4211,33 @@ TEST_F(SceneCacheTest, RemoveAndDestroyOnDifferentPagesKeepsOtherEntities) {
     std::vector<Entity> pool(3 * PAGE);
     em.create(pool.size(), pool.data());
     mEntities.insert(mEntities.end(), pool.begin(), pool.end());
-    std::vector<uint32_t> ids;
-    ids.reserve(pool.size());
+    std::vector<uint32_t> indices;
+    indices.reserve(pool.size());
     for (Entity const e : pool) {
-        ids.push_back(e.getId());
+        indices.push_back(EntityManager::getIndex(e));
     }
-    std::sort(ids.begin(), ids.end());
-    std::vector<uint32_t> lows; // ids whose counterpart one page up also exists
-    for (uint32_t const id : ids) {
-        if (std::binary_search(ids.begin(), ids.end(), id + PAGE)) {
-            if (!lows.empty() && lows.front() / PAGE != id / PAGE) {
+    std::sort(indices.begin(), indices.end());
+    std::vector<uint32_t> lows; // indices whose counterpart one page up also exists
+    for (uint32_t const idx : indices) {
+        if (std::binary_search(indices.begin(), indices.end(), idx + PAGE)) {
+            if (!lows.empty() && lows.front() / PAGE != idx / PAGE) {
                 if (lows.size() >= 4) {
                     break;
                 }
                 lows.clear();
             }
-            lows.push_back(id);
+            lows.push_back(idx);
         }
     }
     ASSERT_GE(lows.size(), 4u);
 
     // X and D are on page p; E = X + PAGE, Y = D + PAGE, U1 and U2 are on page p + 1.
-    Entity const X = Entity::import(int32_t(lows[0]));
-    Entity const D = Entity::import(int32_t(lows[1]));
-    Entity const E = Entity::import(int32_t(lows[0] + PAGE));
-    Entity const Y = Entity::import(int32_t(lows[1] + PAGE));
-    Entity const U1 = Entity::import(int32_t(lows[2] + PAGE));
-    Entity const U2 = Entity::import(int32_t(lows[3] + PAGE));
+    Entity const X = em.getEntity(lows[0]);
+    Entity const D = em.getEntity(lows[1]);
+    Entity const E = em.getEntity(lows[0] + PAGE);
+    Entity const Y = em.getEntity(lows[1] + PAGE);
+    Entity const U1 = em.getEntity(lows[2] + PAGE);
+    Entity const U2 = em.getEntity(lows[3] + PAGE);
 
     for (Entity const e : { X, E, D, Y }) {
         engine->getTransformManager().create(e);
@@ -4100,6 +4475,23 @@ TEST_F(SceneCacheTest, LightDataCapacityForSimdOverRead) {
         prepare(scene, view, T);
         EXPECT_GT(cache.lightData.capacity(), roundup4(p)) << "p = " << p;
         EXPECT_GE(cache.lightData.capacity(), roundup4(p + 1)) << "p = " << p;
+    }
+}
+
+// Guards the scratch size invariant asserted in FView::prepareVisibleLights() (debug builds).
+// The buffer must hold the directional light slot too, rounded up to 4.
+TEST_F(SceneCacheTest, LightDistancesFitScratchBuffer) {
+    Scene* scene = createScene();
+    View* view = createView();
+    view->setScene(scene);
+    createCamera(view);
+
+    for (size_t p = 1; p <= 8; ++p) {
+        scene->addEntity(createPointLight());
+        ASSERT_TRUE(renderFrame(view)) << "p = " << p;
+        // all lights must be visible, so p = 4 and p = 8 hit the worst case
+        EXPECT_EQ(p + FScene::DIRECTIONAL_LIGHTS_COUNT,
+                downcast(view)->getSceneCache()->lightData.size()) << "p = " << p;
     }
 }
 
@@ -4424,25 +4816,25 @@ TEST_F(SceneCacheTest, ContactShadowsFollowSceneLightsAndShadowOptions) {
     // 1. Enabling contact shadows on a positional light notifies, and is picked up.
     options.screenSpaceContactShadows = true;
     lcm.setShadowOptions(li, options);
-    EXPECT_TRUE(cache.dirtyEntities[p.getId()]);
+    EXPECT_TRUE(cache.dirtyEntities[EntityManager::getIndex(p)]);
     prepare(scene, view, T);
     EXPECT_TRUE(cache.lightsHaveContactShadows);
 
     // 2. Setting the same options again is a no-op: nothing is dirtied.
     lcm.setShadowOptions(li, options);
-    EXPECT_FALSE(cache.dirtyEntities[p.getId()]);
+    EXPECT_FALSE(cache.dirtyEntities[EntityManager::getIndex(p)]);
     EXPECT_FALSE(cache.hasDirtyEntities());
 
     // 3. Any other field notifies (operator== covers every field), and the comparison is made
     //    after clamping: 4096 clamps to 2048, so going from 2048 to 4096 is a no-op.
     options.mapSize = 2048;
     lcm.setShadowOptions(li, options);
-    EXPECT_TRUE(cache.dirtyEntities[p.getId()]);
+    EXPECT_TRUE(cache.dirtyEntities[EntityManager::getIndex(p)]);
     prepare(scene, view, T);
     EXPECT_TRUE(cache.lightsHaveContactShadows);
     options.mapSize = 4096;
     lcm.setShadowOptions(li, options);
-    EXPECT_FALSE(cache.dirtyEntities[p.getId()]);
+    EXPECT_FALSE(cache.dirtyEntities[EntityManager::getIndex(p)]);
 
     // 4. The dominant directional light counts too.
     options.screenSpaceContactShadows = false;
@@ -4601,6 +4993,200 @@ TEST_F(SceneCacheTest, UnrelatedEntitiesDoNotDirtySceneCache) {
     downcast(tcm).ensureWorldTransformsUpToDate();
     EXPECT_TRUE(cache.hasDirtyEntities());
     EXPECT_TRUE(downcast(scene)->processDeferredUpdates(T.upperLeft(), false, cache));
+}
+
+TEST_F(SceneCacheTest, SceneHoldsEbrWatermarkAndMultiViewEvictionSurvivesIndexRecycling) {
+    Scene* scene = createScene();
+    View* viewX = createView();
+    View* viewY = createView();
+    viewX->setScene(scene);
+    viewY->setScene(scene);
+    EntityManager& em = engine->getEntityManager();
+
+    // Flush any pending epochs from earlier tests and drain pre-existing free-list entries until
+    // EntityManager bump-allocates a fresh generation-0 index (meaning mFreeList.size() < 1024).
+    downcast(engine)->gc();
+    downcast(engine)->gc();
+    while (true) {
+        Entity const drain = createEntity();
+        if (drain.getId() == EntityManager::getIndex(drain)) {
+            break;
+        }
+    }
+
+    Entity const r1 = createRenderable();
+    Entity const p1 = createPointLight();
+    Entity const d1 = createDirectionalLight();
+    scene->addEntity(r1);
+    scene->addEntity(p1);
+    scene->addEntity(d1);
+
+    prepare(scene, viewX, T);
+    prepare(scene, viewY, T);
+    ASSERT_TRUE(hasRenderableRow(viewX, r1));
+    ASSERT_TRUE(hasRenderableRow(viewY, r1));
+    ASSERT_TRUE(hasLightRow(viewX, p1));
+    ASSERT_TRUE(hasLightRow(viewY, p1));
+    ASSERT_TRUE(hasDirectionalLight(viewX, d1));
+    ASSERT_TRUE(hasDirectionalLight(viewY, d1));
+
+    // Create > 2 * MIN_FREE_INDICES (2048) extra entities with higher indices than r1 so that once
+    // reclaimed, r1 sits near the front of mFreeList while mFreeList.size() stays well above 1024.
+    constexpr size_t kExtraCount = 2200;
+    std::vector<Entity> extras(kExtraCount);
+    em.create(kExtraCount, extras.data());
+    mEntities.insert(mEntities.end(), extras.begin(), extras.end());
+
+    std::unordered_set<uint32_t> destroyedIndices;
+    destroyedIndices.insert(EntityManager::getIndex(r1));
+    destroyedIndices.insert(EntityManager::getIndex(p1));
+    destroyedIndices.insert(EntityManager::getIndex(d1));
+    for (Entity const e : extras) {
+        destroyedIndices.insert(EntityManager::getIndex(e));
+    }
+
+    // Destroy component data, then destroy the entities in EntityManager.
+    engine->destroy(r1);
+    engine->destroy(p1);
+    engine->destroy(d1);
+    em.destroy(r1);
+    em.destroy(p1);
+    em.destroy(d1);
+    em.destroy(extras.size(), extras.data());
+
+    // Seal the epoch and attempt reclamation directly on EntityManager WITHOUT running FScene::gc()
+    // or prepare(): Scene's component manager must hold the EBR watermark so none of the 2203
+    // destroyed indices can be recycled (even across 1050 > MIN_FREE_INDICES allocations).
+    em.advanceEpoch();
+    em.reclaimSafeEpochs();
+    for (size_t i = 0; i < 1050; ++i) {
+        Entity const probe = createEntity();
+        EXPECT_EQ(0u, destroyedIndices.count(EntityManager::getIndex(probe)));
+    }
+
+    // Now run FEngine::gc() WITHOUT calling prepare() on viewY. FScene::gc() evicts r1/p1/d1 from
+    // Scene AND immediately evicts them from all attached View caches (including inactive viewY),
+    // then advances its EBR watermark so EntityManager can recycle their 17-bit indices.
+    downcast(engine)->gc();
+    EXPECT_FALSE(scene->hasEntity(r1));
+    EXPECT_FALSE(hasRenderableRow(viewY, r1));
+    EXPECT_FALSE(hasLightRow(viewY, p1));
+    EXPECT_FALSE(hasDirectionalLight(viewY, d1));
+
+    // Allocate until we obtain a recycled entity reusing r1's 17-bit index (guaranteed within 1025
+    // allocations since r1 has the smallest index among the 2203 newly reclaimed indices).
+    Entity r1Recycled;
+    for (size_t i = 0; i < 1100; ++i) {
+        Entity const candidate = createEntity();
+        if (EntityManager::getIndex(candidate) == EntityManager::getIndex(r1)) {
+            r1Recycled = candidate;
+            break;
+        }
+    }
+    ASSERT_FALSE(r1Recycled.isNull());
+    EXPECT_NE(r1Recycled, r1);
+
+    // Attach a new renderable to r1Recycled, add to Scene, and finally prepare inactive viewY.
+    engine->getTransformManager().create(r1Recycled);
+    RenderableManager::Builder(1)
+            .boundingBox({{ -1, -1, -1 }, { 1, 1, 1 }})
+            .build(*engine, r1Recycled);
+    scene->addEntity(r1Recycled);
+
+    prepare(scene, viewY, T);
+    EXPECT_FALSE(hasRenderableRow(viewY, r1));
+    EXPECT_TRUE(hasRenderableRow(viewY, r1Recycled));
+}
+
+TEST_F(SceneCacheTest, SoaCacheEntityInstanceMapInvariants) {
+    EntityManager& em = engine->getEntityManager();
+    FScene::SceneCacheData::RenderableCache cache;
+
+    // 1. Empty cache and null entity return 0xFFFFFFFFu.
+    EXPECT_EQ(0u, cache.size());
+    EXPECT_EQ(0xFFFFFFFFu, cache.getIndex(Entity{}));
+
+    // 2. Multi-page acquire (> 2 * 1024 entries per page) with 0-based row indices. The Extra
+    //    (PrevTransform) only exists when motion vectors are compiled in.
+    constexpr size_t kCount = 2500;
+    std::vector<Entity> entities(kCount);
+    em.create(kCount, entities.data());
+    mEntities.insert(mEntities.end(), entities.begin(), entities.end());
+
+    // Unallocated page query before insertion returns 0xFFFFFFFFu.
+    for (size_t i = 0; i < kCount; ++i) {
+        EXPECT_EQ(0xFFFFFFFFu, cache.getIndex(entities[i]));
+    }
+
+    for (size_t i = 0; i < kCount; ++i) {
+        double3 const t{ double(i), double(i * 2), double(i * 3) };
+        auto const [idx, inserted] = cache.acquire(entities[i], t);
+        ASSERT_TRUE(inserted);
+        ASSERT_EQ(uint32_t(i), idx);
+        // A new row has its EntityColumn populated by acquire() itself.
+        EXPECT_EQ(entities[i], cache.getSoA().elementAt<FScene::RENDERABLE_ENTITY>(idx));
+        cache.getSoA().elementAt<FScene::USER_DATA>(idx) = float(i + 100);
+#if defined(FILAMENT_SUPPORTS_MOTION_VECTORS)
+        cache.extraAt(idx) = PrevTransform{
+            mat4f::translation(float3{ float(i), 0.0f, 0.0f }),
+            float3{ float(i), 1.0f, 2.0f }
+        };
+#endif
+    }
+    EXPECT_EQ(kCount, cache.size());
+
+    // 3. Re-acquiring existing entities returns { idx, false } and updates translation in-place.
+    for (size_t i = 0; i < kCount; ++i) {
+        EXPECT_EQ(uint32_t(i), cache.getIndex(entities[i]));
+        double3 const updatedT{ double(i + 10), double(i + 20), double(i + 30) };
+        auto const [idx, inserted] = cache.acquire(entities[i], updatedT);
+        EXPECT_FALSE(inserted);
+        EXPECT_EQ(uint32_t(i), idx);
+        EXPECT_EQ(updatedT, cache.getTranslations()[idx]);
+        EXPECT_EQ(float(i + 100), cache.getSoA().elementAt<FScene::USER_DATA>(idx));
+#if defined(FILAMENT_SUPPORTS_MOTION_VECTORS)
+        EXPECT_EQ(float(i), cache.extraAt(idx).lo.x);
+#endif
+    }
+
+    // 4. Forged/stale generation sharing the same 17-bit index must miss getIndex() and remove().
+    Entity const target = entities[0];
+    uint32_t const forgedId = target.getId() ^ (1u << FILAMENT_GENERATION_SHIFT);
+    Entity const forged = Entity::import(static_cast<int32_t>(forgedId));
+    ASSERT_EQ(EntityManager::getIndex(target), EntityManager::getIndex(forged));
+    ASSERT_NE(target, forged);
+    EXPECT_EQ(0xFFFFFFFFu, cache.getIndex(forged));
+    cache.remove(forged);
+    EXPECT_EQ(kCount, cache.size());
+    EXPECT_EQ(0u, cache.getIndex(target));
+
+    // 5. Swap-and-pop removal from front (row 0) migrates the last row into row 0.
+    Entity const lastEntity = entities[kCount - 1];
+    cache.remove(target);
+    EXPECT_EQ(kCount - 1, cache.size());
+    EXPECT_EQ(0xFFFFFFFFu, cache.getIndex(target));
+    EXPECT_EQ(0u, cache.getIndex(lastEntity));
+    EXPECT_EQ(lastEntity, cache.getSoA().elementAt<FScene::RENDERABLE_ENTITY>(0));
+    EXPECT_EQ(float(kCount - 1 + 100), cache.getSoA().elementAt<FScene::USER_DATA>(0));
+    EXPECT_EQ((double3{ double(kCount - 1 + 10), double(kCount - 1 + 20), double(kCount - 1 + 30) }),
+            cache.getTranslations()[0]);
+#if defined(FILAMENT_SUPPORTS_MOTION_VECTORS)
+    EXPECT_EQ(float(kCount - 1), cache.extraAt(0).lo.x);
+#endif
+
+    // 6. Removing the current last row pops without swapping.
+    Entity const newLast = cache.getSoA().elementAt<FScene::RENDERABLE_ENTITY>(cache.size() - 1);
+    cache.remove(newLast);
+    EXPECT_EQ(kCount - 2, cache.size());
+    EXPECT_EQ(0xFFFFFFFFu, cache.getIndex(newLast));
+    EXPECT_EQ(0u, cache.getIndex(lastEntity));
+
+    // 7. clear() resets all rows and map entries.
+    cache.clear();
+    EXPECT_EQ(0u, cache.size());
+    for (Entity const e : entities) {
+        EXPECT_EQ(0xFFFFFFFFu, cache.getIndex(e));
+    }
 }
 
 int main(int argc, char** argv) {

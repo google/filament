@@ -495,13 +495,6 @@ if (MSVC)
 elseif(WASM)
     # Avoid strict-vtable-pointers here, it is broken in WebAssembly.
     set(OPTIMIZATION_FLAGS -fvisibility-inlines-hidden)
-elseif(FILAMENT_USING_GCC)
-    set(OPTIMIZATION_FLAGS
-        -ffast-math
-        -fno-finite-math-only
-        -ffp-contract=fast
-        -fvisibility-inlines-hidden
-    )
 else()
     set(OPTIMIZATION_FLAGS
         -ffast-math
@@ -510,7 +503,7 @@ else()
         # TODO: aggressive vectorization is currently broken on Android
         #        -fslp-vectorize-aggressive
         -fvisibility-inlines-hidden
-        -fstrict-vtable-pointers
+        $<$<CXX_COMPILER_ID:Clang,AppleClang>:-fstrict-vtable-pointers>
     )
 endif()
 

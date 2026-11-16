@@ -51,10 +51,6 @@ public:
     }
 
     void create(utils::Entity entity) {
-        utils::Entity zombie;
-        if (UTILS_UNLIKELY(mManager.popPendingZombie(entity, zombie))) {
-            destroy(zombie);
-        }
         if (UTILS_UNLIKELY(mManager.hasComponent(entity))) {
             destroy(entity);
         }

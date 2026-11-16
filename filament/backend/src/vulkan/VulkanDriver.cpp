@@ -1485,6 +1485,7 @@ void VulkanDriver::destroySwapChain(Handle<HwSwapChain> sch) {
         return;
     }
     auto swapChain = resource_ptr<VulkanSwapChain>::cast(&mResourceManager, sch);
+
     if (mCurrentSwapChain == swapChain) {
         mCurrentSwapChain = {};
     }
@@ -1887,6 +1888,11 @@ bool VulkanDriver::isWorkaroundNeeded(Workaround workaround) {
             // early exit condition is flattened in EASU code
             return vendorId == 0x5143; // Qualcomm
         }
+        case Workaround::POWER_VR_SHADER_WORKAROUNDS: {
+            auto const vendorId = mContext.getPhysicalDeviceVendorId();
+            // textureGather is slow on PowerVR + Vulkan (tested on Pixel11).
+            return vendorId == 0x1010; // ImgTec (PowerVR)
+        }
         case Workaround::ALLOW_READ_ONLY_ANCILLARY_FEEDBACK_LOOP:
             // Supporting depth attachment as both sampler and attachment is only possible if we set
             // the depth attachment as read-only (e.g. during SSAO pass), however note that the
@@ -2259,10 +2265,14 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
     // first render pass. Note however that its contents are often preserved on subsequent render
     // passes, due to multiple views.
     TargetBufferFlags discardStart = params.flags.discardStart;
+    fvkmemory::resource_ptr<VulkanSwapChain> swapchain;
     if (rt->isSwapChain()) {
-        fvkmemory::resource_ptr<VulkanSwapChain> sc = mCurrentSwapChain;
-        assert_invariant(sc);
-        if (sc->isFirstRenderPass()) {
+        // There should be no subpasses for the swapchain rendertarget. This is an assumption made
+        // to keep the swapchain FBO compatible without too much bookkeeping.
+        assert_invariant(params.subpassMask == 0);
+        swapchain = mCurrentSwapChain;
+        assert_invariant(swapchain);
+        if (swapchain->isFirstRenderPass()) {
             if (!acquireNextSwapchainImage()) {
                 // We've failed to acquire the next image. Subsequent calls cannot assume the render
                 // pass exists.
@@ -2270,7 +2280,7 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
                 return;
             } else {
                 discardStart |= TargetBufferFlags::COLOR;
-                sc->markFirstRenderPass();
+                swapchain->markFirstRenderPass();
             }
         }
     }
@@ -2346,8 +2356,21 @@ void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth, const RenderPassP
 
     rt->emitBarriersBeginRenderPass(*commandBuffer);
 
-    fvkmemory::resource_ptr<VulkanFramebuffer> vkfb =
-            mFramebufferCache.getFramebuffer(fbkey, &mResourceManager, rt);
+    fvkmemory::resource_ptr<VulkanFramebuffer> vkfb;
+    if (swapchain) {
+        // Swapchain framebuffers are owned by the swapchain so that they are never evicted. One is
+        // reused for every render pass on a given image since those render passes are compatible.
+        vkfb = swapchain->getCurrentFramebuffer();
+        if (!vkfb) {
+            // Cached framebuffers retain the render target to keep their VkImageView cache keys
+            // valid. Swapchain framebuffers are uncached and cleared when attachments change, so
+            // they do not need a render target reference.
+            vkfb = mFramebufferCache.createFramebuffer(fbkey, &mResourceManager, {});
+            swapchain->setCurrentFramebuffer(vkfb);
+        }
+    } else {
+        vkfb = mFramebufferCache.getFramebuffer(fbkey, &mResourceManager, rt);
+    }
 
     // Assign a label to the framebuffer for debugging purposes.
 
@@ -3154,9 +3177,9 @@ bool VulkanDriver::acquireNextSwapchainImage() {
     }
 
     auto const [acquired, backingChanged] = mCurrentSwapChain->acquire();
+    // Note that the swapchain releases its own framebuffers when its backing images change, so
+    // the FBO cache does not need to be reset here.
     if (backingChanged) {
-        mFramebufferCache.resetFramebuffers();
-
         if (mPlatform->getCustomization().flushAndWaitOnWindowResize) {
             // In this scenario the command buffer was flushed, so we need
             // to set again the pipeline state and descriptor set state.

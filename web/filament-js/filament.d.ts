@@ -748,6 +748,8 @@ export class View {
     public isStencilBufferEnabled(): boolean;
     public setTransparentPickingEnabled(enabled: boolean): void;
     public isTransparentPickingEnabled(): boolean;
+    public setTighterShadowCasterCullingEnabled(enabled: boolean): void;
+    public isTighterShadowCasterCullingEnabled(): boolean;
     public getViewport(): float4;
     public hasCamera(): boolean;
     public setShadowingEnabled(enabled: boolean): void;
@@ -1389,6 +1391,14 @@ export enum Texture$InternalFormat {
     SRGB8_ALPHA8_ASTC_10x10,
     SRGB8_ALPHA8_ASTC_12x10,
     SRGB8_ALPHA8_ASTC_12x12,
+    R16,
+    R16_SNORM,
+    RG16,
+    RG16_SNORM,
+    RGB16,
+    RGB16_SNORM,
+    RGBA16,
+    RGBA16_SNORM,
 }
 
 export enum Texture$Sampler {

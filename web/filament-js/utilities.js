@@ -60,8 +60,10 @@ Filament.initWebGPU = async function() {
         'depth-clip-control',
         'depth32float-stencil8',
         'texture-compression-bc',
+        'texture-compression-bc-sliced-3d',
         'texture-compression-etc2',
-        'texture-compression-astc'
+        'texture-compression-astc',
+        'texture-compression-astc-sliced-3d'
     ];
     const missingFeatures = filamentRequiredFeatures.filter((f) => !adapter.features.has(f));
     if (missingFeatures.length > 0) {

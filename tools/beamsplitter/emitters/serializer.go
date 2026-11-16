@@ -55,7 +55,7 @@ func EmitSerializer(definitions []db.TypeDefinition, outputFolder string) {
 			switch ctype {
 			case "bool":
 				return "to_string"
-			case "uint8_t":
+			case "uint8_t", "int8_t":
 				return "int"
 			}
 			return ""

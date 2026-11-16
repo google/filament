@@ -116,8 +116,6 @@ public:
     Program& pushConstants(ShaderStage stage,
             utils::FixedCapacityVector<PushConstant> constants) noexcept;
 
-    Program& cacheId(uint64_t cacheId) noexcept;
-
     Program& multiview(bool multiview) noexcept;
 
     // For ES2 support only...
@@ -135,8 +133,6 @@ public:
     utils::CString& getName() noexcept { return mName; }
 
     auto const& getShaderLanguage() const { return mShaderLanguage; }
-
-    uint64_t getCacheId() const noexcept { return mCacheId; }
 
     bool isMultiview() const noexcept { return mMultiview; }
 
@@ -184,7 +180,6 @@ private:
     ShaderSource mShadersSource;
     ShaderLanguage mShaderLanguage = ShaderLanguage::ESSL3;
     utils::CString mName;
-    uint64_t mCacheId{};
     CompilerPriorityQueue mPriorityQueue = CompilerPriorityQueue::HIGH;
     utils::Invocable<utils::io::ostream&(utils::CString const& name, utils::io::ostream& out)>
             mLogger;
