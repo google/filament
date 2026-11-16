@@ -2772,6 +2772,7 @@ $dokka.location:com.google.android.filament/View/isPostProcessingEnabled/#/Point
 $dokka.location:com.google.android.filament/View/isScreenSpaceRefractionEnabled/#/PointingToDeclaration/filament-android/com.google.android.filament/-view/is-screen-space-refraction-enabled.md
 $dokka.location:com.google.android.filament/View/isShadowingEnabled/#/PointingToDeclaration/filament-android/com.google.android.filament/-view/is-shadowing-enabled.md
 $dokka.location:com.google.android.filament/View/isStencilBufferEnabled/#/PointingToDeclaration/filament-android/com.google.android.filament/-view/is-stencil-buffer-enabled.md
+$dokka.location:com.google.android.filament/View/isTighterShadowCasterCullingEnabled/#/PointingToDeclaration/filament-android/com.google.android.filament/-view/is-tighter-shadow-caster-culling-enabled.md
 $dokka.location:com.google.android.filament/View/isTransparentPickingEnabled/#/PointingToDeclaration/filament-android/com.google.android.filament/-view/is-transparent-picking-enabled.md
 $dokka.location:com.google.android.filament/View/pick/#int#int#java.lang.Object#com.google.android.filament.View.OnPickCallback/PointingToDeclaration/filament-android/com.google.android.filament/-view/pick.md
 $dokka.location:com.google.android.filament/View/setAmbientOcclusion/#com.google.android.filament.View.AmbientOcclusion/PointingToDeclaration/filament-android/com.google.android.filament/-view/set-ambient-occlusion.md
@@ -2812,6 +2813,7 @@ $dokka.location:com.google.android.filament/View/setSoftShadowOptions/#com.googl
 $dokka.location:com.google.android.filament/View/setStencilBufferEnabled/#boolean/PointingToDeclaration/filament-android/com.google.android.filament/-view/set-stencil-buffer-enabled.md
 $dokka.location:com.google.android.filament/View/setStereoscopicOptions/#com.google.android.filament.View.StereoscopicOptions/PointingToDeclaration/filament-android/com.google.android.filament/-view/set-stereoscopic-options.md
 $dokka.location:com.google.android.filament/View/setTemporalAntiAliasingOptions/#com.google.android.filament.View.TemporalAntiAliasingOptions/PointingToDeclaration/filament-android/com.google.android.filament/-view/set-temporal-anti-aliasing-options.md
+$dokka.location:com.google.android.filament/View/setTighterShadowCasterCullingEnabled/#boolean/PointingToDeclaration/filament-android/com.google.android.filament/-view/set-tighter-shadow-caster-culling-enabled.md
 $dokka.location:com.google.android.filament/View/setToneMapping/#com.google.android.filament.View.ToneMapping/PointingToDeclaration/filament-android/com.google.android.filament/-view/set-tone-mapping.md
 $dokka.location:com.google.android.filament/View/setTransparentPickingEnabled/#boolean/PointingToDeclaration/filament-android/com.google.android.filament/-view/set-transparent-picking-enabled.md
 $dokka.location:com.google.android.filament/View/setViewport/#com.google.android.filament.Viewport/PointingToDeclaration/filament-android/com.google.android.filament/-view/set-viewport.md
