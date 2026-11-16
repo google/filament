@@ -33,6 +33,10 @@ class DracoCache;
 
 struct cgltf_accessor;
 
+namespace utils {
+class JobSystem;
+}
+
 namespace filament::gltfio {
 
 // Referenced in ResourceLoader and AssetLoaderExtended
@@ -46,7 +50,8 @@ namespace filament::gltfio::utility {
 
 // Functions that are shared between the original implementation and the extended implementation.
 bool decodeDracoMeshes(cgltf_data const* gltf, cgltf_primitive const* prim, DracoCache* dracoCache);
-bool decodeMeshoptCompression(cgltf_data* data, bool* decoded = nullptr);
+bool decodeMeshoptCompression(cgltf_data* data, bool* decoded = nullptr,
+        utils::JobSystem* js = nullptr);
 bool primitiveHasVertexColor(cgltf_primitive* inPrim);
 uint32_t computeBindingSize(cgltf_accessor const* accessor);
 void convertBytesToShorts(uint16_t* dst, uint8_t const* src, size_t count);

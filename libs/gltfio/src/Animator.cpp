@@ -41,8 +41,8 @@
 #include <algorithm>
 #include <cmath>
 #include <limits>
-#include <map>
 #include <string>
+#include <utility>
 #include <vector>
 
 using namespace filament;
@@ -52,12 +52,13 @@ using namespace utils;
 
 namespace filament::gltfio {
 
-using TimeValues = map<float, size_t>;
+using TimeValues = vector<float>;
 using SourceValues = vector<float>;
 using BoneVector = vector<mat4f>;
 
 struct Sampler {
     TimeValues times;
+    vector<size_t> indices;
     SourceValues values;
     enum { LINEAR, STEP, CUBIC } interpolation;
     size_t inputCount = 0;
@@ -98,29 +99,47 @@ struct AnimatorImpl {
 // Imports a sampler that has passed validateSampler(). On failure, dst.times is left empty, which
 // disables every channel that uses this sampler (see Animator::applyAnimation).
 static void createSampler(const cgltf_animation_sampler& src, Sampler& dst) {
-    // Copy the time values into a red-black tree. cgltf_accessor_unpack_floats honors the
+    // Unpack time values into a flat sorted vector. cgltf_accessor_unpack_floats honors the
     // accessor stride and reads meshopt-decoded data when present.
     const cgltf_accessor* timelineAccessor = src.input;
-    vector<float> timeline(timelineAccessor->count);
-    if (cgltf_accessor_unpack_floats(timelineAccessor, timeline.data(), timeline.size()) !=
-            timeline.size()) {
+    dst.times.resize(timelineAccessor->count);
+    if (cgltf_accessor_unpack_floats(timelineAccessor, dst.times.data(), dst.times.size()) !=
+            dst.times.size()) {
         GLTFIO_WARN("Unable to read animation timestamps; animation disabled.");
+        dst.times.clear();
         return;
     }
-    for (size_t i = 0, len = timeline.size(); i < len; ++i) {
-        // NaN keys would break the strict weak ordering that std::map relies upon.
-        if (UTILS_UNLIKELY(!std::isfinite(timeline[i]))) {
+    bool strictlyIncreasing = true;
+    for (size_t i = 0, len = dst.times.size(); i < len; ++i) {
+        if (UTILS_UNLIKELY(!std::isfinite(dst.times[i]))) {
             GLTFIO_WARN("Animation sampler has non-finite timestamps; animation disabled.");
             dst.times.clear();
             return;
         }
-        dst.times[timeline[i]] = i;
+        if (i > 0 && UTILS_UNLIKELY(dst.times[i] <= dst.times[i - 1])) {
+            strictlyIncreasing = false;
+        }
     }
     dst.inputCount = timelineAccessor->count;
-    if (UTILS_UNLIKELY(dst.times.size() != dst.inputCount)) {
-        GLTFIO_WARN("Animation sampler has duplicate timestamps; animation disabled.");
-        dst.times.clear();
-        return;
+    if (UTILS_UNLIKELY(!strictlyIncreasing)) {
+        dst.indices.resize(dst.inputCount);
+        for (size_t i = 0; i < dst.inputCount; ++i) {
+            dst.indices[i] = i;
+        }
+        std::sort(dst.indices.begin(), dst.indices.end(), [&dst](size_t a, size_t b) {
+            return dst.times[a] < dst.times[b];
+        });
+        TimeValues sortedTimes(dst.inputCount);
+        for (size_t i = 0; i < dst.inputCount; ++i) {
+            sortedTimes[i] = dst.times[dst.indices[i]];
+            if (i > 0 && sortedTimes[i] == sortedTimes[i - 1]) {
+                GLTFIO_WARN("Animation sampler has duplicate timestamps; animation disabled.");
+                dst.times.clear();
+                dst.indices.clear();
+                return;
+            }
+        }
+        dst.times = std::move(sortedTimes);
     }
 
     // Convert source data to float.
@@ -139,6 +158,7 @@ static void createSampler(const cgltf_animation_sampler& src, Sampler& dst) {
         default:
             GLTFIO_WARN("Unknown animation type.");
             dst.times.clear();
+            dst.indices.clear();
             return;
     }
     dst.values.resize(valuesAccessor->count * componentCount);
@@ -146,6 +166,7 @@ static void createSampler(const cgltf_animation_sampler& src, Sampler& dst) {
             dst.values.size()) {
         GLTFIO_WARN("Unable to read animation values; animation disabled.");
         dst.times.clear();
+        dst.indices.clear();
         dst.values.clear();
         return;
     }
@@ -333,7 +354,7 @@ Animator::Animator(FFilamentAsset const* asset, FFilamentInstance* instance) {
             Sampler& dstSampler = dstAnim.samplers[j];
             createSampler(srcSampler, dstSampler);
             if (dstSampler.times.size() > 1) {
-                float maxtime = (--dstSampler.times.end())->first;
+                float maxtime = dstSampler.times.back();
                 dstAnim.duration = std::max(dstAnim.duration, maxtime);
             }
         }
@@ -392,7 +413,7 @@ void Animator::applyAnimation(size_t animationIndex, float time) const {
         const TimeValues& times = sampler->times;
 
         // Find the first keyframe after the given time, or the keyframe that matches it exactly.
-        TimeValues::const_iterator iter = times.lower_bound(time);
+        TimeValues::const_iterator iter = std::lower_bound(times.begin(), times.end(), time);
 
         // Compute the interpolant (between 0 and 1) and determine the keyframe pair.
         float t = 0.0f;
@@ -405,16 +426,20 @@ void Animator::applyAnimation(size_t animationIndex, float time) const {
             nextIndex = 0;
             prevIndex = 0;
         } else {
-            TimeValues::const_iterator prev = iter; --prev;
-            nextIndex = iter->second;
-            prevIndex = prev->second;
-            const float nextTime = iter->first;
-            const float prevTime = prev->first;
+            const size_t pos = static_cast<size_t>(iter - times.begin());
+            nextIndex = pos;
+            prevIndex = pos - 1;
+            const float nextTime = times[nextIndex];
+            const float prevTime = times[prevIndex];
             float deltaTime = nextTime - prevTime;
             assert(deltaTime >= 0);
             if (deltaTime > 0) {
                 t = (time - prevTime) / deltaTime;
             }
+        }
+        if (UTILS_UNLIKELY(!sampler->indices.empty())) {
+            nextIndex = sampler->indices[nextIndex];
+            prevIndex = sampler->indices[prevIndex];
         }
 
         if (sampler->interpolation == Sampler::STEP) {

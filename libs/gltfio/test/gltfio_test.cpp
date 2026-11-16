@@ -19,6 +19,7 @@
 #include "FFilamentAsset.h"
 #include "FFilamentInstance.h"
 #include "GlbBuilders.h"
+#include "TangentsJob.h"
 #include "Utility.h"
 
 #include "extended/TangentsJobExtended.h"
@@ -57,6 +58,7 @@
 #include <draco/mesh/mesh.h>
 #endif
 #include <gtest/gtest.h>
+#include <meshoptimizer.h>
 
 #include <algorithm>
 #include <array>
@@ -3205,6 +3207,456 @@ TEST_F(glTFIOTest, ExtendedLoaderDimensionMismatchedMorphsAndBaseAttributes) {
         EXPECT_TRUE(resourceLoader.loadResources(asset));
         assetLoader->destroyAsset(asset);
         AssetLoader::destroy(&assetLoader);
+    }
+}
+
+TEST(glTFIOTangentsJob, GeneratesExpectedQuatsAcrossAllModes) {
+    using math::float2;
+    using math::float3;
+    using math::float4;
+    using math::short4;
+
+    float3 positions[3] = {
+        { 0.0f, 0.0f, 0.0f },
+        { 1.0f, 0.0f, 0.0f },
+        { 0.0f, 1.0f, 0.0f },
+    };
+    float3 normals[3] = {
+        { 0.0f, 0.0f, 1.0f },
+        { 0.0f, 0.0f, 1.0f },
+        { 0.0f, 0.0f, 1.0f },
+    };
+    float4 tangents[3] = {
+        { 1.0f, 0.0f, 0.0f, 1.0f },
+        { 1.0f, 0.0f, 0.0f, 1.0f },
+        { 1.0f, 0.0f, 0.0f, 1.0f },
+    };
+    float2 uvs[3] = {
+        { 0.0f, 0.0f },
+        { 1.0f, 0.0f },
+        { 0.0f, 1.0f },
+    };
+    uint8_t indices8[3] = { 0, 1, 2 };
+    uint16_t indices16[3] = { 0, 1, 2 };
+    uint32_t indices32[3] = { 0, 1, 2 };
+
+    auto makeAccessor = [](void* data, size_t byteSize, cgltf_type type,
+            cgltf_component_type compType, size_t count, size_t stride,
+            cgltf_buffer* buf, cgltf_buffer_view* view) -> cgltf_accessor {
+        *buf = { .size = byteSize, .data = data };
+        *view = { .buffer = buf, .size = byteSize, .stride = stride };
+        return cgltf_accessor{
+            .component_type = compType,
+            .type = type,
+            .count = count,
+            .stride = stride,
+            .buffer_view = view,
+        };
+    };
+
+    cgltf_buffer posBuf{}, normBuf{}, tanBuf{}, uvBuf{}, idxBuf{};
+    cgltf_buffer_view posView{}, normView{}, tanView{}, uvView{}, idxView{};
+    cgltf_accessor posAcc = makeAccessor(positions, sizeof(positions), cgltf_type_vec3,
+            cgltf_component_type_r_32f, 3, sizeof(float3), &posBuf, &posView);
+    cgltf_accessor normAcc = makeAccessor(normals, sizeof(normals), cgltf_type_vec3,
+            cgltf_component_type_r_32f, 3, sizeof(float3), &normBuf, &normView);
+    cgltf_accessor tanAcc = makeAccessor(tangents, sizeof(tangents), cgltf_type_vec4,
+            cgltf_component_type_r_32f, 3, sizeof(float4), &tanBuf, &tanView);
+    cgltf_accessor uvAcc = makeAccessor(uvs, sizeof(uvs), cgltf_type_vec2,
+            cgltf_component_type_r_32f, 3, sizeof(float2), &uvBuf, &uvView);
+
+    // Mode 1: Normals + Tangents (positions/uvs/indices present on primitive, should be ignored).
+    {
+        cgltf_attribute attrs[3] = {
+            { .type = cgltf_attribute_type_position, .index = 0, .data = &posAcc },
+            { .type = cgltf_attribute_type_normal, .index = 0, .data = &normAcc },
+            { .type = cgltf_attribute_type_tangent, .index = 0, .data = &tanAcc },
+        };
+        cgltf_primitive prim{
+            .type = cgltf_primitive_type_triangles,
+            .attributes = attrs,
+            .attributes_count = 3,
+        };
+        TangentsJob::Params params{ .in = { .prim = &prim } };
+        TangentsJob::run(&params);
+        ASSERT_EQ(params.out.vertexCount, 3u);
+        ASSERT_NE(params.out.results, nullptr);
+        EXPECT_EQ(params.out.results[0], params.out.results[1]);
+        EXPECT_EQ(params.out.results[1], params.out.results[2]);
+        EXPECT_NE(params.out.results[0], (short4{ 0, 0, 0, 0 }));
+        free(params.out.results);
+    }
+
+    // Mode 2: Normals only (Frisvad's method).
+    {
+        cgltf_attribute attrs[2] = {
+            { .type = cgltf_attribute_type_position, .index = 0, .data = &posAcc },
+            { .type = cgltf_attribute_type_normal, .index = 0, .data = &normAcc },
+        };
+        cgltf_primitive prim{
+            .type = cgltf_primitive_type_triangles,
+            .attributes = attrs,
+            .attributes_count = 2,
+        };
+        TangentsJob::Params params{ .in = { .prim = &prim } };
+        TangentsJob::run(&params);
+        ASSERT_EQ(params.out.vertexCount, 3u);
+        ASSERT_NE(params.out.results, nullptr);
+        EXPECT_NE(params.out.results[0], (short4{ 0, 0, 0, 0 }));
+        free(params.out.results);
+    }
+
+    // Mode 3: Normals + UVs + Positions + Indices (Lengyel's method) across 8/16/32-bit indices.
+    short4 expectedUvQuats[3] = {};
+    for (int idxMode = 0; idxMode < 3; ++idxMode) {
+        cgltf_accessor idxAcc{};
+        if (idxMode == 0) {
+            idxAcc = makeAccessor(indices8, sizeof(indices8), cgltf_type_scalar,
+                    cgltf_component_type_r_8u, 3, sizeof(uint8_t), &idxBuf, &idxView);
+        } else if (idxMode == 1) {
+            idxAcc = makeAccessor(indices16, sizeof(indices16), cgltf_type_scalar,
+                    cgltf_component_type_r_16u, 3, sizeof(uint16_t), &idxBuf, &idxView);
+        } else {
+            idxAcc = makeAccessor(indices32, sizeof(indices32), cgltf_type_scalar,
+                    cgltf_component_type_r_32u, 3, sizeof(uint32_t), &idxBuf, &idxView);
+        }
+        cgltf_attribute attrs[3] = {
+            { .type = cgltf_attribute_type_position, .index = 0, .data = &posAcc },
+            { .type = cgltf_attribute_type_normal, .index = 0, .data = &normAcc },
+            { .type = cgltf_attribute_type_texcoord, .index = 0, .data = &uvAcc },
+        };
+        cgltf_primitive prim{
+            .type = cgltf_primitive_type_triangles,
+            .indices = &idxAcc,
+            .attributes = attrs,
+            .attributes_count = 3,
+        };
+        TangentsJob::Params params{ .in = { .prim = &prim } };
+        TangentsJob::run(&params);
+        ASSERT_EQ(params.out.vertexCount, 3u);
+        ASSERT_NE(params.out.results, nullptr);
+        if (idxMode == 0) {
+            for (size_t i = 0; i < 3; ++i) {
+                expectedUvQuats[i] = params.out.results[i];
+                EXPECT_NE(expectedUvQuats[i], (short4{ 0, 0, 0, 0 }));
+            }
+        } else {
+            for (size_t i = 0; i < 3; ++i) {
+                EXPECT_EQ(params.out.results[i], expectedUvQuats[i]);
+            }
+        }
+        free(params.out.results);
+    }
+
+    // Mode 4: Flat normals (Positions + Indices, no Normals).
+    {
+        cgltf_accessor idxAcc = makeAccessor(indices16, sizeof(indices16), cgltf_type_scalar,
+                cgltf_component_type_r_16u, 3, sizeof(uint16_t), &idxBuf, &idxView);
+        cgltf_attribute attrs[1] = {
+            { .type = cgltf_attribute_type_position, .index = 0, .data = &posAcc },
+        };
+        cgltf_primitive prim{
+            .type = cgltf_primitive_type_triangles,
+            .indices = &idxAcc,
+            .attributes = attrs,
+            .attributes_count = 1,
+        };
+        TangentsJob::Params params{ .in = { .prim = &prim } };
+        TangentsJob::run(&params);
+        ASSERT_EQ(params.out.vertexCount, 3u);
+        ASSERT_NE(params.out.results, nullptr);
+        EXPECT_NE(params.out.results[0], (short4{ 0, 0, 0, 0 }));
+        free(params.out.results);
+    }
+}
+
+TEST_F(glTFIOTest, UbershaderBitmaskLookupMatchesFeatureCombinations) {
+    MaterialKey const cases[] = {
+        { .unlit = true, .hasBaseColorTexture = true },
+        { .hasBaseColorTexture = true, .hasNormalTexture = true, .alphaMode = AlphaMode::MASK },
+        { .alphaMode = AlphaMode::BLEND, .hasClearCoatTexture = true,
+                .hasClearCoatRoughnessTexture = true, .hasClearCoatNormalTexture = true,
+                .hasClearCoat = true },
+        { .hasTransmission = true, .hasTransmissionTexture = true,
+                .hasVolumeThicknessTexture = true, .hasIOR = true, .hasVolume = true,
+                .hasDispersion = true },
+        { .hasSheenColorTexture = true, .hasSheenRoughnessTexture = true, .hasSheen = true,
+                .hasSpecular = true, .hasSpecularTexture = true },
+        { .hasBaseColorTexture = true, .useSpecularGlossiness = true,
+                .hasMetallicRoughnessTexture = true },
+    };
+
+    for (MaterialKey key : cases) {
+        UvMap uvmap{};
+        Material* mat = mMaterialProvider->getMaterial(&key, &uvmap, "test_mat");
+        ASSERT_NE(mat, nullptr);
+
+        MaterialKey instanceKey = key;
+        UvMap instanceUvmap{};
+        MaterialInstance* mi = mMaterialProvider->createMaterialInstance(
+                &instanceKey, &instanceUvmap, "test_mi");
+        ASSERT_NE(mi, nullptr);
+        EXPECT_EQ(mi->getMaterial(), mat);
+        mEngine->destroy(mi);
+    }
+}
+
+TEST_F(glTFIOTest, AnimatorInterpolatesAndRejectsDuplicateTimestamps) {
+    AssetLoader* assetLoader = AssetLoader::create({ mEngine, mMaterialProvider, mNameManager });
+    ASSERT_NE(assetLoader, nullptr);
+
+    // Valid timeline [0.0f, 1.0f]: verify boundary and interior timestamps.
+    {
+        std::vector<uint8_t> const glb = makeTranslationAnimationGlb();
+        FilamentAsset* const asset = assetLoader->createAsset(glb.data(), uint32_t(glb.size()));
+        ASSERT_NE(asset, nullptr);
+
+        ResourceLoader resourceLoader({ mEngine, ".", false });
+        ASSERT_TRUE(resourceLoader.loadResources(asset));
+
+        Animator* const animator = asset->getInstance()->getAnimator();
+        ASSERT_NE(animator, nullptr);
+        ASSERT_EQ(animator->getAnimationCount(), 1u);
+
+        animator->applyAnimation(0, 0.0f);
+        EXPECT_FLOAT3_EQ(getAnimatedNodeTranslation(mEngine, asset), (math::float3{ 0.0f }));
+
+        animator->applyAnimation(0, 0.25f);
+        EXPECT_FLOAT3_EQ(getAnimatedNodeTranslation(mEngine, asset), 0.25f * kTranslationAnimationEnd);
+
+        animator->applyAnimation(0, 1.0f);
+        EXPECT_FLOAT3_EQ(getAnimatedNodeTranslation(mEngine, asset), kTranslationAnimationEnd);
+
+        assetLoader->destroyAsset(asset);
+    }
+
+    // Duplicate timestamps [0.0f, 0.0f]: must be rejected and leave channel disabled.
+    {
+        std::vector<uint8_t> const glb = makeTranslationAnimationGlb({ .lastTimestamp = 0.0f });
+        FilamentAsset* const asset = assetLoader->createAsset(glb.data(), uint32_t(glb.size()));
+        ASSERT_NE(asset, nullptr);
+
+        ResourceLoader resourceLoader({ mEngine, ".", false });
+        ASSERT_TRUE(resourceLoader.loadResources(asset));
+
+        Animator* const animator = asset->getInstance()->getAnimator();
+        ASSERT_NE(animator, nullptr);
+        EXPECT_FLOAT_EQ(animator->getAnimationDuration(0), 0.0f);
+
+        math::float3 const before = getAnimatedNodeTranslation(mEngine, asset);
+        animator->applyAnimation(0, 0.5f);
+        EXPECT_FLOAT3_EQ(getAnimatedNodeTranslation(mEngine, asset), before);
+
+        assetLoader->destroyAsset(asset);
+    }
+
+    AssetLoader::destroy(&assetLoader);
+}
+
+TEST_F(glTFIOTest, NodeNameResolutionAndUnicodeUnescaping) {
+    AssetLoader* assetLoader = AssetLoader::create({ mEngine, mMaterialProvider, mNameManager });
+    ASSERT_NE(assetLoader, nullptr);
+
+    char const* const gltfJson =
+            R"({"asset":{"version":"2.0"},"scene":0,"scenes":[{"nodes":[0,1,2,3]}],)"
+            R"("nodes":[)"
+            R"({"name":"plain_node"},)"
+            R"({"name":"escaped_\u0062_\u00e9_\u2605"},)"
+            R"({"name":"invalid_\\u123"},)"
+            R"({"name":"invalid_\\u123g"})"
+            R"(]})";
+
+    FilamentAsset* const asset = assetLoader->createAsset(
+            reinterpret_cast<uint8_t const*>(gltfJson), uint32_t(std::strlen(gltfJson)));
+    ASSERT_NE(asset, nullptr);
+
+    EXPECT_TRUE(asset->getFirstEntityByName("plain_node"));
+    EXPECT_TRUE(asset->getFirstEntityByName("escaped_b_\xC3\xA9_\xE2\x98\x85"));
+    EXPECT_TRUE(asset->getFirstEntityByName(R"(invalid_\\u123)"));
+    EXPECT_TRUE(asset->getFirstEntityByName(R"(invalid_\\u123g)"));
+
+    assetLoader->destroyAsset(asset);
+    AssetLoader::destroy(&assetLoader);
+}
+
+TEST_F(glTFIOTest, HierarchicalBoundingBoxAndTransformPropagation) {
+    AssetLoader* assetLoader = AssetLoader::create({ mEngine, mMaterialProvider, mNameManager });
+    ASSERT_NE(assetLoader, nullptr);
+
+    // Build a 3-level hierarchy:
+    // Node 0 ("root_xform"): translation (10, 0, 0), children [1, 3]
+    // Node 1 ("mid_xform"): scale (2, 2, 2), translation (0, 5, 0), children [2]
+    // Node 2 ("leaf_mesh"): translation (1, 0, 0), mesh 0 (AABB [0, 0, 0] -> [1, 1, 1]), extras
+    // Node 3 ("empty_leaf"): translation (100, 100, 100), no mesh, no children
+    // Expected world transform on Node 2:
+    // min = (10, 5, 0) + 2 * ((1, 0, 0) + (0, 0, 0)) = (12, 5, 0)
+    // max = (10, 5, 0) + 2 * ((1, 0, 0) + (1, 1, 1)) = (14, 7, 2)
+    std::string const json =
+            R"({"asset":{"version":"2.0"},"scene":0,"scenes":[{"nodes":[0]}],)"
+            R"("nodes":[)"
+            R"({"name":"node_root","translation":[10,0,0],"children":[1,3]},)"
+            R"({"name":"node_mid","translation":[0,5,0],"scale":[2,2,2],"children":[2]},)"
+            R"({"name":"node_mesh","translation":[1,0,0],"mesh":0,"extras":{"tag":"leaf"}},)"
+            R"({"name":"node_empty","translation":[100,100,100]})"
+            R"(],"meshes":[{"primitives":[{"attributes":{"POSITION":0}}]}],)"
+            R"("accessors":[{"bufferView":0,"componentType":5126,"count":3,"type":"VEC3",)"
+            R"("min":[0,0,0],"max":[1,1,1]}],)"
+            R"("bufferViews":[{"buffer":0,"byteOffset":0,"byteLength":36}],)"
+            R"("buffers":[{"byteLength":36}]})";
+
+    FilamentAsset* const asset = assetLoader->createAsset(
+            reinterpret_cast<uint8_t const*>(json.data()), uint32_t(json.size()));
+    ASSERT_NE(asset, nullptr);
+
+    Aabb const bbox = asset->getBoundingBox();
+    EXPECT_FLOAT3_EQ(bbox.min, (math::float3{ 12.0f, 5.0f, 0.0f }));
+    EXPECT_FLOAT3_EQ(bbox.max, (math::float3{ 14.0f, 7.0f, 2.0f }));
+
+    EXPECT_EQ(asset->getEntitiesByPrefix("node_", nullptr, 0), 4u);
+    utils::Entity const meshEntity = asset->getFirstEntityByName("node_mesh");
+    ASSERT_TRUE(meshEntity);
+
+    auto& tm = mEngine->getTransformManager();
+    tm.openLocalTransformTransaction();
+    tm.commitLocalTransformTransaction();
+    math::mat4f const worldMat = tm.getWorldTransform(tm.getInstance(meshEntity));
+    EXPECT_FLOAT3_EQ(worldMat[3].xyz, (math::float3{ 12.0f, 5.0f, 0.0f }));
+
+    EXPECT_STREQ(asset->getExtras(meshEntity), R"({"tag":"leaf"})");
+
+    assetLoader->destroyAsset(asset);
+    AssetLoader::destroy(&assetLoader);
+}
+
+TEST_F(glTFIOTest, DependencyGraphMultiInstanceAndMultiMaterialReadiness) {
+    // 1. Direct DependencyGraph test: an entity with one untextured material and one textured
+    // material must not become ready across repeated commitEdges() calls until the texture is
+    // marked ready.
+    {
+        MaterialKey keyA{};
+        UvMap uvA{};
+        MaterialInstance* matUntextured = mMaterialProvider->createMaterialInstance(
+                &keyA, &uvA, "untextured");
+        MaterialKey keyB{ .hasBaseColorTexture = true };
+        UvMap uvB{};
+        MaterialInstance* matTextured = mMaterialProvider->createMaterialInstance(
+                &keyB, &uvB, "textured");
+        Texture* tex = Texture::Builder().width(1).height(1).levels(1)
+                .format(Texture::InternalFormat::RGBA8).build(*mEngine);
+
+        utils::Entity const entity = EntityManager::get().create();
+        DependencyGraph graph;
+        graph.addEdge(entity, matUntextured);
+        graph.addEdge(entity, matTextured);
+        graph.addEdge(matTextured, "baseColorMap");
+        graph.addEdge(tex, matTextured, "baseColorMap");
+
+        // Repeated commitEdges() calls must not double-count matUntextured.
+        graph.commitEdges();
+        EXPECT_EQ(graph.popRenderables(nullptr, 0), 0u);
+        graph.commitEdges();
+        EXPECT_EQ(graph.popRenderables(nullptr, 0), 0u);
+
+        // Once the texture is ready, the entity becomes ready exactly once.
+        graph.markAsReady(tex);
+        EXPECT_EQ(graph.popRenderables(nullptr, 0), 1u);
+        utils::Entity popped{};
+        EXPECT_EQ(graph.popRenderables(&popped, 1), 1u);
+        EXPECT_EQ(popped, entity);
+        EXPECT_EQ(graph.popRenderables(nullptr, 0), 0u);
+
+        EntityManager::get().destroy(entity);
+        mEngine->destroy(tex);
+        mEngine->destroy(matTextured);
+        mEngine->destroy(matUntextured);
+    }
+
+    // 2. End-to-end multi-instance creation + dynamic createInstance() readiness.
+    {
+        AssetLoader* assetLoader = AssetLoader::create({ mEngine, mMaterialProvider, mNameManager });
+        ASSERT_NE(assetLoader, nullptr);
+
+        std::string const json =
+                R"({"asset":{"version":"2.0"},"scene":0,"scenes":[{"nodes":[0]}],)"
+                R"("nodes":[{"name":"inst_mesh","mesh":0}],)"
+                R"("meshes":[{"primitives":[{"attributes":{"POSITION":0}}]}],)"
+                R"("accessors":[{"bufferView":0,"componentType":5126,"count":3,"type":"VEC3",)"
+                R"("min":[0,0,0],"max":[1,1,1]}],)"
+                R"("bufferViews":[{"buffer":0,"byteOffset":0,"byteLength":36}],)"
+                R"("buffers":[{"byteLength":36}]})";
+
+        constexpr size_t kInitialInstances = 4;
+        FilamentInstance* instances[kInitialInstances] = {};
+        FilamentAsset* const asset = assetLoader->createInstancedAsset(
+                reinterpret_cast<uint8_t const*>(json.data()), uint32_t(json.size()),
+                instances, kInitialInstances);
+        ASSERT_NE(asset, nullptr);
+        EXPECT_EQ(asset->getAssetInstanceCount(), kInitialInstances);
+        EXPECT_EQ(asset->popRenderables(nullptr, 0), kInitialInstances);
+
+        FilamentInstance* const extraInstance = assetLoader->createInstance(asset);
+        ASSERT_NE(extraInstance, nullptr);
+        EXPECT_EQ(asset->getAssetInstanceCount(), kInitialInstances + 1);
+        EXPECT_EQ(asset->popRenderables(nullptr, 0), kInitialInstances + 1);
+
+        std::vector<utils::Entity> ready(kInitialInstances + 1);
+        EXPECT_EQ(asset->popRenderables(ready.data(), ready.size()), kInitialInstances + 1);
+        EXPECT_EQ(asset->popRenderables(nullptr, 0), 0u);
+
+        assetLoader->destroyAsset(asset);
+        AssetLoader::destroy(&assetLoader);
+    }
+}
+
+TEST_F(glTFIOTest, ParallelMeshoptDecoding) {
+    constexpr size_t kViewCount = 8;
+    constexpr size_t kVertexCount = 16;
+    constexpr size_t kStride = 12;
+
+    std::vector<std::vector<float>> expectedViews(kViewCount);
+    std::vector<std::vector<uint8_t>> encodedPayloads(kViewCount);
+    std::vector<cgltf_buffer> buffers(kViewCount);
+    std::vector<cgltf_buffer_view> views(kViewCount);
+
+    for (size_t i = 0; i < kViewCount; ++i) {
+        expectedViews[i].resize(kVertexCount * 3);
+        for (size_t v = 0; v < kVertexCount * 3; ++v) {
+            expectedViews[i][v] = float(i * 100 + v);
+        }
+        encodedPayloads[i].resize(meshopt_encodeVertexBufferBound(kVertexCount, kStride));
+        size_t const encodedSize = meshopt_encodeVertexBuffer(
+                encodedPayloads[i].data(), encodedPayloads[i].size(),
+                expectedViews[i].data(), kVertexCount, kStride);
+        ASSERT_GT(encodedSize, 0u);
+        encodedPayloads[i].resize(encodedSize);
+
+        buffers[i] = {};
+        buffers[i].data = encodedPayloads[i].data();
+        buffers[i].size = encodedPayloads[i].size();
+
+        views[i] = {};
+        views[i].has_meshopt_compression = true;
+        views[i].meshopt_compression.buffer = &buffers[i];
+        views[i].meshopt_compression.offset = 0;
+        views[i].meshopt_compression.size = encodedPayloads[i].size();
+        views[i].meshopt_compression.stride = kStride;
+        views[i].meshopt_compression.count = kVertexCount;
+        views[i].meshopt_compression.mode = cgltf_meshopt_compression_mode_attributes;
+        views[i].meshopt_compression.filter = cgltf_meshopt_compression_filter_none;
+    }
+
+    cgltf_data data{};
+    data.buffer_views = views.data();
+    data.buffer_views_count = views.size();
+
+    bool decoded = false;
+    ASSERT_TRUE(utility::decodeMeshoptCompression(&data, &decoded, &mEngine->getJobSystem()));
+    EXPECT_TRUE(decoded);
+
+    for (size_t i = 0; i < kViewCount; ++i) {
+        ASSERT_NE(views[i].data, nullptr);
+        EXPECT_EQ(std::memcmp(views[i].data, expectedViews[i].data(), kVertexCount * kStride), 0);
+        free(views[i].data);
     }
 }
 

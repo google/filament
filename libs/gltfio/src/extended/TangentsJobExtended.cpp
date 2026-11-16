@@ -31,6 +31,7 @@
 #include <utils/StructureOfArrays.h>
 
 #include <algorithm>
+#include <cstdint>
 #include <cstring>
 #include <limits>
 #include <memory>
@@ -515,30 +516,42 @@ void TangentsJobExtended::run(Params* params) {
         }
     }
 
-    std::unique_ptr<uint3[]> unpackedTriangles;    
+    std::unique_ptr<uint3[]> unpackedTriangles;
     size_t const triangleCount = prim.indices ? (prim.indices->count / 3) : (vertexCount / 3);
-    unpackedTriangles.reset(new uint3[triangleCount]);
+    tob.triangleCount(triangleCount);
 
-    // TODO: this is slow. We might be able to skip the manual read if the indices are already in
-    // the right format.
     if (prim.indices) {
-        for (size_t tri = 0, j = 0; tri < triangleCount; ++tri) {
-            auto& triangle = unpackedTriangles[tri];
-            triangle.x = cgltf_accessor_read_index(prim.indices, j++);
-            triangle.y = cgltf_accessor_read_index(prim.indices, j++);
-            triangle.z = cgltf_accessor_read_index(prim.indices, j++);
+        const cgltf_accessor* indices = prim.indices;
+        const uint8_t* indexData = (!indices->is_sparse && indices->buffer_view) ?
+                cgltf_buffer_view_data(indices->buffer_view) : nullptr;
+        const uint8_t* ptr = indexData ? (indexData + indices->offset) : nullptr;
+        if (ptr && indices->component_type == cgltf_component_type_r_32u &&
+                indices->stride == sizeof(uint32_t) &&
+                (reinterpret_cast<uintptr_t>(ptr) % alignof(uint32_t) == 0)) {
+            tob.triangles(reinterpret_cast<const uint3*>(ptr));
+        } else {
+            unpackedTriangles.reset(new uint3[triangleCount]);
+            if (!cgltf_accessor_unpack_indices(indices, unpackedTriangles.get(),
+                    sizeof(uint32_t), triangleCount * 3)) {
+                for (size_t tri = 0, j = 0; tri < triangleCount; ++tri) {
+                    auto& triangle = unpackedTriangles[tri];
+                    triangle.x = cgltf_accessor_read_index(indices, j++);
+                    triangle.y = cgltf_accessor_read_index(indices, j++);
+                    triangle.z = cgltf_accessor_read_index(indices, j++);
+                }
+            }
+            tob.triangles(unpackedTriangles.get());
         }
     } else {
+        unpackedTriangles.reset(new uint3[triangleCount]);
         for (size_t tri = 0, j = 0; tri < triangleCount; ++tri) {
             auto& triangle = unpackedTriangles[tri];
             triangle.x = j++;
             triangle.y = j++;
             triangle.z = j++;
         }
+        tob.triangles(unpackedTriangles.get());
     }
-
-    tob.triangleCount(triangleCount);
-    tob.triangles(unpackedTriangles.get());
     auto const mesh = tob.build();
 
     auto& out = params->out;

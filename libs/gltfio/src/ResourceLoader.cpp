@@ -824,7 +824,8 @@ bool ResourceLoader::loadResources(FFilamentAsset* asset, bool async) {
             needsValidation |= utility::decodeDracoMeshes(gltf, prim, dracoCache);
         }
         bool meshoptDecoded = false;
-        if (!utility::decodeMeshoptCompression((cgltf_data*) gltf, &meshoptDecoded)) {
+        if (!utility::decodeMeshoptCompression((cgltf_data*) gltf, &meshoptDecoded,
+                &pImpl->mEngine->getJobSystem())) {
             return false;
         }
         needsValidation |= meshoptDecoded;
@@ -1021,12 +1022,20 @@ std::pair<Texture*, CacheResult> ResourceLoader::Impl::getOrCreateTexture(FFilam
             return {};
         }
         using namespace std;
-        ifstream filest(fullpath, std::ifstream::in | std::ifstream::binary);
-        vector<uint8_t> buffer;
-        filest.seekg(0, ios::end);
-        buffer.reserve((size_t) filest.tellg());
+        ifstream filest(fullpath, std::ifstream::in | std::ifstream::binary | std::ifstream::ate);
+        const std::streampos endPos = filest.tellg();
+        if (endPos < 0) {
+            LOG(ERROR) << "Unable to read " << fullpath;
+            return {};
+        }
+        const size_t fileSize = static_cast<size_t>(endPos);
+        vector<uint8_t> buffer(fileSize);
         filest.seekg(0, ios::beg);
-        buffer.assign((istreambuf_iterator<char>(filest)), istreambuf_iterator<char>());
+        if (fileSize > 0 && !filest.read(reinterpret_cast<char*>(buffer.data()),
+                static_cast<std::streamsize>(fileSize))) {
+            LOG(ERROR) << "Unable to read " << fullpath;
+            return {};
+        }
         if (Texture* texture = provider->pushTexture(buffer.data(), buffer.size(), mime.c_str(), flags); texture) {
             mFilepathTextureCache[cacheIdx][uri] = texture;
             return {texture, CacheResult::MISS};
