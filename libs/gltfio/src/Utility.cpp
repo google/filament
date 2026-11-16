@@ -336,6 +336,26 @@ bool requiresPacking(cgltf_accessor const* accessor) {
     }
 }
 
+math::float3 dequantizeBounds(cgltf_accessor const* accessor, float const* bound) {
+    math::float3 const value{ bound[0], bound[1], bound[2] };
+    if (!accessor->normalized) {
+        return value;
+    }
+    // glTF 2.0 normalized integer decoding; signed values are clamped to -1.
+    switch (accessor->component_type) {
+        case cgltf_component_type_r_8:
+            return max(value / 127.0f, math::float3{ -1.0f });
+        case cgltf_component_type_r_8u:
+            return value / 255.0f;
+        case cgltf_component_type_r_16:
+            return max(value / 32767.0f, math::float3{ -1.0f });
+        case cgltf_component_type_r_16u:
+            return value / 65535.0f;
+        default:
+            return value;
+    }
+}
+
 bool isUploadableIndexAccessor(cgltf_accessor const* accessor) {
     // A sparse accessor's contents are not the raw bytes of its bufferView, so a straight copy of
     // (count * componentSize) bytes would upload the wrong data.

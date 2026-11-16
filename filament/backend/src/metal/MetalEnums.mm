@@ -31,6 +31,8 @@ MTLPixelFormat getMetalFormat(MetalContext* context, TextureFormat format) noexc
         case TextureFormat::STENCIL8: return MTLPixelFormatStencil8;
 
         // 16-bits per element
+        case TextureFormat::R16: return MTLPixelFormatR16Unorm;
+        case TextureFormat::R16_SNORM: return MTLPixelFormatR16Snorm;
         case TextureFormat::R16F: return MTLPixelFormatR16Float;
         case TextureFormat::R16UI: return MTLPixelFormatR16Uint;
         case TextureFormat::R16I: return MTLPixelFormatR16Sint;
@@ -51,6 +53,8 @@ MTLPixelFormat getMetalFormat(MetalContext* context, TextureFormat format) noexc
         case TextureFormat::R32F: return MTLPixelFormatR32Float;
         case TextureFormat::R32UI: return MTLPixelFormatR32Uint;
         case TextureFormat::R32I: return MTLPixelFormatR32Sint;
+        case TextureFormat::RG16: return MTLPixelFormatRG16Unorm;
+        case TextureFormat::RG16_SNORM: return MTLPixelFormatRG16Snorm;
         case TextureFormat::RG16F: return MTLPixelFormatRG16Float;
         case TextureFormat::RG16UI: return MTLPixelFormatRG16Uint;
         case TextureFormat::RG16I: return MTLPixelFormatRG16Sint;
@@ -66,6 +70,8 @@ MTLPixelFormat getMetalFormat(MetalContext* context, TextureFormat format) noexc
         case TextureFormat::DEPTH32F_STENCIL8: return MTLPixelFormatDepth32Float_Stencil8;
 
         // 48-bits per element
+        case TextureFormat::RGB16:
+        case TextureFormat::RGB16_SNORM:
         case TextureFormat::RGB16F:
         case TextureFormat::RGB16UI:
         case TextureFormat::RGB16I:
@@ -75,6 +81,8 @@ MTLPixelFormat getMetalFormat(MetalContext* context, TextureFormat format) noexc
         case TextureFormat::RG32F: return MTLPixelFormatRG32Float;
         case TextureFormat::RG32UI: return MTLPixelFormatRG32Uint;
         case TextureFormat::RG32I: return MTLPixelFormatRG32Sint;
+        case TextureFormat::RGBA16: return MTLPixelFormatRGBA16Unorm;
+        case TextureFormat::RGBA16_SNORM: return MTLPixelFormatRGBA16Snorm;
         case TextureFormat::RGBA16F: return MTLPixelFormatRGBA16Float;
         case TextureFormat::RGBA16UI: return MTLPixelFormatRGBA16Uint;
         case TextureFormat::RGBA16I: return MTLPixelFormatRGBA16Sint;
@@ -122,6 +130,24 @@ MTLPixelFormat getMetalFormat(MetalContext* context, TextureFormat format) noexc
     // Only iOS 13.0 and Apple Silicon support the ASTC HDR profile. Older OS versions fallback to
     // LDR. The HDR profile is a superset of the LDR profile.
     if (context->highestSupportedGpuFamily.apple >= 2) {
+        // sRGB ASTC shares the LDR family requirement; the GPU decodes sRGB on sample.
+        switch (format) {
+            case TextureFormat::SRGB8_ALPHA8_ASTC_4x4: return MTLPixelFormatASTC_4x4_sRGB;
+            case TextureFormat::SRGB8_ALPHA8_ASTC_5x4: return MTLPixelFormatASTC_5x4_sRGB;
+            case TextureFormat::SRGB8_ALPHA8_ASTC_5x5: return MTLPixelFormatASTC_5x5_sRGB;
+            case TextureFormat::SRGB8_ALPHA8_ASTC_6x5: return MTLPixelFormatASTC_6x5_sRGB;
+            case TextureFormat::SRGB8_ALPHA8_ASTC_6x6: return MTLPixelFormatASTC_6x6_sRGB;
+            case TextureFormat::SRGB8_ALPHA8_ASTC_8x5: return MTLPixelFormatASTC_8x5_sRGB;
+            case TextureFormat::SRGB8_ALPHA8_ASTC_8x6: return MTLPixelFormatASTC_8x6_sRGB;
+            case TextureFormat::SRGB8_ALPHA8_ASTC_8x8: return MTLPixelFormatASTC_8x8_sRGB;
+            case TextureFormat::SRGB8_ALPHA8_ASTC_10x5: return MTLPixelFormatASTC_10x5_sRGB;
+            case TextureFormat::SRGB8_ALPHA8_ASTC_10x6: return MTLPixelFormatASTC_10x6_sRGB;
+            case TextureFormat::SRGB8_ALPHA8_ASTC_10x8: return MTLPixelFormatASTC_10x8_sRGB;
+            case TextureFormat::SRGB8_ALPHA8_ASTC_10x10: return MTLPixelFormatASTC_10x10_sRGB;
+            case TextureFormat::SRGB8_ALPHA8_ASTC_12x10: return MTLPixelFormatASTC_12x10_sRGB;
+            case TextureFormat::SRGB8_ALPHA8_ASTC_12x12: return MTLPixelFormatASTC_12x12_sRGB;
+            default: break;
+        }
         if (@available(iOS 13, *)) {
             switch (format) {
                 case TextureFormat::RGBA_ASTC_4x4: return MTLPixelFormatASTC_4x4_HDR;

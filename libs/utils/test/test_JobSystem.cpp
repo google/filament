@@ -1383,3 +1383,29 @@ TEST(JobSystem, JobPoolExhaustionNullJobRun) {
 
     js.emancipate();
 }
+
+TEST(JobSystem, JobPoolFullOfChildren) {
+    JobSystem js(JobSystem::SINGLE_THREADED);
+    js.adopt();
+
+    // The parent's running count reaches MAX_JOB_COUNT (itself plus every other job).
+    size_t executed = 0;
+    JobSystem::Job* parent = js.createJob();
+    std::vector<JobSystem::Job*> children;
+    children.reserve(JobSystem::MAX_JOB_COUNT);
+    JobSystem::Job* child = nullptr;
+    while ((child = js.createJob(parent, [&executed](JobSystem&, JobSystem::Job*) {
+        executed++;
+    })) != nullptr) {
+        children.push_back(child);
+    }
+    ASSERT_EQ(children.size(), JobSystem::MAX_JOB_COUNT - 1);
+
+    for (auto* c : children) {
+        js.run(c);
+    }
+    js.runAndWait(parent);
+    EXPECT_EQ(executed, children.size());
+
+    js.emancipate();
+}

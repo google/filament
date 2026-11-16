@@ -757,7 +757,10 @@ ENGINE_METHODS_JAVA = """    private Engine(long nativeEngine, @Nullable Config 
 
 
     public void destroySwapChain(@NonNull SwapChain swapChain) {
-        assertDestroy(nDestroySwapChain(getNativeObject(), swapChain.getNativeObject()));
+        // Only SwapChains from createSwapChain(Object) hold a native window reference.
+        boolean releaseNativeWindow = Platform.get().validateSurface(swapChain.getNativeWindow());
+        assertDestroy(nDestroySwapChain(getNativeObject(), swapChain.getNativeObject(),
+                releaseNativeWindow));
         swapChain.clearNativeObject();
     }
 
@@ -910,7 +913,7 @@ ENGINE_NATIVE_DECLS_JAVA: List[str] = [
     "    private static native boolean nDestroySkinningBuffer(long nativeEngine, long nativeSkinningBuffer);",
     "    private static native boolean nDestroySkybox(long nativeEngine, long nativeSkybox);",
     "    private static native boolean nDestroyStream(long nativeEngine, long nativeStream);",
-    "    private static native boolean nDestroySwapChain(long nativeEngine, long nativeSwapChain);",
+    "    private static native boolean nDestroySwapChain(long nativeEngine, long nativeSwapChain, boolean releaseNativeWindow);",
     "    private static native boolean nDestroyTexture(long nativeEngine, long nativeTexture);",
     "    private static native boolean nDestroyVertexBuffer(long nativeEngine, long nativeVertexBuffer);",
     "    private static native boolean nDestroyView(long nativeEngine, long nativeView);",
@@ -1106,13 +1109,14 @@ def get_engine_jni_methods(jni_package: str) -> str:
     Returns:
         Formatted C++ source block containing all specialized `Engine` JNI functions.
     """
-    # Generate typed Engine::destroy(T*) bridges for all 20 Engine-managed resource types.
+    # Generate typed Engine::destroy(T*) bridges for Engine-managed resource types.
+    # SwapChain is handwritten below because it also releases the native window.
     types = [
         "BufferObject", "ColorGrading", "Fence", "FramePacer",
         "IndexBuffer", "IndirectLight", "InstanceBuffer", "Material",
         "MaterialInstance", "MorphTargetBuffer", "RenderTarget",
         "Renderer", "Scene", "SkinningBuffer", "Skybox", "Stream",
-        "SwapChain", "Texture", "VertexBuffer", "View",
+        "Texture", "VertexBuffer", "View",
     ]
     destroy_funcs = [
         f"""extern "C" JNIEXPORT jboolean JNICALL
@@ -1138,6 +1142,7 @@ Java_{jni_package}_Engine_nDestroyEngine(JNIEnv *env, jclass, jlong nativeEngine
 
 extern "C" {{
 extern void* getNativeWindow(JNIEnv* env, jclass, jobject surface);
+extern void releaseNativeWindow(void* nativeWindow);
 }}
 
 extern "C" JNIEXPORT jlong JNICALL
@@ -1162,6 +1167,27 @@ Java_{jni_package}_Engine_nCreateSwapChainFromRawPointer(JNIEnv*,
     return (jlong) engine->createSwapChain((void*) pointer, (uint64_t) flags);
 }}
 
+extern "C" JNIEXPORT jboolean JNICALL
+Java_{jni_package}_Engine_nDestroySwapChain(JNIEnv *env, jclass,
+        jlong nativeEngine, jlong nativeObject, jboolean releaseWindow) {{
+    Engine* engine = (Engine*) nativeEngine;
+    SwapChain* obj = (SwapChain*) nativeObject;
+    return wrapJni<jboolean>(env, [=]() {{
+        // nCreateSwapChain holds a window reference until here. Queued driver commands may still
+        // use the window, so wait for them before releasing it. A paused engine never drains its
+        // queue, so the reference is kept in that case.
+        void* const nativeWindow =
+                (releaseWindow && engine->isValid(obj)) ? obj->getNativeWindow() : nullptr;
+        bool const success = engine->destroy(obj);
+        if (success && nativeWindow && !engine->isPaused()) {{
+            if (Fence::waitAndDestroy(engine->createFence()) ==
+                    Fence::FenceStatus::CONDITION_SATISFIED) {{
+                releaseNativeWindow(nativeWindow);
+            }}
+        }}
+        return success;
+    }});
+}}
 
 extern "C" JNIEXPORT void JNICALL
 Java_{jni_package}_Engine_nDestroyEntity(JNIEnv*, jclass,

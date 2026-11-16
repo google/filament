@@ -98,6 +98,8 @@ public:
 
     /**
      * Gets the skin name at skin index.
+     *
+     * Returns null if the skin index is invalid, or if the resources of the asset are not loaded.
      */
     const char* getSkinNameAt(size_t skinIndex) const noexcept;
 

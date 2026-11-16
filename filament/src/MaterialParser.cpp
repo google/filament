@@ -280,13 +280,6 @@ bool MaterialParser::getSourceShader(CString* cstring) const noexcept {
     return true;
 }
 
-bool MaterialParser::getCacheId(uint64_t* cacheId) const noexcept {
-   auto [start, end] = mImpl.mChunkContainer.getChunkRange(MaterialCacheId);
-    if (start == end) return false;
-   Unflattener unflattener(start, end);
-   return unflattener.read(cacheId);
-}
-
 bool MaterialParser::getUIB(BufferInterfaceBlock* container) const noexcept {
     return get<ChunkUniformInterfaceBlock>(container);
 }

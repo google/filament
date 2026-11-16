@@ -242,6 +242,26 @@ using namespace glext;
 #   define GL_DEPTH_CLAMP                           0x864F
 #endif
 
+#if defined(GL_EXT_texture_norm16)
+#   define GL_R16                                   GL_R16_EXT
+#   define GL_R16_SNORM                             GL_R16_SNORM_EXT
+#   define GL_RG16                                  GL_RG16_EXT
+#   define GL_RG16_SNORM                            GL_RG16_SNORM_EXT
+#   define GL_RGB16                                 GL_RGB16_EXT
+#   define GL_RGB16_SNORM                           GL_RGB16_SNORM_EXT
+#   define GL_RGBA16                                GL_RGBA16_EXT
+#   define GL_RGBA16_SNORM                          GL_RGBA16_SNORM_EXT
+#else
+#   define GL_R16                                   0x822A
+#   define GL_R16_SNORM                             0x8F98
+#   define GL_RG16                                  0x822C
+#   define GL_RG16_SNORM                            0x8F99
+#   define GL_RGB16                                 0x8054
+#   define GL_RGB16_SNORM                           0x8F9A
+#   define GL_RGBA16                                0x805B
+#   define GL_RGBA16_SNORM                          0x8F9B
+#endif
+
 #if defined(GL_KHR_debug)
 #   define GL_DEBUG_OUTPUT                          GL_DEBUG_OUTPUT_KHR
 #   define GL_DEBUG_OUTPUT_SYNCHRONOUS              GL_DEBUG_OUTPUT_SYNCHRONOUS_KHR

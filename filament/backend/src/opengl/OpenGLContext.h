@@ -196,6 +196,7 @@ public:
         bool EXT_texture_compression_s3tc_srgb;
         bool EXT_texture_cube_map_array;
         bool EXT_texture_filter_anisotropic;
+        bool EXT_texture_norm16;
         bool EXT_texture_sRGB;
         bool GOOGLE_cpp_style_line_directive;
         bool KHR_debug;
@@ -303,8 +304,14 @@ public:
 
         // WebGL with ANGLE's Metal backend can incur significant overhead when binding many ranges
         // from a large UBO, especially when uniform layout conversion is required. In practice,
-        // batching is slower than using individual UBOs on this path.
+        // batching is slower than using individual UBOs on this path. Also set on PowerVR Rogue
+        // GE9215, where writing the batched UBO waits for in-flight frames that still read it.
         bool disable_material_instance_uniform_batching;
+
+        // On PowerVR Rogue GE9215, every glMapBufferRange/glUnmapBuffer pair costs more than a
+        // glBufferSubData of the same bytes, whatever the size. Write the unsynchronized and
+        // memory-mapped buffer updates with glBufferSubData instead.
+        bool disable_map_buffer_for_updates;
 
     } bugs = {};
 
@@ -405,6 +412,9 @@ private:
                     ""},
             {   bugs.disable_material_instance_uniform_batching,
                     "disable_material_instance_uniform_batching",
+                    "" },
+            {   bugs.disable_map_buffer_for_updates,
+                    "disable_map_buffer_for_updates",
                     "" }
     }};
 

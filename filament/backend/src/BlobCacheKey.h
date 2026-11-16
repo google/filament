@@ -19,11 +19,21 @@
 
 #include <backend/Program.h>
 
+#include <cstddef>
+#include <cstdint>
+#include <memory>
+
 namespace filament::backend {
 
 class BlobCacheKey {
 public:
     using SpecializationConstants = utils::FixedCapacityVector<Program::SpecializationConstant>;
+
+    /**
+     * Computes an identifier from the final shader sources of `program`. Specialization
+     * constants are not included because they are encoded separately in the key.
+     */
+    static uint64_t computeProgramId(Program const& program) noexcept;
 
     BlobCacheKey() noexcept;
     BlobCacheKey(uint64_t id, SpecializationConstants const& specConstants);

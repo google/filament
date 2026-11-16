@@ -94,11 +94,6 @@ Program& Program::pushConstants(ShaderStage stage,
     return *this;
 }
 
-Program& Program::cacheId(uint64_t const cacheId) noexcept {
-    mCacheId = cacheId;
-    return *this;
-}
-
 Program& Program::multiview(bool const multiview) noexcept {
     mMultiview = multiview;
     return *this;

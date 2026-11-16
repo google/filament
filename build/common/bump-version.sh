@@ -50,10 +50,11 @@ function replace {
     FIND_STR="${1//\{\{VERSION\}\}/${VERSION_REGEX}}"
     REPLACE_STR="${1//\{\{VERSION\}\}/${NEW_VERSION}}"
     local FILE_NAME="$2"
+    local RANGE="${3:-}"
     if [ $IS_DARWIN == 1 ]; then
-        sed -i '' -E "s/${FIND_STR}/${REPLACE_STR}/" "${FILE_NAME}"
+        sed -i '' -E "${RANGE}s/${FIND_STR}/${REPLACE_STR}/" "${FILE_NAME}"
     else
-        sed -i -E "s/${FIND_STR}/${REPLACE_STR}/" "${FILE_NAME}"
+        sed -i -E "${RANGE}s/${FIND_STR}/${REPLACE_STR}/" "${FILE_NAME}"
     fi
 }
 
@@ -82,3 +83,8 @@ replace \
 replace \
     "\"version\": \"{{VERSION}}\"" \
     web/filament-js/package.json
+
+replace \
+    "\"version\": \"{{VERSION}}\"" \
+    web/filament-js/package-lock.json \
+    "1,14"

@@ -262,7 +262,6 @@ struct MaterialDefinition {
             pushConstants;
 
     utils::CString name;
-    uint64_t cacheId = 0;
     utils::CString source;
 
     // Keys the program cache. Ids are never reused, so a stale program entry can't match a new

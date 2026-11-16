@@ -59,6 +59,8 @@ enum UTILS_PUBLIC ChunkType : uint64_t {
     MaterialName = charTo64bitNum("MAT_NAME"),
     MaterialVersion = charTo64bitNum("MAT_VERS"),
     MaterialCompilationParameters = charTo64bitNum("MAT_CPRM"),
+    // Deprecated: no longer written by matc nor read by the engine (since MATERIAL_VERSION 81).
+    // Kept so the tag isn't reused; older packages may still contain it.
     MaterialCacheId = charTo64bitNum("MAT_UUID"),
     MaterialFeatureLevel = charTo64bitNum("MAT_FEAT"),
     MaterialShading = charTo64bitNum("MAT_SHAD"),

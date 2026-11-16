@@ -16,12 +16,33 @@
 
 #include "BlobCacheKey.h"
 
+#include <backend/Program.h>
+
+#include <utils/Hash.h>
+
+#include <cstddef>
+#include <cstdint>
 #include <cstring>
+#include <functional>
 #include <memory>
+#include <string_view>
 #include <type_traits>
 #include <variant>
 
 namespace filament::backend {
+
+uint64_t BlobCacheKey::computeProgramId(Program const& program) noexcept {
+    // Each stage is hashed separately and combined in order, so stage boundaries matter.
+    std::hash<std::string_view> const hasher;
+    size_t h = 0;
+    auto const& sources = program.getShadersSource();
+    for (size_t i = 0; i < Program::SHADER_TYPE_COUNT; i++) {
+        auto const& source = sources[i];
+        h = utils::hash::combine(h,
+                hasher({ reinterpret_cast<char const*>(source.data()), source.size() }));
+    }
+    return h;
+}
 
 struct BlobCacheKey::Key {
     // The key is hashed/compared as raw bytes by the platform blob cache, so its

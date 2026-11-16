@@ -57,8 +57,11 @@ public:
     static constexpr uint32_t MAX_THREADS = 32;
 
 private:
-    static constexpr uint32_t JOB_COUNT_MASK = MAX_JOB_COUNT - 1;
     static constexpr uint32_t WAITER_COUNT_SHIFT = 24;
+    // A job's running count is itself plus its live children, which can briefly exceed
+    // MAX_JOB_COUNT.
+    static constexpr uint32_t JOB_COUNT_MASK = (1u << WAITER_COUNT_SHIFT) - 1;
+    static_assert(MAX_JOB_COUNT <= JOB_COUNT_MASK, "JOB_COUNT_MASK must hold MAX_JOB_COUNT");
     static_assert(MAX_JOB_COUNT <= 0x7FFE, "MAX_JOB_COUNT must be <= 0x7FFE");
     using WorkQueue = WorkStealingDequeue<uint16_t, MAX_JOB_COUNT>;
     using Mutex = utils::Mutex;
