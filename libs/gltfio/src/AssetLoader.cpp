@@ -504,7 +504,6 @@ FilamentInstance* FAssetLoader::createInstance(FFilamentAsset* fAsset) {
         instance->mVariants.push_back({ .name = CString(srcAsset->variants[i].name) });
     }
 
-    fAsset->mEntities.reserve(fAsset->mEntities.size() + srcAsset->nodes_count);
     instance->mEntities.reserve(srcAsset->nodes_count);
 
     // For each scene root, recursively create all entities.
