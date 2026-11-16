@@ -3653,10 +3653,30 @@ TEST_F(glTFIOTest, ParallelMeshoptDecoding) {
     ASSERT_TRUE(utility::decodeMeshoptCompression(&data, &decoded, &mEngine->getJobSystem()));
     EXPECT_TRUE(decoded);
 
+    // Calling decodeMeshoptCompression again on already-decoded views must be a no-op.
+    std::vector<void*> firstPassPointers(kViewCount);
     for (size_t i = 0; i < kViewCount; ++i) {
-        ASSERT_NE(views[i].data, nullptr);
+        firstPassPointers[i] = views[i].data;
+    }
+    bool decodedAgain = true;
+    ASSERT_TRUE(utility::decodeMeshoptCompression(&data, &decodedAgain, &mEngine->getJobSystem()));
+    EXPECT_FALSE(decodedAgain);
+
+    for (size_t i = 0; i < kViewCount; ++i) {
+        ASSERT_EQ(views[i].data, firstPassPointers[i]);
         EXPECT_EQ(std::memcmp(views[i].data, expectedViews[i].data(), kVertexCount * kStride), 0);
         free(views[i].data);
+        views[i].data = nullptr;
+    }
+
+    // Corrupt a later bufferView's compressed payload and verify failure is atomic: earlier views
+    // that decoded cleanly must also have their temporary buffers freed and view.data left null.
+    std::fill(encodedPayloads[kViewCount / 2].begin(), encodedPayloads[kViewCount / 2].end(), 0xff);
+    decoded = false;
+    EXPECT_FALSE(utility::decodeMeshoptCompression(&data, &decoded, &mEngine->getJobSystem()));
+    EXPECT_FALSE(decoded);
+    for (size_t i = 0; i < kViewCount; ++i) {
+        EXPECT_EQ(views[i].data, nullptr);
     }
 }
 
