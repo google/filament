@@ -53,6 +53,19 @@ public:
             float const* ex, float const* ey, float const* ez,
             size_t count, size_t bit = 0) noexcept;
 
+    // number of planes accepted by the tighter shadow caster culling overload below
+    static constexpr size_t TIGHTER_CULLING_PLANE_COUNT = 12u;
+
+    /*
+     * returns whether each AABB in a planar array intersects with a set of
+     * TIGHTER_CULLING_PLANE_COUNT planes, used for tighter shadow caster culling.
+     */
+    static void intersects(result_type* results,
+            math::float4 const* planes,
+            float const* cx, float const* cy, float const* cz,
+            float const* ex, float const* ey, float const* ez,
+            size_t count, size_t bit) noexcept;
+
     /*
      * returns whether each sphere in a planar array intersects with the frustum
      */
@@ -81,6 +94,12 @@ public:
     struct UTILS_PUBLIC Test {
         static void intersects(result_type* results,
                 Frustum const& frustum,
+                float const* cx, float const* cy, float const* cz,
+                float const* ex, float const* ey, float const* ez,
+                size_t count) noexcept;
+
+        static void intersects(result_type* results,
+                math::float4 const* planes,
                 float const* cx, float const* cy, float const* cz,
                 float const* ex, float const* ey, float const* ez,
                 size_t count) noexcept;

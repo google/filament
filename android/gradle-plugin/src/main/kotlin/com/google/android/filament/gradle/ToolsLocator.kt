@@ -34,19 +34,28 @@ class ToolsLocator(private val project: Project) {
     val filamesh: ToolConfig = ToolConfig()
 
     val matcToolFiles: FileCollection
-        get() = matc.files ?: project.files()
+        get() {
+            if (matc.files == null) {
+                resolveTool(matc, "matc")
+            }
+            return matc.files ?: project.files()
+        }
 
     val cmgenToolFiles: FileCollection
-        get() = cmgen.files ?: project.files()
+        get() {
+            if (cmgen.files == null) {
+                resolveTool(cmgen, "cmgen")
+            }
+            return cmgen.files ?: project.files()
+        }
 
     val filameshToolFiles: FileCollection
-        get() = filamesh.files ?: project.files()
-
-    fun resolve(project: Project) {
-        resolveTool(matc, "matc")
-        resolveTool(cmgen, "cmgen")
-        resolveTool(filamesh, "filamesh")
-    }
+        get() {
+            if (filamesh.files == null) {
+                resolveTool(filamesh, "filamesh")
+            }
+            return filamesh.files ?: project.files()
+        }
 
     /**
      * Resolves a specific tool by its name and sets the [ToolConfig.files] property of the

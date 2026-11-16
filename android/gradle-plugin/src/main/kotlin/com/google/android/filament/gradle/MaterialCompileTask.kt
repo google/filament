@@ -23,28 +23,54 @@ import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.FileSystemOperations
 import org.gradle.api.file.FileType
+import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.model.ObjectFactory
-import org.gradle.api.provider.ProviderFactory
+import org.gradle.api.provider.ListProperty
+import org.gradle.api.provider.Property
+import org.gradle.api.tasks.CacheableTask
+import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputDirectory
 import org.gradle.api.tasks.InputFiles
+import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.OutputDirectory
 import org.gradle.api.tasks.PathSensitive
 import org.gradle.api.tasks.PathSensitivity
 import org.gradle.api.tasks.TaskAction
 import org.gradle.process.ExecOperations
 import org.gradle.work.ChangeType
-import org.gradle.work.DisableCachingByDefault
 import org.gradle.work.Incremental
 import org.gradle.work.InputChanges
+import org.gradle.workers.WorkAction
+import org.gradle.workers.WorkParameters
+import org.gradle.workers.WorkerExecutor
 
-@DisableCachingByDefault
+interface MaterialCompileParameters : WorkParameters {
+    val matcExecutable: RegularFileProperty
+    val args: ListProperty<String>
+}
+
+abstract class MaterialCompileAction : WorkAction<MaterialCompileParameters> {
+    @get:Inject
+    abstract val execOperations: ExecOperations
+
+    override fun execute() {
+        execOperations.exec { spec ->
+            spec.executable(parameters.matcExecutable.get().asFile)
+            spec.args(parameters.args.get())
+        }
+    }
+}
+
+@CacheableTask
 abstract class MaterialCompileTask : DefaultTask() {
 
+    @get:Optional
     @get:Incremental
     @get:InputDirectory
     @get:PathSensitive(PathSensitivity.RELATIVE)
     abstract val inputDir: DirectoryProperty
 
+    @get:Optional
     @get:OutputDirectory
     abstract val outputDir: DirectoryProperty
 
@@ -52,17 +78,20 @@ abstract class MaterialCompileTask : DefaultTask() {
     @get:PathSensitive(PathSensitivity.NONE)
     abstract val matcTool: ConfigurableFileCollection
 
+    @get:Input
+    abstract val excludeVulkan: Property<Boolean>
+
+    @get:Input
+    abstract val matNoOpt: Property<Boolean>
+
     @get:Inject
-    abstract val execOperations: ExecOperations
+    abstract val workerExecutor: WorkerExecutor
 
     @get:Inject
     abstract val fileSystemOperations: FileSystemOperations
 
     @get:Inject
     abstract val objectFactory: ObjectFactory
-
-    @get:Inject
-    abstract val providerFactory: ProviderFactory
 
     @TaskAction
     fun compile(inputs: InputChanges) {
@@ -91,11 +120,9 @@ abstract class MaterialCompileTask : DefaultTask() {
             }
         }
 
-        val pf = providerFactory
-        val excludeVulkanProperty = pf.gradleProperty("com.google.android.filament.exclude-vulkan")
-        val matNoOptProperty = pf.gradleProperty("com.google.android.filament.matnopt")
-        val excludeVulkan = excludeVulkanProperty.orNull == "true"
-        val matNoOpt = matNoOptProperty.orNull == "true"
+        val noVulkan = excludeVulkan.getOrElse(false)
+        val noOpt = matNoOpt.getOrElse(false)
+        val workQueue = workerExecutor.noIsolation()
 
         inputs.getFileChanges(inputDir).forEach { change ->
             if (change.fileType == FileType.DIRECTORY) return@forEach
@@ -109,11 +136,11 @@ abstract class MaterialCompileTask : DefaultTask() {
                 println("Compiling material: ${file.name}")
 
                 val args = mutableListOf<String>()
-                if (!excludeVulkan) {
+                if (!noVulkan) {
                     args += listOf("-a", "vulkan")
                 }
 
-                if (matNoOpt) {
+                if (noOpt) {
                     args += listOf("-g")
                 }
 
@@ -123,9 +150,9 @@ abstract class MaterialCompileTask : DefaultTask() {
                     file.absolutePath
                 )
 
-                execOperations.exec { spec ->
-                    spec.executable(matc)
-                    spec.args(args)
+                workQueue.submit(MaterialCompileAction::class.java) { params ->
+                    params.matcExecutable.set(matc)
+                    params.args.set(args)
                 }
             }
         }
