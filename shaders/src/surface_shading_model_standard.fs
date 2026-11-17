@@ -202,7 +202,12 @@ vec3 surfaceShading(const PixelParams pixel, const Light light, float occlusion)
     float attenuation = 1.0 - Fcc;
 
 #if defined(MATERIAL_HAS_NORMAL) || defined(MATERIAL_HAS_CLEAR_COAT_NORMAL)
+#if defined(MATERIAL_HAS_DIFFUSE_TRANSMISSION)
+    // We already applied NoL to the lobes, so we don't multiply by it again here.
+    color *= attenuation;
+#else
     color *= attenuation * NoL;
+#endif
 
     // If the material has a normal map, we want to use the geometric normal
     // instead to avoid applying the normal map details to the clear coat layer
