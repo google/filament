@@ -15,9 +15,9 @@
  *
  */
 
-#include <gtest/gtest.h>
-
 #include <utils/FixedCircularBuffer.h>
+
+#include <gtest/gtest.h>
 
 using namespace utils;
 
@@ -80,18 +80,22 @@ TEST(FixedCircularBufferTest, ZeroCapacity) {
     EXPECT_EQ(circularBuffer.full(), false);
 }
 
-TEST(FixedCircularBufferTest, Exceptions) {
 #if !defined(NDEBUG) && defined(GTEST_HAS_DEATH_TEST)
+TEST(FixedCircularBufferTest, Exceptions) {
     FixedCircularBuffer<int> circularBuffer(4);
 
     EXPECT_DEATH({
         circularBuffer.pop();  // should assert
-    }, "failed");
+    }, "");
 
-    circularBuffer.push(1);
-    circularBuffer.push(2);
-    circularBuffer.push(3);
-    circularBuffer.push(4);
-    circularBuffer.push(5); // should not assert
-#endif
+    EXPECT_FALSE(circularBuffer.push(1).has_value());
+    EXPECT_FALSE(circularBuffer.push(2).has_value());
+    EXPECT_FALSE(circularBuffer.push(3).has_value());
+    EXPECT_FALSE(circularBuffer.push(4).has_value());
+    auto displaced = circularBuffer.push(5); // should not assert
+    ASSERT_TRUE(displaced.has_value());
+    EXPECT_EQ(*displaced, 1);
+    EXPECT_EQ(circularBuffer.size(), 4);
+    EXPECT_TRUE(circularBuffer.full());
 }
+#endif

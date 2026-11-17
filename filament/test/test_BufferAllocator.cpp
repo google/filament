@@ -107,14 +107,21 @@ TEST_F(BufferAllocatorTest, AllocateAll) {
 }
 
 TEST_F(BufferAllocatorTest, AllocationFailure) {
-    auto [id1, offset1] = mAllocator.allocate(TOTAL_SIZE - 1); // Allocate most of the buffer.
+    // Allocate all but one 64-byte slot so a non-empty free slot (64 bytes) remains.
+    auto [id1, offset1] = mAllocator.allocate(TOTAL_SIZE - SLOT_SIZE);
     EXPECT_EQ(id1, 1);
     EXPECT_EQ(offset1, 0);
+    EXPECT_EQ(mAllocator.getAllocationSize(id1), TOTAL_SIZE - SLOT_SIZE);
 
-    // Try to allocate more than the remaining space.
+    // Try to allocate more than the remaining 64-byte slot.
     auto [id2, offset2] = mAllocator.allocate(100);
     EXPECT_EQ(id2, BufferAllocator::REALLOCATION_REQUIRED);
     EXPECT_EQ(offset2, 0);
+
+    // An allocation that fits in the remaining 64-byte slot must still succeed.
+    auto [id3, offset3] = mAllocator.allocate(SLOT_SIZE);
+    EXPECT_TRUE(BufferAllocator::isValid(id3));
+    EXPECT_EQ(offset3, TOTAL_SIZE - SLOT_SIZE);
 }
 
 TEST_F(BufferAllocatorTest, AllocationLifecycle) {
@@ -254,7 +261,7 @@ TEST_F(BufferAllocatorTest, ResetWithInvalidSize) {
 }
 
 TEST_F(BufferAllocatorTest, InvalidOperations) {
-    // These operations on invalid IDs should not crash and should be handled gracefully.
+    // Retiring or querying invalid IDs must trigger an assertion failure.
     EXPECT_DEATH(mAllocator.retire(BufferAllocator::UNALLOCATED), "failed assertion");
     EXPECT_DEATH(mAllocator.retire(999), "failed assertion"); // Non-existent ID
 

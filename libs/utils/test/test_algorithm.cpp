@@ -153,7 +153,7 @@ TEST(AlgorithmTest, popcount) {
     EXPECT_EQ(16, popcount(uint32_t(0x55555555)));
     EXPECT_EQ(32, popcount(uint64_t(0x5555555555555555)));
 
-    for (uint64_t i = 1, j = 63; i < 64; i *= 2, j--) {
+    for (uint64_t i = 1, j = 63; j < 64; i *= 2, j--) {
         EXPECT_EQ(1, popcount(i));
     }
     for (uint32_t i = 1, j = 31; j < 32; i *= 2, j--) {

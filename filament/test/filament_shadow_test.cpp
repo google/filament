@@ -160,10 +160,12 @@ TEST_F(ShadowTest, DirectionalBoundsIgnoreDepthClampWhenUnsupported) {
             .build(*mEngine, sun);
     mScene->addEntity(sun);
 
-    // The floor, in view. It must also cast shadows: with the default
-    // "d.shadowmap.far_uses_shadowcasters", the light frustum ends at the farthest caster.
-    addBox({ 0, -0.5f, 0 }, { 50, 0.5f, 50 }, true, true);
-    // A box far above the camera's view volume, whose shadow falls on the visible floor.
+    // The floor, in view. It only receives shadows: in light space it lies entirely behind the
+    // farthest caster (the box below), and the light frustum must still reach it.
+    addBox({ 0, -0.5f, 0 }, { 50, 0.5f, 50 }, false, true);
+    // A box far above the camera's view volume, whose shadow falls on the visible floor. The view
+    // volume never reaches it, so if the light frustum were clipped to the casters' depth range
+    // before being intersected with the view volume, there would be no shadow map at all.
     addBox({ 0, 30, 0 }, { 1, 1, 1 }, true, false);
 
     mCamera->setProjection(45.0, 1.0, 0.1, 100.0);

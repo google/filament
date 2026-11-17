@@ -1540,10 +1540,22 @@ MaterialKey FAssetLoader::getMaterialKey(const cgltf_material* inputMat, bool ve
     auto vlConfig = inputMat->volume;
     auto spConfig = inputMat->specular;
     auto rrConfig = inputMat->retroreflection;
+    auto irConfig = inputMat->iridescence;
+    auto anConfig = inputMat->anisotropy;
+    auto dtConfig = inputMat->diffuse_transmission;
     *baseColorTexture = mrConfig.base_color_texture;
     *metallicRoughnessTexture = mrConfig.metallic_roughness_texture;
 
     bool const hasRetroreflection = inputMat->has_retroreflection &&
+            !inputMat->unlit && !inputMat->has_pbr_specular_glossiness;
+
+    bool const hasIridescence = inputMat->has_iridescence &&
+            !inputMat->unlit && !inputMat->has_pbr_specular_glossiness;
+
+    bool const hasAnisotropy = inputMat->has_anisotropy &&
+            !inputMat->unlit && !inputMat->has_pbr_specular_glossiness;
+
+    bool const hasDiffuseTransmission = inputMat->has_diffuse_transmission &&
             !inputMat->unlit && !inputMat->has_pbr_specular_glossiness;
 
     bool hasTextureTransforms =
@@ -1562,7 +1574,12 @@ MaterialKey FAssetLoader::getMaterialKey(const cgltf_material* inputMat, bool ve
         trConfig.transmission_texture.has_transform ||
         spConfig.specular_color_texture.has_transform ||
         spConfig.specular_texture.has_transform ||
-        (hasRetroreflection && rrConfig.retroreflection_texture.has_transform);
+        (hasRetroreflection && rrConfig.retroreflection_texture.has_transform) ||
+        (hasIridescence && irConfig.iridescence_texture.has_transform) ||
+        (hasIridescence && irConfig.iridescence_thickness_texture.has_transform) ||
+        (hasAnisotropy && anConfig.anisotropy_texture.has_transform) ||
+        (hasDiffuseTransmission && dtConfig.diffuse_transmission_texture.has_transform) ||
+        (hasDiffuseTransmission && dtConfig.diffuse_transmission_color_texture.has_transform);
 
     auto const clampTexCoord = [](cgltf_int texcoord) -> uint8_t {
         return uint8_t(std::clamp(texcoord, 0, cgltf_int(UvMapSize - 1)));
@@ -1611,6 +1628,24 @@ MaterialKey FAssetLoader::getMaterialKey(const cgltf_material* inputMat, bool ve
         .hasRetroreflectionTexture =
                 hasRetroreflection && rrConfig.retroreflection_texture.texture != nullptr,
         .retroreflectionUV = clampTexCoord(rrConfig.retroreflection_texture.texcoord),
+        .hasIridescenceTexture =
+                hasIridescence && irConfig.iridescence_texture.texture != nullptr,
+        .iridescenceUV = clampTexCoord(irConfig.iridescence_texture.texcoord),
+        .hasIridescenceThicknessTexture =
+                hasIridescence && irConfig.iridescence_thickness_texture.texture != nullptr,
+        .iridescenceThicknessUV = clampTexCoord(irConfig.iridescence_thickness_texture.texcoord),
+        .hasIridescence = hasIridescence,
+        .anisotropyUV = clampTexCoord(anConfig.anisotropy_texture.texcoord),
+        .hasAnisotropyTexture = hasAnisotropy && anConfig.anisotropy_texture.texture != nullptr,
+        .diffuseTransmissionUV = clampTexCoord(dtConfig.diffuse_transmission_texture.texcoord),
+        .hasAnisotropy = hasAnisotropy,
+        .diffuseTransmissionColorUV =
+                clampTexCoord(dtConfig.diffuse_transmission_color_texture.texcoord),
+        .hasDiffuseTransmissionTexture = hasDiffuseTransmission &&
+                dtConfig.diffuse_transmission_texture.texture != nullptr,
+        .hasDiffuseTransmissionColorTexture = hasDiffuseTransmission &&
+                dtConfig.diffuse_transmission_color_texture.texture != nullptr,
+        .hasDiffuseTransmission = hasDiffuseTransmission,
     };
 
     if (inputMat->has_pbr_specular_glossiness) {
@@ -1700,6 +1735,9 @@ MaterialInstance* FAssetLoader::createMaterialInstance(const cgltf_material* inp
     auto vlConfig = inputMat->volume;
     auto spConfig = inputMat->specular;
     auto rrConfig = inputMat->retroreflection;
+    auto irConfig = inputMat->iridescence;
+    auto anConfig = inputMat->anisotropy;
+    auto dtConfig = inputMat->diffuse_transmission;
 
     // Check the material blending mode, not the cgltf blending mode, because the provider
     // might have selected an alternative blend mode (e.g. to support transmission).
@@ -1941,6 +1979,77 @@ MaterialInstance* FAssetLoader::createMaterialInstance(const cgltf_material* inp
         }
     }
 
+    if (matkey.hasIridescence && mi->getMaterial()->hasParameter("iridescenceFactor")) {
+        mi->setParameter("iridescenceFactor", irConfig.iridescence_factor);
+        mi->setParameter("iridescenceIor", irConfig.iridescence_ior);
+        mi->setParameter("iridescenceThicknessMaximum", irConfig.iridescence_thickness_max);
+
+        if (matkey.hasIridescenceTexture) {
+            fAsset->addTextureBinding(mi, "iridescenceMap",
+                    irConfig.iridescence_texture.texture, LINEAR);
+            if (matkey.hasTextureTransforms) {
+                const cgltf_texture_transform& uvt = irConfig.iridescence_texture.transform;
+                auto uvmat = matrixFromUvTransform(uvt.offset, uvt.rotation, uvt.scale);
+                mi->setParameter("iridescenceUvMatrix", uvmat);
+            }
+        }
+        if (matkey.hasIridescenceThicknessTexture) {
+            mi->setParameter("iridescenceThicknessMinimum", irConfig.iridescence_thickness_min);
+            fAsset->addTextureBinding(mi, "iridescenceThicknessMap",
+                    irConfig.iridescence_thickness_texture.texture, LINEAR);
+            if (matkey.hasTextureTransforms) {
+                const cgltf_texture_transform& uvt = irConfig.iridescence_thickness_texture.transform;
+                auto uvmat = matrixFromUvTransform(uvt.offset, uvt.rotation, uvt.scale);
+                mi->setParameter("iridescenceThicknessUvMatrix", uvmat);
+            }
+        }
+    }
+
+    if (matkey.hasAnisotropy && mi->getMaterial()->hasParameter("anisotropyStrength")) {
+        mi->setParameter("anisotropyStrength", anConfig.anisotropy_strength);
+        mi->setParameter("anisotropyRotation", anConfig.anisotropy_rotation);
+
+        if (matkey.hasAnisotropyTexture) {
+            fAsset->addTextureBinding(mi, "anisotropyMap",
+                    anConfig.anisotropy_texture.texture, LINEAR);
+            if (matkey.hasTextureTransforms) {
+                const cgltf_texture_transform& uvt = anConfig.anisotropy_texture.transform;
+                auto uvmat = matrixFromUvTransform(uvt.offset, uvt.rotation, uvt.scale);
+                mi->setParameter("anisotropyUvMatrix", uvmat);
+            }
+        }
+    }
+
+    if (matkey.hasDiffuseTransmission &&
+            mi->getMaterial()->hasParameter("diffuseTransmissionFactor")) {
+        const float* c = dtConfig.diffuse_transmission_color_factor;
+        mi->setParameter("diffuseTransmissionFactor", dtConfig.diffuse_transmission_factor);
+        mi->setParameter("diffuseTransmissionColorFactor", float3{ c[0], c[1], c[2] });
+
+        if (matkey.hasDiffuseTransmissionColorTexture) {
+            fAsset->addTextureBinding(mi, "diffuseTransmissionColorMap",
+                    dtConfig.diffuse_transmission_color_texture.texture, sRGB);
+            if (matkey.hasTextureTransforms) {
+                const cgltf_texture_transform& uvt =
+                        dtConfig.diffuse_transmission_color_texture.transform;
+                auto uvmat = matrixFromUvTransform(uvt.offset, uvt.rotation, uvt.scale);
+                mi->setParameter("diffuseTransmissionColorUvMatrix", uvmat);
+            }
+        }
+        if (matkey.hasDiffuseTransmissionTexture) {
+            bool sameTexture = dtConfig.diffuse_transmission_color_texture.texture ==
+                               dtConfig.diffuse_transmission_texture.texture;
+            fAsset->addTextureBinding(mi, "diffuseTransmissionMap",
+                    dtConfig.diffuse_transmission_texture.texture, sameTexture ? sRGB : LINEAR);
+            if (matkey.hasTextureTransforms) {
+                const cgltf_texture_transform& uvt =
+                        dtConfig.diffuse_transmission_texture.transform;
+                auto uvmat = matrixFromUvTransform(uvt.offset, uvt.rotation, uvt.scale);
+                mi->setParameter("diffuseTransmissionUvMatrix", uvmat);
+            }
+        }
+    }
+
     *cacheEntry = { .instance = mi, .uvmap = *uvmap };
     return mi;
 }
@@ -2062,6 +2171,33 @@ FFilamentAsset* FAssetLoader::preresolveTextures(FFilamentAsset* fAsset,
             auto rrConfig = inputMat->retroreflection;
             if (matkey.hasRetroreflectionTexture) {
                 resolveTexture(rrConfig.retroreflection_texture.texture, LINEAR);
+            }
+        }
+        if (matkey.hasIridescence) {
+            auto irConfig = inputMat->iridescence;
+            if (matkey.hasIridescenceTexture) {
+                resolveTexture(irConfig.iridescence_texture.texture, LINEAR);
+            }
+            if (matkey.hasIridescenceThicknessTexture) {
+                resolveTexture(irConfig.iridescence_thickness_texture.texture, LINEAR);
+            }
+        }
+        if (matkey.hasAnisotropy) {
+            auto anConfig = inputMat->anisotropy;
+            if (matkey.hasAnisotropyTexture) {
+                resolveTexture(anConfig.anisotropy_texture.texture, LINEAR);
+            }
+        }
+        if (matkey.hasDiffuseTransmission) {
+            auto dtConfig = inputMat->diffuse_transmission;
+            if (matkey.hasDiffuseTransmissionColorTexture) {
+                resolveTexture(dtConfig.diffuse_transmission_color_texture.texture, sRGB);
+            }
+            if (matkey.hasDiffuseTransmissionTexture) {
+                bool sameTexture = dtConfig.diffuse_transmission_color_texture.texture ==
+                                   dtConfig.diffuse_transmission_texture.texture;
+                resolveTexture(dtConfig.diffuse_transmission_texture.texture,
+                        sameTexture ? sRGB : LINEAR);
             }
         }
     }

@@ -13,9 +13,9 @@
 * See the License for the specific language governing permissions and
 * limitations under the License.
  */
-#include <gtest/gtest.h>
-
 #include <utils/Status.h>
+
+#include <gtest/gtest.h>
 
 using namespace utils;
 
@@ -79,8 +79,8 @@ TEST(StatusTest, Equality) {
 }
 
 TEST(StatusTest, InEqualityWithDifferentStatusCode) {
-    Status status1(StatusCode::INTERNAL, "internal error");
-    Status status2(StatusCode::INVALID_ARGUMENT, "invalid argument error");
+    Status status1(StatusCode::INTERNAL, "error message");
+    Status status2(StatusCode::INVALID_ARGUMENT, "error message");
 
     EXPECT_NE(status1, status2);
 }

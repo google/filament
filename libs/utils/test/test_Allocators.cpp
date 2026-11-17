@@ -199,6 +199,9 @@ TEST(AllocatorTest, CppAllocator) {
         void onFree(void* p, size_t) {
             auto const pos = std::find(allocations.begin(), allocations.end(), p);
             EXPECT_TRUE(pos != allocations.end());
+            if (pos != allocations.end()) {
+                allocations.erase(pos);
+            }
         }
         std::vector<void*> allocations;
     };
@@ -222,7 +225,6 @@ TEST(AllocatorTest, CppAllocator) {
         }
 
         void operator delete(void* p, size_t s) {
-            // don't do anything
             Tag const* tag = static_cast<Tag*>(p) - 1;
             tag->arena->free(p, s);
         }
@@ -233,17 +235,21 @@ TEST(AllocatorTest, CppAllocator) {
     // check we can override operator new and use one of our allocator
     Foo* p0 = new(arena) Foo;
     EXPECT_NE(nullptr, p0);
+    EXPECT_EQ(1u, arena.getListener().allocations.size());
 
     Foo* p1 = new(arena) Foo;
     EXPECT_NE(nullptr, p1);
+    EXPECT_EQ(2u, arena.getListener().allocations.size());
 
     EXPECT_EQ(0, count);
 
     delete p0;
     EXPECT_EQ(1, count);
+    EXPECT_EQ(1u, arena.getListener().allocations.size());
 
     delete p1;
     EXPECT_EQ(2, count);
+    EXPECT_TRUE(arena.getListener().allocations.empty());
 }
 
 TEST(AllocatorTest, ArenaScope) {
@@ -324,7 +330,6 @@ TEST(AllocatorTest, STLAllocator) {
     STLAllocator<int, Arena> allocator(arena);
     STLAllocator<int, Arena> allocator2(arena2);
     EXPECT_TRUE(allocator != allocator2);
-    EXPECT_TRUE(allocator == allocator);
 
     STLAllocator<int, Arena>::rebind<char>::other charAllocator(arena);
     EXPECT_TRUE(allocator == charAllocator);

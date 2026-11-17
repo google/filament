@@ -838,13 +838,15 @@ bool EXREncoder::encode(const LinearImage& image) {
         }
 
         unsigned char* outData;
-        const char* error;
+        // tinyexr leaves this untouched on some failure paths.
+        const char* error = nullptr;
         size_t size = SaveEXRImageToMemory(&exrImage, &header, &outData, &error);
         if (size > 0 && outData) {
             mStream.write(reinterpret_cast<char*>(outData), size);
             free(outData);
         } else {
-            std::cerr << "Runtime error while encoding EXR: " << error << std::endl;
+            std::cerr << "Runtime error while encoding EXR: " << (error ? error : "unknown")
+                    << std::endl;
             mStream.seekp(mStreamStartPos);
         }
 

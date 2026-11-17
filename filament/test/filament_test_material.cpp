@@ -30,6 +30,7 @@
 
 #include <gtest/gtest.h>
 
+#include <cstring>
 #include <string>
 #include <tuple>
 #include <vector>
@@ -380,6 +381,7 @@ TEST(Material, CompileMaterialWithSkinningEnabled) {
             /* shadowReceiver= */ utils::tribool(false),
             /* skinning= */ utils::tribool(true));
 
+    EXPECT_FALSE(variants.empty());
     for (auto const v : variants) {
         EXPECT_FALSE(filament::Variant::isShadowReceiverVariant(v));
         EXPECT_TRUE(v.hasSkinningOrMorphing());
@@ -451,10 +453,8 @@ TEST(MaterialVariant, DynamicLightingSpecKeySupportsPunctualShadowReceivers) {
 
     constexpr Variant::type_t SHADOW_VARIANTS[] = {
             Variant::SRE,
-            Variant::SRE | Variant::FOG,
             Variant::SRE | Variant::SKN,
             Variant::S2D | Variant::SRE,
-            Variant::S2D | Variant::SRE | Variant::FOG,
             Variant::S2D | Variant::SRE | Variant::SKN,
             Variant::S2D | Variant::SRE | Variant::STE,
     };
@@ -613,11 +613,6 @@ TEST(Material, SsrFilteredLitMaterialContainsPunctualShadowPrograms) {
                     fengine.isStereoSupported()))
                     << "variant=" << +key << " specKey=" << specKey.key;
         }
-        // Fog is a dynamic specialization constant now, there is no FOG variant anymore.
-        EXPECT_FALSE(definition.isValidProgram(
-                Variant(key | Variant::FOG), DynamicSpecConstKey{}, fengine.getShaderModel(),
-                fengine.isStereoSupported()))
-                << "variant=" << +key;
     }
     EXPECT_FALSE(definition.isValidProgram(
             Variant(Variant::SPECIAL_SSR_VARIANT), DynamicSpecConstKey{},
@@ -1211,6 +1206,79 @@ TEST(Material, ProgramCacheLruEvictUAF) {
             DynamicSpecConstKey{ 0 }, backend::CompilerPriorityQueue::HIGH);
     engine->destroy(mat2);
 
+    Engine::destroy(engine);
+}
+
+TEST(Material, ProgramCacheSeparatesMaterialsWithSameCrc32) {
+    Engine* engine = Engine::Builder()
+                             .backend(Engine::Backend::NOOP)
+                             .feature("engine.enable_program_cache", true)
+                             .feature("material.check_crc32_after_loading", false)
+                             .build();
+    ASSERT_NE(engine, nullptr);
+    FEngine::DriverApi& driver = downcast(engine)->getDriverApi();
+
+    auto const buildPackage = [engine](const char* name, const char* shader) {
+        filamat::MaterialBuilder builder;
+        builder.init();
+        builder.name(name);
+        builder.material(shader);
+        return builder.build(engine->getJobSystem());
+    };
+    filamat::Package const pkgA = buildPackage("CrcA", R"(
+        void material(inout MaterialInputs material) {
+            prepareMaterial(material);
+            material.baseColor = vec4(1.0, 0.0, 0.0, 1.0);
+        }
+    )");
+    filamat::Package const pkgB = buildPackage("CrcB", R"(
+        void material(inout MaterialInputs material) {
+            prepareMaterial(material);
+            material.baseColor = vec4(0.0, 1.0, 0.0, 1.0);
+        }
+    )");
+    ASSERT_TRUE(pkgA.isValid());
+    ASSERT_TRUE(pkgB.isValid());
+
+    // Give B the MaterialCrc32 chunk of A. The packages still differ.
+    auto const getCrc32Chunk = [](uint8_t const* data, size_t const size) -> uint8_t const* {
+        filaflat::ChunkContainer cc(data, size);
+        if (!cc.parse() || !cc.hasChunk(filamat::MaterialCrc32)) {
+            return nullptr;
+        }
+        return cc.getChunkRange(filamat::MaterialCrc32).first;
+    };
+    std::vector<uint8_t> bytesB(pkgB.getData(), pkgB.getData() + pkgB.getSize());
+    uint8_t const* const crcA = getCrc32Chunk(pkgA.getData(), pkgA.getSize());
+    uint8_t const* const crcB = getCrc32Chunk(bytesB.data(), bytesB.size());
+    ASSERT_NE(crcA, nullptr);
+    ASSERT_NE(crcB, nullptr);
+    std::memcpy(bytesB.data() + (crcB - bytesB.data()), crcA, sizeof(uint32_t));
+
+    Material* matA = Material::Builder().package(pkgA.getData(), pkgA.getSize()).build(*engine);
+    Material* matA2 = Material::Builder().package(pkgA.getData(), pkgA.getSize()).build(*engine);
+    Material* matB = Material::Builder().package(bytesB.data(), bytesB.size()).build(*engine);
+    ASSERT_NE(matA, nullptr);
+    ASSERT_NE(matA2, nullptr);
+    ASSERT_NE(matB, nullptr);
+    uint32_t crc32A = 0;
+    uint32_t crc32B = 0;
+    ASSERT_TRUE(downcast(matA)->getMaterialParser().getMaterialCrc32(&crc32A));
+    ASSERT_TRUE(downcast(matB)->getMaterialParser().getMaterialCrc32(&crc32B));
+    ASSERT_EQ(crc32A, crc32B);
+    ASSERT_NE(&downcast(matA)->getDefinition(), &downcast(matB)->getDefinition());
+
+    auto const prepare = [&driver](Material* material) {
+        return downcast(material)->getPrograms().prepareProgram(driver, Variant{ 0 },
+                DynamicSpecConstKey{ 0 }, backend::CompilerPriorityQueue::HIGH);
+    };
+    auto const programA = prepare(matA);
+    EXPECT_EQ(prepare(matA2), programA);
+    EXPECT_NE(prepare(matB), programA);
+
+    engine->destroy(matA);
+    engine->destroy(matA2);
+    engine->destroy(matB);
     Engine::destroy(engine);
 }
 

@@ -189,7 +189,7 @@ func createJsCodeGenerator(namespace string) func(*os.File, string, db.TypeDefin
 				return cpptype[6:]
 			}
 			switch cpptype {
-			case "float", "uint8_t", "uint32_t", "uint16_t":
+			case "float", "uint8_t", "uint32_t", "uint16_t", "int8_t", "int16_t", "int32_t", "int":
 				return "number"
 			case "bool":
 				return "boolean"

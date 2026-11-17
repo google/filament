@@ -53,11 +53,6 @@ void FCameraManager::gc(FEngine& engine) noexcept {
 FCamera* FCameraManager::create(FEngine& engine, Entity entity) {
     auto& manager = mManager;
 
-    Entity zombie;
-    if (UTILS_UNLIKELY(manager.popPendingZombie(entity, zombie))) {
-        destroy(zombie, engine);
-    }
-
     // add the Camera component to the entity (destroying any previous one first)
     auto [i, added] = manager.tryAddComponent(entity);
     if (UTILS_UNLIKELY(!added && i)) {

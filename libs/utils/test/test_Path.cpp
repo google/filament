@@ -41,12 +41,13 @@ void mk_file(Path &p, const char *str) {
 TEST(PathTest, Constructor) {
     // Ensure the path is canonical
     Path path("/out/blue/../bin/./test_path");
-    EXPECT_EQ(Path::getCanonicalPath("/out/blue/../bin/./test_path"), path.getPath());
+    EXPECT_EQ("/out/bin/test_path", path.getPath());
 }
 
 TEST(PathTest, Conversion) {
     Path r("/out/blue/bin");
     std::string s(r);
+    EXPECT_EQ("/out/blue/bin", s);
     EXPECT_EQ(r, s);
 }
 
@@ -387,7 +388,7 @@ TEST(PathTest, AbsolutePath) {
     EXPECT_EQ("/out/blue/bin", p.getPath());
 
     p = Path("../bin").getAbsolutePath();
-    EXPECT_NE(cwd, p);
+    EXPECT_EQ(cwd.concat("../bin"), p);
     EXPECT_TRUE(p.isAbsolute());
 }
 

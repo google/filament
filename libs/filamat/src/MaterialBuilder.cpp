@@ -1815,17 +1815,6 @@ void MaterialBuilder::writeCommonChunks(ChunkContainer& container, MaterialInfo&
         container.emplace<uint8_t>(MaterialStereoscopicType, static_cast<uint8_t>(mStereoscopicType));
     }
 
-    // create a unique material id
-    auto const& vert = mMaterialVertexCode.getCode();
-    auto const& frag = mMaterialFragmentCode.getCode();
-    std::hash<std::string_view> const hasher;
-    size_t const materialId = hash::combine(
-            MATERIAL_VERSION,
-            hash::combine(
-                    hasher({ vert.data(), vert.size() }),
-                    hasher({ frag.data(), frag.size() })));
-
-    container.emplace<uint64_t>(MaterialCacheId, materialId);
     if (!mMaterialSource.empty()) {
         container.push<CompressedStringChunk>(
                 MaterialSource, mMaterialSource,

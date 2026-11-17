@@ -17,6 +17,7 @@
 #include "VulkanSwapChain.h"
 
 #include "VulkanCommands.h"
+#include "VulkanHandles.h"
 #include "VulkanTexture.h"
 
 #include <utils/compiler.h>
@@ -59,6 +60,10 @@ VulkanSwapChain::~VulkanSwapChain() {
     mCommands->flush();
     mCommands->wait();
 
+    // Actual destruction is deferred to ResourceManager::gc(). Command buffers may still hold
+    // references to mFramebuffers, so the image views in mColors and mDepth may be destroyed
+    // first; Vulkan permits this once GPU work has finished and the framebuffers are unused.
+    mFramebuffers.clear();
     mColors = {};
     mDepth = {};
     for (auto& semaphore : mFinishedDrawing) {
@@ -69,12 +74,19 @@ VulkanSwapChain::~VulkanSwapChain() {
 }
 
 void VulkanSwapChain::update() {
+    // Drop the framebuffers for the old images so they are not reused; new ones are created
+    // lazily. As in the destructor, deferred destruction order relative to mColors and mDepth
+    // does not matter.
+    mFramebuffers.clear();
     mColors.clear();
 
     auto const bundle = mPlatform->getSwapChainBundle(swapChain);
     size_t const swapChainCount = bundle.colors.size();
     mColors.reserve(bundle.colors.size());
     VkDevice const device = mPlatform->getDevice();
+
+    mFramebuffers.reserve(swapChainCount);
+    mFramebuffers.resize(swapChainCount);
 
     mFinishedDrawing.clear();
     mFinishedDrawing.reserve(swapChainCount);
@@ -159,8 +171,8 @@ void VulkanSwapChain::present(DriverBase& driver) {
 }
 
 std::pair<bool, bool> VulkanSwapChain::acquire() {
-    // Indicates whether the backing swapchain has changed (and might invalidate the associated
-    // images that are tracked in the FBO cache).
+    // Indicates whether the backing swapchain has changed (and might invalidate state that refers
+    // to the old images).
     bool swapchainRecreated = false;
 
     // Final result of the call to acquire a swapchain image.
@@ -235,6 +247,17 @@ std::pair<bool, bool> VulkanSwapChain::acquire() {
     mAcquired = true;
 
     return { true, swapchainRecreated };
+}
+
+fvkmemory::resource_ptr<VulkanFramebuffer> VulkanSwapChain::getCurrentFramebuffer() const noexcept {
+    assert_invariant(mCurrentSwapIndex < mFramebuffers.size());
+    return mFramebuffers[mCurrentSwapIndex];
+}
+
+void VulkanSwapChain::setCurrentFramebuffer(
+        fvkmemory::resource_ptr<VulkanFramebuffer> framebuffer) noexcept {
+    assert_invariant(mCurrentSwapIndex < mFramebuffers.size());
+    mFramebuffers[mCurrentSwapIndex] = framebuffer;
 }
 
 }// namespace filament::backend

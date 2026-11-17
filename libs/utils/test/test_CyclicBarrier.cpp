@@ -14,9 +14,10 @@
  * limitations under the License.
  */
 
+#include <utils/CyclicBarrier.h>
+
 #include <gtest/gtest.h>
 
-#include <utils/CyclicBarrier.h>
 #include <atomic>
 #include <thread>
 
@@ -42,29 +43,68 @@ static inline long countPrimes(long max) {
 }
 
 TEST(CyclicBarrierTest, Simple) {
-    std::atomic_int counter(0);
-    int p0, p1, p2;
-    int r0, r1, r2;
+    std::atomic_int phase1Arrivals{ 0 };
+    std::atomic_int phase2Arrivals{ 0 };
+    std::atomic<long> p0{ 0 }, p1{ 0 }, p2{ 0 };
+    std::atomic<long> r0{ 0 }, r1{ 0 }, r2{ 0 };
     const long k0 = countPrimes(0x7FFFF);
     const long k1 = countPrimes(0x7FFF);
     const long k2 = countPrimes(0x7FF);
     CyclicBarrier barrier(4);
+    EXPECT_EQ(4u, barrier.getThreadCount());
 
-    std::thread a( [&]()->int { p0=countPrimes(0x7FFFF); barrier.await(); r0 = p0+p1+p2; barrier.await(); return 0; } );
-    std::thread b( [&]()->int { p1=countPrimes(0x7FFF);  barrier.await(); r1 = p0+p1+p2; barrier.await(); return 0; } );
-    std::thread c( [&]()->int { p2=countPrimes(0x7FF);   barrier.await(); r2 = p0+p1+p2; barrier.await(); return 0; } );
+    std::thread a([&]() -> int {
+        p0.store(countPrimes(0x7FFFF), std::memory_order_relaxed);
+        phase1Arrivals.fetch_add(1, std::memory_order_release);
+        barrier.await();
+        EXPECT_EQ(4, phase1Arrivals.load(std::memory_order_acquire));
+        r0.store(p0.load(std::memory_order_relaxed) + p1.load(std::memory_order_relaxed) +
+                p2.load(std::memory_order_relaxed), std::memory_order_relaxed);
+        phase2Arrivals.fetch_add(1, std::memory_order_release);
+        barrier.await();
+        EXPECT_EQ(4, phase2Arrivals.load(std::memory_order_acquire));
+        return 0;
+    });
+    std::thread b([&]() -> int {
+        p1.store(countPrimes(0x7FFF), std::memory_order_relaxed);
+        phase1Arrivals.fetch_add(1, std::memory_order_release);
+        barrier.await();
+        EXPECT_EQ(4, phase1Arrivals.load(std::memory_order_acquire));
+        r1.store(p0.load(std::memory_order_relaxed) + p1.load(std::memory_order_relaxed) +
+                p2.load(std::memory_order_relaxed), std::memory_order_relaxed);
+        phase2Arrivals.fetch_add(1, std::memory_order_release);
+        barrier.await();
+        EXPECT_EQ(4, phase2Arrivals.load(std::memory_order_acquire));
+        return 0;
+    });
+    std::thread c([&]() -> int {
+        p2.store(countPrimes(0x7FF), std::memory_order_relaxed);
+        phase1Arrivals.fetch_add(1, std::memory_order_release);
+        barrier.await();
+        EXPECT_EQ(4, phase1Arrivals.load(std::memory_order_acquire));
+        r2.store(p0.load(std::memory_order_relaxed) + p1.load(std::memory_order_relaxed) +
+                p2.load(std::memory_order_relaxed), std::memory_order_relaxed);
+        phase2Arrivals.fetch_add(1, std::memory_order_release);
+        barrier.await();
+        EXPECT_EQ(4, phase2Arrivals.load(std::memory_order_acquire));
+        return 0;
+    });
 
+    phase1Arrivals.fetch_add(1, std::memory_order_release);
     barrier.await();
+    EXPECT_EQ(4, phase1Arrivals.load(std::memory_order_acquire));
 
-    EXPECT_EQ(k0, p0);
-    EXPECT_EQ(k1, p1);
-    EXPECT_EQ(k2, p2);
+    EXPECT_EQ(k0, p0.load(std::memory_order_relaxed));
+    EXPECT_EQ(k1, p1.load(std::memory_order_relaxed));
+    EXPECT_EQ(k2, p2.load(std::memory_order_relaxed));
 
+    phase2Arrivals.fetch_add(1, std::memory_order_release);
     barrier.await();
+    EXPECT_EQ(4, phase2Arrivals.load(std::memory_order_acquire));
 
-    EXPECT_EQ(k0+k1+k2, r0);
-    EXPECT_EQ(k0+k1+k2, r1);
-    EXPECT_EQ(k0+k1+k2, r2);
+    EXPECT_EQ(k0 + k1 + k2, r0.load(std::memory_order_relaxed));
+    EXPECT_EQ(k0 + k1 + k2, r1.load(std::memory_order_relaxed));
+    EXPECT_EQ(k0 + k1 + k2, r2.load(std::memory_order_relaxed));
 
     a.join();
     b.join();

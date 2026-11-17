@@ -187,10 +187,15 @@ TEST_F(BufferBoundsTest, IndexBufferRejectsIndexCountAboveMax) {
 }
 
 TEST_F(BufferBoundsTest, IndexBufferRejectsIndexCountThatWrapsByteSize) {
-    // The byte size of this many UINT indices does not fit in 32 bits.
+    // 0x40000001u * sizeof(uint32_t) wraps in 32-bit arithmetic to a small non-zero size (4 bytes).
     EXPECT_INDEX_COUNT_REJECTED(IndexBuffer::Builder()
-            .indexCount(uint32_t(UINT32_MAX / sizeof(uint32_t) + 1))
+            .indexCount(uint32_t(UINT32_MAX / sizeof(uint32_t) + 2))
             .bufferType(IndexBuffer::IndexType::UINT)
+            .build(*mEngine));
+    // 0x80000001u * sizeof(uint16_t) wraps in 32-bit arithmetic to 2 bytes for 16-bit indices.
+    EXPECT_INDEX_COUNT_REJECTED(IndexBuffer::Builder()
+            .indexCount(uint32_t(UINT32_MAX / sizeof(uint16_t) + 2))
+            .bufferType(IndexBuffer::IndexType::USHORT)
             .build(*mEngine));
 }
 

@@ -1225,6 +1225,8 @@ char const* CodeGenerator::getConstantName(MaterialBuilder::Property const prope
         case Property::IRIDESCENCE_IOR:             return "IRIDESCENCE_IOR";
         case Property::IRIDESCENCE_THICKNESS:       return "IRIDESCENCE_THICKNESS";
         case Property::RETROREFLECTION:             return "RETROREFLECTION";
+        case Property::DIFFUSE_TRANSMISSION:        return "DIFFUSE_TRANSMISSION";
+        case Property::DIFFUSE_TRANSMISSION_COLOR:  return "DIFFUSE_TRANSMISSION_COLOR";
     }
 }
 

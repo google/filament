@@ -162,8 +162,8 @@ TEST(StructureOfArraysTest, Simple) {
     EXPECT_EQ(8, soa.size());
 
     // check that each array doesn't overlap the previous one
-    EXPECT_TRUE((void*)soa.data<1>() >= (void*)(soa.data<0>() + capacity));
-    EXPECT_TRUE((void*)soa.data<2>() >= (void*)(soa.data<1>() + capacity));
+    EXPECT_TRUE((void*)soa.data<1>() >= (void*)(soa.data<0>() + soa.capacity()));
+    EXPECT_TRUE((void*)soa.data<2>() >= (void*)(soa.data<1>() + soa.capacity()));
 
     // check that each array is aligned properly
     EXPECT_EQ(0, uintptr_t(soa.data<0>()) % alignof(float));
@@ -179,6 +179,11 @@ TEST(StructureOfArraysTest, Simple) {
 
     soa.push_back(0.0f, 1.0, destroyedFloat4);
     soa.push_back(0.0f, 1.0, std::move(destroyedFloat4));
+    EXPECT_EQ(10, soa.size());
+    EXPECT_EQ(0.0f, soa.elementAt<0>(8));
+    EXPECT_EQ(1.0, soa.elementAt<1>(8));
+    EXPECT_EQ(0.0f, soa.elementAt<0>(9));
+    EXPECT_EQ(1.0, soa.elementAt<1>(9));
 }
 
 TEST(StructureOfArraysTest, MoveOnly) {

@@ -138,7 +138,7 @@ LinearImage ImageDecoder::decode(std::istream& stream, const std::string& source
     Format format = Format::NONE;
 
     std::streampos pos = stream.tellg();
-    char buf[16];
+    char buf[16] = {};
     stream.read(buf, sizeof(buf));
 
     if (PNGDecoder::checkSignature(buf)) {
@@ -473,11 +473,12 @@ LinearImage EXRDecoder::decode() {
         int width;
         int height;
         float* rgba;
-        const char* error;
+        // tinyexr leaves this untouched on some failure paths.
+        const char* error = nullptr;
 
         int ret = LoadEXRFromMemory(&rgba, &width, &height, src.data(), src.size(), &error);
         if (ret != TINYEXR_SUCCESS) {
-            std::cerr << "Could not decode OpenEXR: " << error << std::endl;
+            std::cerr << "Could not decode OpenEXR: " << (error ? error : "unknown") << std::endl;
             FreeEXRErrorMessage(error);
             mStream.seekg(mStreamStartPos);
             return LinearImage();

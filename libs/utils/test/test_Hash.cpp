@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-#include <gtest/gtest.h>
-
 #include <utils/Hash.h>
+
+#include <gtest/gtest.h>
 
 using namespace utils;
 
@@ -70,4 +70,9 @@ TEST(HashTest, crc32) {
     EXPECT_NE(checksumPart3, checksumPart1);
 
     EXPECT_EQ(checksumFull, checksumPart3);
+
+    // Standard IEEE 802.3 CRC-32 check value for ASCII "123456789" is 0xCBF43926.
+    const char* const stdCheckInput = "123456789";
+    uint32_t const stdCheckCrc = hash::crc32Update(0, stdCheckInput, 9, table);
+    EXPECT_EQ(0xCBF43926u, stdCheckCrc);
 }

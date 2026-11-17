@@ -14,11 +14,10 @@
  * limitations under the License.
  */
 
-#include <gtest/gtest.h>
-
+#include <utils/Log.h>
 #include <utils/sstream.h>
 
-#include <utils/Log.h>
+#include <gtest/gtest.h>
 
 using namespace utils;
 using namespace utils::io;
@@ -36,12 +35,19 @@ TEST(ostream, setConsumer) {
     flush(slog.d);
 
     const char* str = "hello world!";
-    slog.d.setConsumer(+[](void* user, char const* str) {
-        ASSERT_STREQ(str, (const char*)user);
-    }, (void*)str);
+    struct ConsumerState {
+        const char* expected;
+        int callCount;
+    } state{ str, 0 };
+    slog.d.setConsumer(+[](void* user, char const* actual) {
+        auto* s = static_cast<ConsumerState*>(user);
+        s->callCount++;
+        ASSERT_STREQ(actual, s->expected);
+    }, &state);
     slog.d << str;
-    // we test that the comsumer is called with the right string
+    // we test that the consumer is called with the right string
     flush(slog.d);
+    EXPECT_EQ(1, state.callCount);
     slog.d.setConsumer(nullptr, nullptr);
 }
 

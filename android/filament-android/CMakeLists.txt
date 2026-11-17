@@ -125,7 +125,7 @@ add_library(filament-jni SHARED
     src/main/cpp/Renderer.cpp
     src/main/cpp/RenderTarget.cpp
     src/main/cpp/Scene.cpp
-    src/main/cpp/SkyBox.cpp
+    src/main/cpp/Skybox.cpp
     src/main/cpp/SkinningBuffer.cpp
     src/main/cpp/Stream.cpp
     src/main/cpp/StreamHelper.cpp

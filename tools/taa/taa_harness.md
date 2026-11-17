@@ -22,6 +22,50 @@ This alone is sufficient after editing `taa.mat` — it is a source of `libfilam
 dependency chain (material compile → resource package → `taa.cpp` → `libfilament.a` →
 `taa_harness`) is wired correctly through ninja. No need for a full `build.sh`.
 
+## Upscaler qualification benchmark (`--benchmark` & `--compare`)
+
+*(For the developer-facing user guide on running the benchmark and interpreting its scores, see
+[benchmark.md](benchmark.md).)*
+
+When evaluating `taa.mat` changes or comparing tuned `-s` `TemporalAntiAliasingOptions` presets,
+pass `--benchmark` (`-b`).
+
+Instead of running a single model, `--benchmark` executes a curated 10-scenario suite across four
+scenes (`Fox.glb`, `DamagedHelmet.glb`, `SubpixelStar.glb`, and `SSRReflection.glb`, at `-u 2 -F box`
+by default) and distills the results into **3 headline qualification metrics** in decibels (dB,
+where higher is always better: `+3 dB` = 2x less error energy, `+6 dB` = 2x lower RMS error)
+alongside their direct physical units:
+
+1. **`Spatial Quality` (dB & Correlated Detail %)** — Static converged accuracy combining
+   whole-frame and silhouette MSE on real geometry (`fox_static`, `helmet_static`) with
+   phase-correlated Laplacian detail transfer (`detail_transfer_mean`, including `star_static`),
+   so neither blur nor ghosting/ringing overshoot (`spurious_hf_mean`) can game the score.
+2. **`Temporal Stability` (dB & Top-1% / Sub-Pixel Flicker RMS)** — Worst-1% pixel residual
+   temporal shimmer (`residual_flicker_top1pct_rms`) and `SubpixelStar` ring flicker
+   (`subpixel_ring_flicker_rms`) across static scenes plus a `0.1` render-texel/frame slow camera
+   drift (`fox_drift`).
+3. **`Motion Robustness` (dB & Dynamic Edge RMSE)** — Combines `edge_rmse_mean`, `edge_ghost_peak`,
+   and unrecovered post-motion `edge_tail_error` across:
+   - **Tracked Motion** (`helmet_cam_rotate`, `helmet_cam_dolly`, `fox_obj_translate`,
+     `helmet_obj_spin` with `motionVectors = true`)
+   - **Unmodeled Motion** (`fox_skinned_run` skeletal animation clip `-A 2`, and `ssr_reflection`
+     sliding specular reflection with SSR enabled)
+
+Example side-by-side qualification of Filament's default TAA vs a custom `-s` preset:
+
+```bash
+H=./out/cmake-debug/tools/taa/taa_harness
+cat > /tmp/adaptive.json <<'EOF'
+{ "view": { "taa": { "motionAdaptiveHistory": true, "historyReprojection": true } } }
+EOF
+$H -b --label "Filament TAA" -o /tmp/bench_default.json
+$H -b -s /tmp/adaptive.json --label "TAA (Adaptive)" -o /tmp/bench_adaptive.json
+$H --compare /tmp/bench_default.json,/tmp/bench_adaptive.json
+```
+
+Pass `-F lanczos` explicitly with `-b` when you want an upscaler-neutral 256-sample true Lanczos-2
+reference instead of the fast 32-sample `-F box` default.
+
 ## Before/after workflow for a TAA change
 
 1. `tools/taa/taa_harness_baseline.json` in this directory is a checked-in run against the
@@ -170,10 +214,13 @@ every orientation, and contrast is exactly 1.0 regardless of the harness's IBL a
 generator is checked in beside it — spoke count sets which feature widths land on screen, and
 needs retuning for any `-S` other than 512.
 
-The aggregate metrics are the wrong tool here, for the reason under `flicker_variance` above: the
-failure lives in a few thousand pixels near the centre. Dump a full jitter cycle and bin the
-per-pixel temporal standard deviation by radius instead — that turns the sweep into a curve of
-flicker against feature width, which is what makes the failure legible:
+The whole-frame `flicker_variance` metric is the wrong tool here, for the reason under
+`flicker_variance` below: the failure lives in a few thousand pixels near the centre. When the
+model filename is `SubpixelStar.glb`, `taa_harness` automatically computes and emits the four
+concentric sub-pixel wedge-width rings natively in the JSON (`subpixel_flicker_0_22px`,
+`subpixel_flicker_0_34px`, `subpixel_flicker_0_53px`, `subpixel_flicker_0_80px`, and
+`subpixel_ring_flicker_rms`). You can also dump a full jitter cycle and inspect the radial curve
+directly:
 
 ```bash
 ./out/cmake-debug/tools/taa/taa_harness -e -r static -u 1 -n 16 -F box -R 8 -q \
@@ -214,6 +261,21 @@ Fox and quietly puts the third column back up near `defaults` has broken it.
   quantization) — read `edge_ghost_peak` for the part actually caused by motion.
 - **`edge_ghost_peak`** — worst captured frame's edge error, **with the frame-0 floor already
   subtracted out**. This is "how bad did it get," isolated from reference-definition noise.
+- **`edge_tail_error`** — residual edge error above the frame-0 floor on the final captured frame
+  (half a capture window after motion stopped); isolates unrecovered stale-history lock.
+- **`detail_transfer_mean`** / **`edge_detail_transfer_mean`** — phase-correlated Laplacian
+  projection $\langle \nabla^2 I, \nabla^2 R \rangle / \|\nabla^2 R\|^2$. Unlike `sharpness_mean`,
+  only high-frequency detail that is *in phase* with the reference counts positively (`1.0` =
+  matches reference detail); ghost double-edges and out-of-phase ringing cannot inflate it.
+- **`spurious_hf_mean`** — orthogonal / overshoot Laplacian residual relative to the reference,
+  isolating high-frequency ringing, aliasing, and ghost-edge energy.
+- **`flicker_top1pct_rms`** / **`residual_flicker_top1pct_rms`** — RMS temporal standard deviation
+  over the worst 1% of pixels (without / with per-frame ground truth subtracted), avoiding the
+  whole-frame background dilution of `flicker_variance` and isolating shimmer even during slow
+  camera drift (`0.1` tx/frame).
+- **`subpixel_flicker_0_22px`** .. **`0_80px`** / **`subpixel_ring_flicker_rms`** — emitted
+  automatically on static `SubpixelStar.glb` runs for feature widths of `0.22`, `0.34`, `0.53`, and
+  `0.80` output pixels.
 - **`edge_recovery_frames`** — frames after motion stops until edge error returns to within 25%
   of the peak-minus-floor transient. **`-1` means it never recovered within the capture window** —
   that's a real finding, not a missing value; don't filter it out as `NaN`.
@@ -276,10 +338,14 @@ Fox and quietly puts the third column back up near `defaults` has broken it.
 
 | flag | default | for |
 |---|---|---|
-| `-r static,camera,object` | all three | which regimes to run |
-| `-u 1,2` | `1,2` | upscaling factors |
+| `-b`, `--benchmark` | off | run the 10-scenario upscaler qualification benchmark and print the 3-metric scorecard |
+| `--label <name>` | auto | display name for this configuration in benchmark scorecards and `--compare` |
+| `--compare <a.json,b.json,...>` | off | print a side-by-side comparison table of benchmark JSON files (runs standalone without GPU) |
+| `--ssr` | off | enable screen-space reflections (automatically enabled on `ssr_reflection` in `--benchmark`) |
+| `-r static,camera,object` | all three | which regimes to run (single-model mode) |
+| `-u 1,2` | `2` (`-b`) / `1,2` | upscaling factors |
 | `-S` | 512 | output resolution (square) |
-| `-F box\|lanczos\|lanczos-filament` | `lanczos` | reference reconstruction kernel — see Gotchas above |
+| `-F box\|lanczos\|lanczos-filament` | `box` (`-b`) / `lanczos` | reference reconstruction kernel — see Gotchas above |
 | `-M` | 0 (off) | MSAA cross-check sample count; capped at 4 by the CLI (8x silently renders identically to 4x on hardware without 8x support, e.g. Apple silicon, so the flag doesn't offer it) |
 | `-W` | 64 | warmup frames before motion; measured-converged, don't lower casually |
 | `-n` | 16 | capture frames (should stay a full jitter cycle for flicker metrics) |
@@ -405,8 +471,7 @@ with a per-pixel delta from a `-d` dump before believing a change matters, and s
 No disocclusion-mask-specific *metrics* -- `--visualize-disocclusion` renders the mask so it can
 be dumped and looked at (see "Debugging `depthDisocclusion` specifically" above), but nothing
 aggregates it into the JSON, so "how many texels fired" still has to be counted out of the dumped
-PNGs by hand. Same for the ring-binned flicker curve under "Test scenes": both live in throwaway
-Python around the tool rather than in it.
+PNGs by hand.
 
 The silhouette mask is a luminance-gradient heuristic on the reference image, not a true
 depth-edge mask. One backend per run — nothing here is cross-backend validated. Every scene under

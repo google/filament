@@ -14,9 +14,11 @@
  * limitations under the License.
  */
 
+#include <geometry/SurfaceOrientation.h>
 #include <geometry/TangentSpaceMesh.h>
 
 #include <utils/Log.h>
+#include <utils/Panic.h>
 
 #include <math/quat.h>
 #include <math/vec3.h>
@@ -259,7 +261,14 @@ TEST_F(TangentSpaceMeshTest, TangentsProvided) {
     mesh->getQuats(quats.data());
     for (size_t i = 0; i < vertexCount; ++i) {
         float3 const n = quats[i] * NORMAL_AXIS;
-        EXPECT_PRED2(isAlmostEqual3, n, CUBE_NORMALS[i]);        
+        float3 const b = quats[i] * BITANGENT_AXIS;
+        float3 const t = quats[i] * TANGENT_AXIS;
+        EXPECT_PRED2(isAlmostEqual3, n, CUBE_NORMALS[i]);
+        EXPECT_LT(abs(dot(b, t)), std::numeric_limits<float>::epsilon());
+        EXPECT_LT(abs(dot(n, t)), std::numeric_limits<float>::epsilon());
+        EXPECT_LT(abs(dot(n, b)), std::numeric_limits<float>::epsilon());
+        EXPECT_PRED2(isAlmostEqual3, cross(n, t), b);
+        EXPECT_NEAR(dot(t, CUBE_TANGENTS[i].xyz), 1.0f, 1e-5f);
     }
     TangentSpaceMesh::destroy(mesh);
 }
@@ -440,6 +449,139 @@ TEST_F(TangentSpaceMeshTest, OobTriangleIndexAborts) {
                 .build();
         TangentSpaceMesh::destroy(mesh);
     }, "");
+}
+
+TEST_F(TangentSpaceMeshTest, SurfaceOrientationOobTriangleIndexRejects) {
+    float3 const positions[] = {{0, 0, 0}, {1, 0, 0}, {0, 1, 0}};
+    float3 const normals[] = {{0, 0, 1}, {0, 0, 1}, {0, 0, 1}};
+    float2 const uvs[] = {{0, 0}, {1, 0}, {0, 1}};
+    uint3 const triangles[] = {{100, 1, 2}};  // index 100 >= vertexCount 3
+
+#if GTEST_HAS_EXCEPTIONS
+    EXPECT_THROW({
+        SurfaceOrientation* so = SurfaceOrientation::Builder()
+                .vertexCount(3)
+                .positions(positions)
+                .triangleCount(1)
+                .triangles(triangles)
+                .build();
+        delete so;
+    }, utils::PreconditionPanic);
+
+    EXPECT_THROW({
+        SurfaceOrientation* so = SurfaceOrientation::Builder()
+                .vertexCount(3)
+                .positions(positions)
+                .normals(normals)
+                .uvs(uvs)
+                .triangleCount(1)
+                .triangles(triangles)
+                .build();
+        delete so;
+    }, utils::PreconditionPanic);
+#elif !defined(NDEBUG)
+    EXPECT_DEATH({
+        SurfaceOrientation* so = SurfaceOrientation::Builder()
+                .vertexCount(3)
+                .positions(positions)
+                .triangleCount(1)
+                .triangles(triangles)
+                .build();
+        delete so;
+    }, "");
+
+    EXPECT_DEATH({
+        SurfaceOrientation* so = SurfaceOrientation::Builder()
+                .vertexCount(3)
+                .positions(positions)
+                .normals(normals)
+                .uvs(uvs)
+                .triangleCount(1)
+                .triangles(triangles)
+                .build();
+        delete so;
+    }, "");
+#else
+    EXPECT_EQ(SurfaceOrientation::Builder()
+            .vertexCount(3)
+            .positions(positions)
+            .triangleCount(1)
+            .triangles(triangles)
+            .build(), nullptr);
+
+    EXPECT_EQ(SurfaceOrientation::Builder()
+            .vertexCount(3)
+            .positions(positions)
+            .normals(normals)
+            .uvs(uvs)
+            .triangleCount(1)
+            .triangles(triangles)
+            .build(), nullptr);
+#endif
+}
+
+TEST_F(TangentSpaceMeshTest, SurfaceOrientationUvsWithoutPositionsOrTrianglesRejects) {
+    float3 const positions[] = {{0, 0, 0}, {1, 0, 0}, {0, 1, 0}};
+    float3 const normals[] = {{0, 0, 1}, {0, 0, 1}, {0, 0, 1}};
+    float2 const uvs[] = {{0, 0}, {1, 0}, {0, 1}};
+
+#if GTEST_HAS_EXCEPTIONS
+    // UVs + normals without positions or triangles
+    EXPECT_THROW({
+        SurfaceOrientation* so = SurfaceOrientation::Builder()
+                .vertexCount(3)
+                .normals(normals)
+                .uvs(uvs)
+                .build();
+        delete so;
+    }, utils::PreconditionPanic);
+
+    // UVs + normals + positions + triangleCount without triangles buffer
+    EXPECT_THROW({
+        SurfaceOrientation* so = SurfaceOrientation::Builder()
+                .vertexCount(3)
+                .positions(positions)
+                .normals(normals)
+                .uvs(uvs)
+                .triangleCount(1)
+                .build();
+        delete so;
+    }, utils::PreconditionPanic);
+#elif !defined(NDEBUG)
+    EXPECT_DEATH({
+        SurfaceOrientation* so = SurfaceOrientation::Builder()
+                .vertexCount(3)
+                .normals(normals)
+                .uvs(uvs)
+                .build();
+        delete so;
+    }, "");
+
+    EXPECT_DEATH({
+        SurfaceOrientation* so = SurfaceOrientation::Builder()
+                .vertexCount(3)
+                .positions(positions)
+                .normals(normals)
+                .uvs(uvs)
+                .triangleCount(1)
+                .build();
+        delete so;
+    }, "");
+#else
+    EXPECT_EQ(SurfaceOrientation::Builder()
+            .vertexCount(3)
+            .normals(normals)
+            .uvs(uvs)
+            .build(), nullptr);
+
+    EXPECT_EQ(SurfaceOrientation::Builder()
+            .vertexCount(3)
+            .positions(positions)
+            .normals(normals)
+            .uvs(uvs)
+            .triangleCount(1)
+            .build(), nullptr);
+#endif
 }
 
 int main(int argc, char** argv) {

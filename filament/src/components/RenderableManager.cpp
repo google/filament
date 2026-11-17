@@ -636,11 +636,6 @@ void FRenderableManager::create(
         boneIndicesAndWeights = builder->processBoneIndicesAndWights(engine, entity);
     }
 
-    Entity zombie;
-    if (UTILS_UNLIKELY(manager.popPendingZombie(entity, zombie))) {
-        destroy(zombie, driver);
-    }
-
     auto [ci, added] = manager.tryAddComponent(entity);
     if (UTILS_UNLIKELY(!added && ci)) {
         destroy(entity, driver);

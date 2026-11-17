@@ -16,10 +16,9 @@
 
 #include <utils/Log.h>
 
-#include <GLES3/gl3.h>
 #include <EGL/egl.h>
 #include <EGL/eglext.h>
-
+#include <GLES3/gl3.h>
 #include <gtest/gtest.h>
 
 using namespace utils;
@@ -41,7 +40,7 @@ protected:
                 EGL_NONE
         };
 
-        EGLint configsCount;
+        EGLint configsCount = 0;
         EGLint configAttribs[] = {
                 EGL_RENDERABLE_TYPE, EGL_OPENGL_ES3_BIT_KHR,        //  0
                 EGL_RED_SIZE,    8,                                 //  2
@@ -51,6 +50,7 @@ protected:
         };
         success = eglChooseConfig(dpy, configAttribs, &config, 1, &configsCount);
         ASSERT_TRUE(success);
+        ASSERT_GT(configsCount, 0);
 
         context = eglCreateContext(dpy, config, EGL_NO_CONTEXT, contextAttribs);
         ASSERT_NE(context, EGL_NO_CONTEXT);

@@ -438,8 +438,7 @@ ShadowMap::DirectionalShadowBounds ShadowMap::computeDirectionalShadowBounds(
             MvAtOrigin, wsShadowReceiversVolume, wsShadowCastersVolume,
             sceneInfo,
             params.options.stable,
-            engine.debug.shadowmap.focus_shadowcasters,
-            engine.debug.shadowmap.far_uses_shadowcasters);
+            engine.debug.shadowmap.focus_shadowcasters);
 
     // handles NaNs
     if (UTILS_UNLIKELY(!((lsLightFrustumBounds.min.x < lsLightFrustumBounds.max.x) &&
@@ -459,9 +458,7 @@ ShadowMap::DirectionalShadowBounds ShadowMap::computeDirectionalShadowBounds(
      * Adjust the scene's zmax (i.e. Near plane) and zmin (i.e. Far plane) in light space.
      * (near/far correspond to max/min because the light looks down the -z axis).
      *
-     *   - For the Far plane, the light frustum is already set to the closest of receivers and
-     *     casters (i.e.: shadow casters behind the last receivers can't cast any shadows).
-     *     But it can be moved closer up to the farthest point in the camera frustum & light
+     *   - The Far plane can be moved closer up to the farthest point in the camera frustum & light
      *     frustum intersection.
      *
      *  - The Near plane is already set to the shadow casters max z (i.e. closest to the light)
@@ -824,12 +821,11 @@ ShadowMap::Corners ShadowMap::computeFrustumCorners(
 Aabb ShadowMap::computeLightFrustumBounds(mat4f const& lightView,
         Aabb const& wsShadowReceiversVolume, Aabb const& wsShadowCastersVolume,
         SceneInfo const& sceneInfo,
-        bool const stable, bool const focusShadowCasters, bool const farUsesShadowCasters) noexcept {
+        bool const stable, bool const focusShadowCasters) noexcept {
     Aabb lsLightFrustumBounds{};
 
     float const receiversFar = sceneInfo.lsReceiversNearFar[1];
     float const castersNear = sceneInfo.lsCastersNearFar[0];
-    float const castersFar = sceneInfo.lsCastersNearFar[1];
 
     Aabb const lsReceiversBounds = compute2DBounds(lightView, wsShadowReceiversVolume);
     // far plane from receivers
@@ -847,10 +843,6 @@ Aabb ShadowMap::computeLightFrustumBounds(mat4f const& lightView,
         lsLightFrustumBounds.max.xy = min(lsLightFrustumBounds.max.xy, lsCastersBounds.max.xy);
     }
 
-    if (farUsesShadowCasters) {
-        // far: closest of the farthest shadow casters and receivers
-        lsLightFrustumBounds.min.z = max(lsLightFrustumBounds.min.z, castersFar);
-    }
     return lsLightFrustumBounds;
 }
 

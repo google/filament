@@ -117,7 +117,6 @@ class Node final : public DependencyGraph::Node {
     char const* getName() const noexcept override { return mName; }
 public:
     Node(DependencyGraph& graph, const char* name) noexcept : DependencyGraph::Node(graph), mName(name) { }
-    bool isCulledCalled() const noexcept { return this->isCulled(); }
 };
 
 TEST_F(DependencyGraphTest, Simple) {
@@ -139,9 +138,6 @@ TEST_F(DependencyGraphTest, Simple) {
     EXPECT_FALSE(n2->isCulled());
     EXPECT_FALSE(n1->isCulled());
     EXPECT_FALSE(n0->isCulled());
-    EXPECT_FALSE(n2->isCulledCalled());
-    EXPECT_FALSE(n1->isCulledCalled());
-    EXPECT_FALSE(n0->isCulledCalled());
 
     EXPECT_EQ(n0->getRefCount(), 1);
     EXPECT_EQ(n1->getRefCount(), 1);
@@ -173,18 +169,15 @@ TEST_F(DependencyGraphTest, Culling1) {
     //DLOG(INFO) << graphviz.c_str();
 
     EXPECT_TRUE(n1_0->isCulled());
-    EXPECT_TRUE(n1_0->isCulledCalled());
 
     EXPECT_FALSE(n2->isCulled());
     EXPECT_FALSE(n1->isCulled());
     EXPECT_FALSE(n0->isCulled());
-    EXPECT_FALSE(n2->isCulledCalled());
-    EXPECT_FALSE(n1->isCulledCalled());
-    EXPECT_FALSE(n0->isCulledCalled());
 
     EXPECT_EQ(n0->getRefCount(), 1);
     EXPECT_EQ(n1->getRefCount(), 1);
     EXPECT_EQ(n2->getRefCount(), 1);
+    EXPECT_EQ(n1_0->getRefCount(), 0);
 
     auto edges = graph.getEdges();
     auto nodes = graph.getNodes();
@@ -200,7 +193,7 @@ TEST_F(DependencyGraphTest, Culling2) {
     Node* n2 = new Node(graph, "node 2");
     Node* n1_0 = new Node(graph, "node 1.0");
     Node* n1_0_0 = new Node(graph, "node 1.0.0");
-    Node* n1_0_1 = new Node(graph, "node 1.0.0");
+    Node* n1_0_1 = new Node(graph, "node 1.0.1");
 
     new DependencyGraph::Edge(graph, n0, n1);
     new DependencyGraph::Edge(graph, n1, n2);
@@ -218,20 +211,17 @@ TEST_F(DependencyGraphTest, Culling2) {
     EXPECT_TRUE(n1_0->isCulled());
     EXPECT_TRUE(n1_0_0->isCulled());
     EXPECT_TRUE(n1_0_1->isCulled());
-    EXPECT_TRUE(n1_0->isCulledCalled());
-    EXPECT_TRUE(n1_0_0->isCulledCalled());
-    EXPECT_TRUE(n1_0_1->isCulledCalled());
 
     EXPECT_FALSE(n2->isCulled());
     EXPECT_FALSE(n1->isCulled());
     EXPECT_FALSE(n0->isCulled());
-    EXPECT_FALSE(n2->isCulledCalled());
-    EXPECT_FALSE(n1->isCulledCalled());
-    EXPECT_FALSE(n0->isCulledCalled());
 
     EXPECT_EQ(n0->getRefCount(), 1);
     EXPECT_EQ(n1->getRefCount(), 1);
     EXPECT_EQ(n2->getRefCount(), 1);
+    EXPECT_EQ(n1_0->getRefCount(), 0);
+    EXPECT_EQ(n1_0_0->getRefCount(), 0);
+    EXPECT_EQ(n1_0_1->getRefCount(), 0);
 
     auto edges = graph.getEdges();
     auto nodes = graph.getNodes();
@@ -244,13 +234,15 @@ TEST_F(FrameGraphTest, ReadRead) {
     struct PassData {
         FrameGraphId<FrameGraphTexture> input;
     };
+    bool executed = false;
     auto const& pass = fg.addPass<PassData>("Pass", [&](FrameGraph::Builder& builder, auto& data) {
                 data.input = builder.create<FrameGraphTexture>("Input buffer", {.width=16, .height=32});
                 data.input = builder.read(data.input, FrameGraphTexture::Usage::SAMPLEABLE);
                 data.input = builder.read(data.input, FrameGraphTexture::Usage::COLOR_ATTACHMENT);
                 builder.sideEffect();
             },
-            [=](FrameGraphResources const& resources, auto const& data, DriverApi& driver) {
+            [&](FrameGraphResources const& resources, auto const& data, DriverApi& driver) {
+                executed = true;
                 EXPECT_EQ(resources.getUsage(data.input), FrameGraphTexture::Usage::SAMPLEABLE | FrameGraphTexture::Usage::COLOR_ATTACHMENT);
             });
 
@@ -261,6 +253,7 @@ TEST_F(FrameGraphTest, ReadRead) {
     EXPECT_FALSE(fg.isCulled(pass));
 
     fg.execute(driverApi);
+    EXPECT_TRUE(executed);
 }
 
 TEST_F(FrameGraphTest, WriteWrite) {
@@ -268,13 +261,15 @@ TEST_F(FrameGraphTest, WriteWrite) {
         FrameGraphId<FrameGraphTexture> output1;
         FrameGraphId<FrameGraphTexture> output2;
     };
+    bool executed = false;
     auto const& pass = fg.addPass<PassData>("Pass", [&](FrameGraph::Builder& builder, auto& data) {
                 data.output1 = builder.create<FrameGraphTexture>("Input buffer", {.width=16, .height=32});
                 data.output1 = builder.write(data.output1, FrameGraphTexture::Usage::UPLOADABLE);
                 data.output2 = builder.write(data.output1, FrameGraphTexture::Usage::COLOR_ATTACHMENT);
                 EXPECT_EQ(data.output1, data.output2);
             },
-            [=](FrameGraphResources const& resources, auto const& data, DriverApi& driver) {
+            [&](FrameGraphResources const& resources, auto const& data, DriverApi& driver) {
+                executed = true;
                 EXPECT_EQ(resources.getUsage(data.output2), FrameGraphTexture::Usage::UPLOADABLE | FrameGraphTexture::Usage::COLOR_ATTACHMENT);
             });
 
@@ -287,6 +282,7 @@ TEST_F(FrameGraphTest, WriteWrite) {
     EXPECT_FALSE(fg.isCulled(pass));
 
     fg.execute(driverApi);
+    EXPECT_TRUE(executed);
 }
 
 TEST_F(FrameGraphTest, WriteRead) {
@@ -299,6 +295,7 @@ TEST_F(FrameGraphTest, WriteRead) {
                 EXPECT_ANY_THROW( builder.read(data.inout) );
             },
             [=](FrameGraphResources const& resources, auto const& data, DriverApi& driver) {
+                FAIL() << "Culled pass should not be executed";
             });
 
     EXPECT_TRUE(fg.isAcyclic());
@@ -321,6 +318,7 @@ TEST_F(FrameGraphTest, ReadWrite) {
         FrameGraphId<FrameGraphTexture> inout;
         FrameGraphId<FrameGraphTexture> imported;
     };
+    bool executed = false;
     auto const& pass = fg.addPass<PassData>("Pass", [&](FrameGraph::Builder& builder, auto& data) {
                 data.inout = builder.create<FrameGraphTexture>("Inout buffer", {.width=16, .height=32});
                 data.inout = builder.read(data.inout);
@@ -328,7 +326,8 @@ TEST_F(FrameGraphTest, ReadWrite) {
                 data.imported = builder.read(imported, FrameGraphTexture::Usage::SAMPLEABLE);
                 data.imported = builder.write(data.imported, FrameGraphTexture::Usage::COLOR_ATTACHMENT);
             },
-            [=](FrameGraphResources const& resources, auto const& data, DriverApi& driver) {
+            [&](FrameGraphResources const& resources, auto const& data, DriverApi& driver) {
+                executed = true;
                 EXPECT_EQ(resources.getUsage(data.inout), FrameGraphTexture::Usage::SAMPLEABLE | FrameGraphTexture::Usage::COLOR_ATTACHMENT);
                 EXPECT_EQ(resources.getUsage(data.imported), FrameGraphTexture::Usage::SAMPLEABLE | FrameGraphTexture::Usage::COLOR_ATTACHMENT);
             });
@@ -342,6 +341,7 @@ TEST_F(FrameGraphTest, ReadWrite) {
     EXPECT_FALSE(fg.isCulled(pass));
 
     fg.execute(driverApi);
+    EXPECT_TRUE(executed);
 }
 
 TEST_F(FrameGraphTest, Culling1) {
@@ -349,13 +349,15 @@ TEST_F(FrameGraphTest, Culling1) {
         FrameGraphId<FrameGraphTexture> out0;
         FrameGraphId<FrameGraphTexture> out1;
     };
+    bool executed = false;
     auto const& pass = fg.addPass<PassData>("Pass", [&](FrameGraph::Builder& builder, auto& data) {
                 data.out0 = builder.create<FrameGraphTexture>("Out0 buffer", {.width=16, .height=32});
                 data.out0 = builder.write(data.out0, FrameGraphTexture::Usage::COLOR_ATTACHMENT);
                 data.out1 = builder.create<FrameGraphTexture>("Out1 buffer", {.width=16, .height=32});
                 data.out1 = builder.write(data.out1, FrameGraphTexture::Usage::UPLOADABLE);
             },
-            [=](FrameGraphResources const& resources, auto const& data, DriverApi& driver) {
+            [&](FrameGraphResources const& resources, auto const& data, DriverApi& driver) {
+                executed = true;
                 // even if out1 is not consumed, we expect it to exist, because this pass needs it
                 EXPECT_TRUE(resources.get(data.out0).handle);
                 EXPECT_TRUE(resources.get(data.out1).handle);
@@ -372,9 +374,15 @@ TEST_F(FrameGraphTest, Culling1) {
     EXPECT_FALSE(fg.isCulled(pass));
 
     fg.execute(driverApi);
+    EXPECT_TRUE(executed);
 }
 
 TEST_F(FrameGraphTest, Basic) {
+    int depthPassExecuted = 0;
+    int gBufferPassExecuted = 0;
+    int lightingPassExecuted = 0;
+    int postPassExecuted = 0;
+
     struct DepthPassData {
         FrameGraphId<FrameGraphTexture> depth;
     };
@@ -385,7 +393,8 @@ TEST_F(FrameGraphTest, Basic) {
                 builder.declareRenderPass("Depth target", { .attachments = { .depth = data.depth }});
                 EXPECT_TRUE(fg.isValid(data.depth));
             },
-            [=](FrameGraphResources const& resources, auto const& data, DriverApi& driver) {
+            [&](FrameGraphResources const& resources, auto const& data, DriverApi& driver) {
+                depthPassExecuted++;
                 FrameGraphTexture const& depth = resources.get(data.depth);
                 EXPECT_TRUE((bool)depth.handle);
                 auto const rp = resources.getRenderPassInfo();
@@ -420,7 +429,8 @@ TEST_F(FrameGraphTest, Basic) {
 
                 EXPECT_TRUE(fg.isValid(data.depth));
             },
-            [=](FrameGraphResources const& resources, auto const& data, DriverApi&) {
+            [&](FrameGraphResources const& resources, auto const& data, DriverApi&) {
+                gBufferPassExecuted++;
                 FrameGraphTexture const& depth = resources.get(data.depth);
                 FrameGraphTexture const& gbuf1 = resources.get(data.gbuf1);
                 FrameGraphTexture const& gbuf2 = resources.get(data.gbuf2);
@@ -457,7 +467,8 @@ TEST_F(FrameGraphTest, Basic) {
                 data.lightingBuffer = builder.create<FrameGraphTexture>("Lighting buffer", desc);
                 data.lightingBuffer = builder.declareRenderPass(data.lightingBuffer);
             },
-            [=](FrameGraphResources const& resources, auto const& data, DriverApi& driver) {
+            [&](FrameGraphResources const& resources, auto const& data, DriverApi& driver) {
+                lightingPassExecuted++;
                 FrameGraphTexture const& lightingBuffer = resources.get(data.lightingBuffer);
                 FrameGraphTexture const& depth = resources.get(data.depth);
                 EXPECT_ANY_THROW(FrameGraphTexture const& gbuf1 = resources.get(data.gbuf1));
@@ -491,16 +502,7 @@ TEST_F(FrameGraphTest, Basic) {
                 data.debugBuffer = builder.declareRenderPass(data.debugBuffer);
             },
             [=](FrameGraphResources const& resources, auto const& data, DriverApi& driver) {
-                FrameGraphTexture const& debugBuffer = resources.get(data.debugBuffer);
-                FrameGraphTexture const& gbuf1 = resources.get(data.gbuf1);
-                FrameGraphTexture const& gbuf2 = resources.get(data.gbuf2);
-                FrameGraphTexture const& gbuf3 = resources.get(data.gbuf3);
-                EXPECT_FALSE((bool)debugBuffer.handle);
-                EXPECT_TRUE((bool)gbuf1.handle);
-                EXPECT_TRUE((bool)gbuf2.handle);
-                EXPECT_TRUE((bool)gbuf3.handle);
-                auto const rp = resources.getRenderPassInfo();
-                EXPECT_FALSE((bool)rp.target);
+                FAIL() << "Culled pass should not be executed";
             });
 
     struct PostPassData {
@@ -524,7 +526,8 @@ TEST_F(FrameGraphTest, Basic) {
                 data.destroyed.gbuf2 = lightingPass->gbuf2;
                 data.destroyed.gbuf3 = lightingPass->gbuf3;
             },
-            [=](FrameGraphResources const& resources, auto const& data, DriverApi& driver) {
+            [&](FrameGraphResources const& resources, auto const& data, DriverApi& driver) {
+                postPassExecuted++;
                 FrameGraphTexture const& lightingBuffer = resources.get(data.lightingBuffer);
                 FrameGraphTexture const& backBuffer = resources.get(data.backBuffer);
                 EXPECT_TRUE((bool)lightingBuffer.handle);
@@ -565,6 +568,10 @@ TEST_F(FrameGraphTest, Basic) {
     EXPECT_TRUE(fg.isCulled(culledPass));
 
     fg.execute(driverApi);
+    EXPECT_EQ(depthPassExecuted, 1);
+    EXPECT_EQ(gBufferPassExecuted, 1);
+    EXPECT_EQ(lightingPassExecuted, 1);
+    EXPECT_EQ(postPassExecuted, 1);
 }
 
 TEST_F(FrameGraphTest, ImportResource) {
@@ -583,6 +590,7 @@ TEST_F(FrameGraphTest, ImportResource) {
         FrameGraphId<FrameGraphTexture> input;
         FrameGraphId<FrameGraphTexture> output;
     };
+    bool executed = false;
     auto const& pass = fg.addPass<PassData>("Pass", [&](FrameGraph::Builder& builder, auto& data) {
                 auto const& descOutput = builder.getDescriptor(output);
                 EXPECT_EQ(descOutput.width, 320);
@@ -601,7 +609,8 @@ TEST_F(FrameGraphTest, ImportResource) {
                 data.input = builder.read(input, FrameGraphTexture::Usage::SAMPLEABLE);
                 EXPECT_TRUE(fg.isValid(data.input));
             },
-            [=](FrameGraphResources const& resources, auto const& data, DriverApi& driver) {
+            [&](FrameGraphResources const& resources, auto const& data, DriverApi& driver) {
+                executed = true;
                 FrameGraphTexture const& output = resources.get(data.output);
                 FrameGraphTexture const& input = resources.get(data.input);
                 EXPECT_EQ(output.handle.getId(), 0x1234);
@@ -615,9 +624,12 @@ TEST_F(FrameGraphTest, ImportResource) {
     fg.compile();
 
     fg.execute(driverApi);
+    EXPECT_TRUE(executed);
 }
 
 TEST_F(FrameGraphTest, ForwardResource) {
+    bool lightingExecuted = false;
+    bool debugExecuted = false;
 
     struct LightingPassData {
         FrameGraphId<FrameGraphTexture> output;
@@ -628,8 +640,9 @@ TEST_F(FrameGraphTest, ForwardResource) {
                         { .width = 640, .height = 400 });
                 data.output = builder.write(data.output, FrameGraphTexture::Usage::COLOR_ATTACHMENT);
             },
-            [=](FrameGraphResources const& resources, auto const& data,
+            [&](FrameGraphResources const& resources, auto const& data,
                     DriverApi& driver) {
+                lightingExecuted = true;
                 auto const& desc = resources.getDescriptor(data.output);
 
                 EXPECT_EQ(resources.getUsage(data.output),
@@ -652,7 +665,8 @@ TEST_F(FrameGraphTest, ForwardResource) {
                 data.input = builder.sample(data.input);
                 data.output = builder.write(data.output);
             },
-            [=](FrameGraphResources const& resources, auto const& data, DriverApi& driver) {
+            [&](FrameGraphResources const& resources, auto const& data, DriverApi& driver) {
+                debugExecuted = true;
                 auto const& desc = resources.getDescriptor(data.input);
 
                 EXPECT_EQ(resources.getUsage(data.input),
@@ -679,6 +693,8 @@ TEST_F(FrameGraphTest, ForwardResource) {
     EXPECT_TRUE(!fg.isCulled(debugPass));
 
     fg.execute(driverApi);
+    EXPECT_TRUE(lightingExecuted);
+    EXPECT_TRUE(debugExecuted);
 }
 
 TEST_F(FrameGraphTest, ForwardImportedResource) {
@@ -690,14 +706,16 @@ TEST_F(FrameGraphTest, ForwardImportedResource) {
     struct LightingPassData {
         FrameGraphId<FrameGraphTexture> output;
     };
+    bool lightingExecuted = false;
     auto const& lightingPass = fg.addPass<LightingPassData>("Lighting pass",
             [&](FrameGraph::Builder& builder, auto& data) {
                 data.output = builder.createTexture("lighting output",
                         { .width = 32, .height = 32 });
                 data.output = builder.declareRenderPass(data.output);
             },
-            [=](FrameGraphResources const& resources, auto const& data,
+            [&](FrameGraphResources const& resources, auto const& data,
                     DriverApi& driver) {
+                lightingExecuted = true;
                 auto const& desc = resources.getDescriptor(data.output);
                 auto const rp = resources.getRenderPassInfo();
 
@@ -724,9 +742,12 @@ TEST_F(FrameGraphTest, ForwardImportedResource) {
     EXPECT_TRUE(!fg.isCulled(lightingPass));
 
     fg.execute(driverApi);
+    EXPECT_TRUE(lightingExecuted);
 }
 
 TEST_F(FrameGraphTest, SubResourcesWrite) {
+    bool passExecuted = false;
+    bool debugPassExecuted = false;
 
     struct PassData {
         FrameGraphId<FrameGraphTexture> output;
@@ -761,8 +782,9 @@ TEST_F(FrameGraphTest, SubResourcesWrite) {
                 EXPECT_TRUE(fg.isValid(data.outputs[2]));
                 EXPECT_TRUE(fg.isValid(data.outputs[3]));
             },
-            [=](FrameGraphResources const& resources, auto const& data,
+            [&](FrameGraphResources const& resources, auto const& data,
                     DriverApi& driver) {
+                passExecuted = true;
                 EXPECT_ANY_THROW(resources.get(data.output));
 
                 EXPECT_TRUE(resources.get(data.outputs[0]).handle);
@@ -799,7 +821,7 @@ TEST_F(FrameGraphTest, SubResourcesWrite) {
                 EXPECT_EQ(rp0.params.flags.discardEnd, TargetBufferFlags::NONE);
                 EXPECT_EQ(rp1.params.flags.discardEnd, TargetBufferFlags::NONE);
                 EXPECT_EQ(rp2.params.flags.discardEnd, TargetBufferFlags::NONE);
-                EXPECT_EQ(rp2.params.flags.discardEnd, TargetBufferFlags::NONE);
+                EXPECT_EQ(rp3.params.flags.discardEnd, TargetBufferFlags::NONE);
             });
 
     struct DebugPass {
@@ -815,7 +837,8 @@ TEST_F(FrameGraphTest, SubResourcesWrite) {
                 data.debugBuffer = builder.create<FrameGraphTexture>("Debug buffer", desc);
                 data.debugBuffer = builder.declareRenderPass(data.debugBuffer);
             },
-            [=](FrameGraphResources const& resources, auto const& data, DriverApi& driver) {
+            [&](FrameGraphResources const& resources, auto const& data, DriverApi& driver) {
+                debugPassExecuted = true;
                 FrameGraphTexture const& debugBuffer = resources.get(data.debugBuffer);
                 FrameGraphTexture const& subresource = resources.get(data.subresource);
                 EXPECT_TRUE((bool)debugBuffer.handle);
@@ -833,9 +856,13 @@ TEST_F(FrameGraphTest, SubResourcesWrite) {
     fg.compile();
 
     fg.execute(driverApi);
+    EXPECT_TRUE(passExecuted);
+    EXPECT_TRUE(debugPassExecuted);
 }
 
 TEST_F(FrameGraphTest, SubResourcesRead) {
+    bool uploadExecuted = false;
+    bool blitExecuted = false;
 
     struct UploadPassData {
         FrameGraphId<FrameGraphTexture> output;
@@ -845,9 +872,13 @@ TEST_F(FrameGraphTest, SubResourcesRead) {
                 data.output = builder.write(data.output, FrameGraphTexture::Usage::UPLOADABLE);
                 EXPECT_TRUE(fg.isValid(data.output));
             },
-            [=](FrameGraphResources const& resources, auto const& data,
+            [&](FrameGraphResources const& resources, auto const& data,
                     DriverApi& driver) {
+                uploadExecuted = true;
                 auto outputDesc = resources.getDescriptor(data.output);
+                EXPECT_EQ(outputDesc.width, 16u);
+                EXPECT_EQ(outputDesc.height, 32u);
+                EXPECT_EQ(outputDesc.levels, 4u);
                 auto output = resources.get(data.output);
                 EXPECT_TRUE(output.handle);
                 EXPECT_EQ(resources.getUsage(data.output),
@@ -869,7 +900,19 @@ TEST_F(FrameGraphTest, SubResourcesRead) {
                     EXPECT_TRUE(fg.isValid(data.inputs[i]));
                 }
             },
-            [=](FrameGraphResources const& resources, auto const& data, DriverApi& driver) {
+            [&](FrameGraphResources const& resources, auto const& data, DriverApi& driver) {
+                blitExecuted = true;
+                EXPECT_TRUE(resources.get(data.output).handle);
+                for (int i = 0; i < 4; i++) {
+                    EXPECT_TRUE(resources.get(data.inputs[i]).handle);
+                    EXPECT_EQ(resources.getSubResourceDescriptor(data.inputs[i]).level, uint8_t(i));
+                    auto const& desc = resources.getDescriptor(data.inputs[i]);
+                    EXPECT_EQ(desc.width, FTexture::valueForLevel(i, 16));
+                    EXPECT_EQ(desc.height, FTexture::valueForLevel(i, 32));
+                    EXPECT_EQ(desc.levels, 1u);
+                    EXPECT_EQ(resources.getUsage(data.inputs[i]),
+                            FrameGraphTexture::Usage::COLOR_ATTACHMENT);
+                }
             });
 
     fg.present(blitPass->output);
@@ -879,9 +922,13 @@ TEST_F(FrameGraphTest, SubResourcesRead) {
     fg.compile();
 
     fg.execute(driverApi);
+    EXPECT_TRUE(uploadExecuted);
+    EXPECT_TRUE(blitExecuted);
 }
 
 TEST_F(FrameGraphTest, SubResourcesWriteRead) {
+    int upstreamExecuted = 0;
+    int mipmapExecuted = 0;
 
     struct UpstreamPassData {
         FrameGraphId<FrameGraphTexture> output;
@@ -891,8 +938,9 @@ TEST_F(FrameGraphTest, SubResourcesWriteRead) {
                 data.output = builder.declareRenderPass(data.output);
                 EXPECT_TRUE(fg.isValid(data.output));
             },
-            [=](FrameGraphResources const& resources, auto const& data,
+            [&](FrameGraphResources const& resources, auto const& data,
                     DriverApi& driver) {
+                upstreamExecuted++;
                 EXPECT_TRUE(resources.get(data.output).handle);
                 EXPECT_TRUE(any(resources.getUsage(data.output) & FrameGraphTexture::Usage::COLOR_ATTACHMENT));
             });
@@ -912,8 +960,9 @@ TEST_F(FrameGraphTest, SubResourcesWriteRead) {
                     EXPECT_TRUE(fg.isValid(data.output));
                     EXPECT_TRUE(fg.isValid(data.input));
                 },
-                [=](FrameGraphResources const& resources, auto const& data,
+                [&](FrameGraphResources const& resources, auto const& data,
                         DriverApi& driver) {
+                    mipmapExecuted++;
                     EXPECT_TRUE(resources.get(data.input).handle);
                     EXPECT_TRUE(any(resources.getUsage(data.input) & FrameGraphTexture::Usage::SAMPLEABLE));
                     EXPECT_TRUE(resources.get(data.output).handle);
@@ -929,6 +978,8 @@ TEST_F(FrameGraphTest, SubResourcesWriteRead) {
     fg.compile();
 
     fg.execute(driverApi);
+    EXPECT_EQ(upstreamExecuted, 1);
+    EXPECT_EQ(mipmapExecuted, 3);
 }
 
 TEST_F(FrameGraphTest, WriteResourceReadAsAttachment) {
@@ -937,6 +988,10 @@ TEST_F(FrameGraphTest, WriteResourceReadAsAttachment) {
     // discard flag on that resource. i.e. that the mere fact of reading a resource as an
     // attachment doesn't make it invalid.
     // see: https://github.com/google/filament/issues/5005
+
+    int writeExecuted = 0;
+    int readExecuted = 0;
+    int sampleExecuted = 0;
 
     struct PassData {
         FrameGraphId<FrameGraphTexture> input;
@@ -949,7 +1004,8 @@ TEST_F(FrameGraphTest, WriteResourceReadAsAttachment) {
                 }});
                 builder.sideEffect();
             },
-            [=](FrameGraphResources const& resources, auto const&, DriverApi&) {
+            [&](FrameGraphResources const& resources, auto const&, DriverApi&) {
+                writeExecuted++;
                 auto const rt = resources.getRenderPassInfo();
                 EXPECT_EQ(rt.params.flags.discardStart, TargetBufferFlags::COLOR0);
                 EXPECT_EQ(rt.params.flags.discardEnd, TargetBufferFlags::NONE);
@@ -962,7 +1018,8 @@ TEST_F(FrameGraphTest, WriteResourceReadAsAttachment) {
                 }});
                 builder.sideEffect();
             },
-            [=](FrameGraphResources const& resources, auto const&, DriverApi&) {
+            [&](FrameGraphResources const& resources, auto const&, DriverApi&) {
+                readExecuted++;
                 auto const rt = resources.getRenderPassInfo();
                 EXPECT_EQ(rt.params.flags.discardStart, TargetBufferFlags::NONE);
                 EXPECT_EQ(rt.params.flags.discardEnd, TargetBufferFlags::NONE);
@@ -972,7 +1029,11 @@ TEST_F(FrameGraphTest, WriteResourceReadAsAttachment) {
                 data.input = builder.sample(writePass->input);
                 builder.sideEffect();
             },
-            [=](FrameGraphResources const& resources, auto const&, DriverApi&) {
+            [&](FrameGraphResources const& resources, auto const& data, DriverApi&) {
+                sampleExecuted++;
+                EXPECT_TRUE(resources.get(data.input).handle);
+                EXPECT_EQ(resources.getUsage(data.input),
+                        FrameGraphTexture::Usage::COLOR_ATTACHMENT | FrameGraphTexture::Usage::SAMPLEABLE);
             });
 
 
@@ -981,6 +1042,9 @@ TEST_F(FrameGraphTest, WriteResourceReadAsAttachment) {
     fg.compile();
 
     fg.execute(driverApi);
+    EXPECT_EQ(writeExecuted, 1);
+    EXPECT_EQ(readExecuted, 1);
+    EXPECT_EQ(sampleExecuted, 1);
 }
 
 // ------------------------------------------------------------------------------------------------

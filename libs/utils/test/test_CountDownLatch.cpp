@@ -14,9 +14,10 @@
  * limitations under the License.
  */
 
+#include <utils/CountDownLatch.h>
+
 #include <gtest/gtest.h>
 
-#include <utils/CountDownLatch.h>
 #include <atomic>
 #include <thread>
 
@@ -27,27 +28,48 @@ template <typename T> using sptr = std::shared_ptr<T>;
 TEST(CountDownLatchTest, Simple) {
 
     CountDownLatch send_latch(1);
-    CountDownLatch receive_latch(1);
+    CountDownLatch receive_latch(2);
+    CountDownLatch thread_started_latch(1);
 
-    std::atomic_int sendbuf;
-    std::atomic_int receivebuf;
+    std::atomic_int sendbuf{ 0 };
+    std::atomic_int receivebuf{ 0 };
 
-    std::thread t([&]()->int {
+    EXPECT_EQ(0u, receive_latch.getCount());
+
+    std::thread t([&]() -> int {
+        thread_started_latch.latch();
         receive_latch.await();
         int v = receivebuf.load();
         EXPECT_EQ(1, v);
-        sendbuf.store(v*2);
+        sendbuf.store(v * 2);
         send_latch.latch();
         return 0;
     });
 
-    // send an int to the thread
+    thread_started_latch.await();
+
+    // First latch (1 of 2) should not unblock the thread yet.
+    receive_latch.latch();
+    EXPECT_EQ(1u, receive_latch.getCount());
+    EXPECT_EQ(0, sendbuf.load());
+
+    // Store value before releasing the final latch count (2 of 2).
     receivebuf.store(1);
     receive_latch.latch();
+    EXPECT_EQ(2u, receive_latch.getCount());
+    // Calling latch() more than count times has no effect.
+    receive_latch.latch();
+    EXPECT_EQ(2u, receive_latch.getCount());
 
     // receive an int back
     send_latch.await();
     EXPECT_EQ(2, sendbuf.load());
 
     t.join();
+
+    // Verify reset() resets getCount() (number of latch() calls since reset) back to 0.
+    receive_latch.reset(3);
+    EXPECT_EQ(0u, receive_latch.getCount());
+    receive_latch.latch();
+    EXPECT_EQ(1u, receive_latch.getCount());
 }

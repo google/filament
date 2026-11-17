@@ -66,10 +66,6 @@ Variant Variant::filterUserVariant(
         variant.key &= ~(MNT | S2D);
     }
 
-    if (filterMask & uint32_t(UserVariantFilterBit::FOG)) {
-        variant.setFog(false);
-    }
-
     return variant;
 }
 
@@ -213,10 +209,10 @@ static auto const gDepthVariants{ details::get_depth_variants() };
 static auto const gPostProcessVariants{ details::get_post_process_variants() };
 
 static_assert(reserved_is_not_valid());
-static_assert(reserved_variant_count() == 24);
-static_assert(valid_variant_count() == 40);
+static_assert(reserved_variant_count() == 36);
+static_assert(valid_variant_count() == 28);
 static_assert(vertex_variant_count() == 8 + 8 + 2);                   // 18
-static_assert(fragment_variant_count() == (8 - 2) + 1 + (2 + 1) + 1); // 11
+static_assert(fragment_variant_count() == (4 - 1) + 1 + (2 + 1) + 1); // 8
 
 } // namespace details
 

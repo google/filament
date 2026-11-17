@@ -139,6 +139,14 @@ TEST(LruCacheTest, MoveToFrontFromTail) {
 
     ASSERT_EQ(evicted.size(), 1);
     EXPECT_EQ(evicted[0], 20);
+
+    // Add 5. Should evict 3 (the new tail after 2 was evicted), proving tail pointer was updated.
+    cache.put(5, 50, releaser);
+    ASSERT_EQ(evicted.size(), 2);
+    EXPECT_EQ(evicted[1], 30);
+    EXPECT_NE(cache.get(1), nullptr);
+    EXPECT_NE(cache.get(4), nullptr);
+    EXPECT_NE(cache.get(5), nullptr);
 }
 
 TEST(LruCacheTest, MoveToFrontFromMiddle) {
@@ -176,7 +184,7 @@ TEST(LruCacheTest, CapacityOne) {
     EXPECT_EQ(*cache.get(2), 20);
 }
 
-#ifdef GTEST_HAS_DEATH_TEST
+#if !defined(NDEBUG) && defined(GTEST_HAS_DEATH_TEST)
 TEST(LruCacheTest, CapacityZero) {
     LruCache<int, int> cache("LruCacheTest", 0);
     EXPECT_EQ(cache.capacity(), 0);
@@ -266,7 +274,11 @@ TEST(LruCacheTest, LargeKey) {
     // Evict k2 (LRU because k1 was accessed)
     cache.put(k3, 300, [](int&&){});
 
-    EXPECT_NE(cache.get(k3), nullptr); // k3 present
+    EXPECT_EQ(cache.get(k2), nullptr); // k2 evicted
+    ASSERT_NE(cache.get(k1), nullptr); // k1 retained
+    EXPECT_EQ(*cache.get(k1), 100);
+    ASSERT_NE(cache.get(k3), nullptr); // k3 present
+    EXPECT_EQ(*cache.get(k3), 300);
 }
 
 TEST(LruCacheTest, PopReturnsStoredKey) {

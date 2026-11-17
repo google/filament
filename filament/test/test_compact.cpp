@@ -14,15 +14,15 @@
  * limitations under the License.
  */
 
-#include <cstddef>
+#include "../src/compact.h"
+
 #include <gtest/gtest.h>
 
+#include <cstddef>
+#include <numeric>
+#include <string>
 #include <utility>
 #include <vector>
-#include <string>
-#include <numeric>
-
-#include "../src/compact.h"
 
 using namespace filament;
 
@@ -219,7 +219,6 @@ TEST(CompactTest, ProcessorModification) {
 
 TEST(CompactTest, IteratorStability) {
     std::vector data = { 10, 20, 20, 20, 30, 40, 40, 50 };
-    std::vector const expected = { 10, 20, 30, 40, 50 };
 
     auto equivalent = [](int a, int b) { return a == b; };
 
@@ -253,8 +252,11 @@ TEST(CompactTest, IteratorStability) {
     EXPECT_EQ(data, final_expected);
     EXPECT_EQ(processor_calls, 2);
 
-    // Verify iterator stability by checking the values through the stored pointers
-    ASSERT_EQ(stable_pointers.size(), 3);
+    // Verify iterator stability by checking both pointer identity and values through stored pointers
+    ASSERT_EQ(stable_pointers.size(), 3u);
+    EXPECT_EQ(stable_pointers[0], &data[0]);
+    EXPECT_EQ(stable_pointers[1], &data[1]);
+    EXPECT_EQ(stable_pointers[2], &data[3]);
     EXPECT_EQ(*stable_pointers[0], 10); // Original 10
     EXPECT_EQ(*stable_pointers[1], 25); // Modified 20
     EXPECT_EQ(*stable_pointers[2], 45); // Modified 40

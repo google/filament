@@ -923,3 +923,56 @@ TEST_F(ImageTest, LinearImageDimensionOverflow) { // NOLINT
     LinearImage img2(2, 2, 0);
     EXPECT_FALSE(img2);
 }
+
+static LinearImage decodeHdr(const string& resolution, std::initializer_list<uint8_t> body) {
+    string data = "#?RADIANCE\nFORMAT=32-bit_rle_rgbe\n\n" + resolution + "\n";
+    data.append(body.begin(), body.end());
+    istringstream in(data);
+    return ImageDecoder::decode(in, "test.hdr");
+}
+
+TEST_F(ImageTest, HdrDecode) { // NOLINT
+    // RGBE decodes to (c + 0.5) * 2^(e - 136), so 128 at e=129 is just over 1.
+    const float one = 128.5f / 128.0f;
+    const float low = 0.5f / 128.0f;
+
+    LinearImage flat = decodeHdr("-Y 1 +X 2", { 128, 0, 0, 129,  0, 0, 0, 0 });
+    ASSERT_TRUE(flat);
+    auto const* px = reinterpret_cast<float3 const*>(flat.getPixelRef());
+    EXPECT_EQ(px[0], float3(one, low, low));
+    EXPECT_EQ(px[1], float3(0));
+
+    LinearImage rle = decodeHdr("-Y 1 +X 8", { 2, 2, 0, 8,
+            0x88, 128,  0x88, 0,  0x88, 0,  0x08, 129, 129, 129, 129, 129, 129, 129, 129 });
+    ASSERT_TRUE(rle);
+    px = reinterpret_cast<float3 const*>(rle.getPixelRef());
+    EXPECT_EQ(px[0], float3(one, low, low));
+    EXPECT_EQ(px[7], float3(one, low, low));
+}
+
+TEST_F(ImageTest, HdrDecodeTruncated) { // NOLINT
+    // Shorter than the format signature.
+    istringstream sig("#?RGB");
+    EXPECT_FALSE(ImageDecoder::decode(sig, "test.hdr"));
+
+    // Too short to detect the scanline encoding.
+    EXPECT_FALSE(decodeHdr("-Y 1 +X 256", { 0xFF, 0x00 }));
+
+    // Flat scanline cut short.
+    EXPECT_FALSE(decodeHdr("-Y 1 +X 256", { 0xFF, 0x00, 0x00 }));
+
+    // RLE, scanline width cut short.
+    EXPECT_FALSE(decodeHdr("-Y 1 +X 8", { 2, 2, 0 }));
+
+    // RLE, last literal run cut short.
+    EXPECT_FALSE(decodeHdr("-Y 1 +X 8", { 2, 2, 0, 8,
+            0x88, 128,  0x88, 0,  0x88, 0,  0x08, 129, 129 }));
+
+    // RLE, last repeat run missing its value.
+    EXPECT_FALSE(decodeHdr("-Y 1 +X 8", { 2, 2, 0, 8,
+            0x88, 128,  0x88, 0,  0x88, 0,  0x88 }));
+
+    // RLE, second scanline header missing.
+    EXPECT_FALSE(decodeHdr("-Y 2 +X 8", { 2, 2, 0, 8,
+            0x88, 128,  0x88, 0,  0x88, 0,  0x88, 129 }));
+}

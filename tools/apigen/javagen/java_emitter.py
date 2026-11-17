@@ -231,9 +231,9 @@ class JavaEmitter:
         if edoc:
             out.append(edoc)
 
-        # Bitmask/flag enums in handle or builder classes are emitted as static int constant
-        # classes rather than Java `enum` types so callers can combine flags with bitwise OR.
-        is_flags = not is_pojo and (
+        # Bitmask/flag enums are emitted as static int constant classes rather than Java `enum`
+        # types so callers can combine flags with bitwise OR.
+        is_flags = (
             enum_ir.get("is_flags", False)
             or any(
                 a in (
@@ -474,6 +474,8 @@ class JavaEmitter:
             if r_info.get("is_struct") and not self.is_aggregate:
                 has_non_null = True
                 has_nullability = True
+            if r_info.get("is_struct_slice"):
+                has_non_null = True
             for arg in m.get("arguments", []):
                 req_t = arg["type"]
                 if check_type(req_t): has_int_range = True
@@ -1094,6 +1096,14 @@ class JavaEmitter:
                 if m.get("is_constructor") or m["name"] in cached_getters:
                     continue
                 ret_info, _ = self.parent_context.resolve_type_info(m["return_type"], silent=True)
+                if (
+                    ret_info.get("is_struct_slice")
+                    and (
+                        ret_info.get("java_elem_type") == self.name
+                        or ret_info.get("inner_info", {}).get("java") == self.name
+                    )
+                ):
+                    return f"{self.parent_context.name}.cpp", True
                 if (
                     ret_info.get("is_struct")
                     and not ret_info.get("is_pojo_struct")
@@ -3163,6 +3173,32 @@ class JavaEmitter:
             )
             return "\n\n".join(convenience_methods + ["\n".join(out)])
 
+        # Step 13B: Struct Slice Return Logic (e.g., utils::Slice<const Info> -> Info[]).
+        if ret_info.get("is_struct_slice"):
+            java_elem_type = ret_info.get("java_elem_type") or ret_info["inner_info"]["java"]
+            javadoc = generate_javadoc(
+                effective_doc, indent_spaces=4, argument_names=arg_names, param_types=method_param_types
+            )
+            if javadoc:
+                out.append(javadoc)
+            annotations = self._get_annotations(doc)
+            if annotations:
+                out += self._annotations_to_indented_list(annotations, "    ")
+            ret_type_str = f"{java_elem_type}[]"
+            out.append("    @NonNull")
+            signature = f"{method_prefix}{ret_type_str} {name}({', '.join(params_list)})"
+            main_sig = self._get_method_sig(name, params_list)
+            if main_sig in self.emitted_signatures:
+                return None
+            self.emitted_signatures.add(main_sig)
+            out.append(f"    {signature} {{")
+            for code in validation_code:
+                out.append(f"        {code}")
+            native_name = "n" + name[0].upper() + name[1:]
+            out.append(f"        return {native_name}({', '.join(call_args)});")
+            out.append("    }")
+            return "\n".join(out)
+
         # Step 14: Slice Return Logic (e.g., utils::Slice<const Entity> -> int[]).
         # Emits dual overloads:
         # - Primary method accepting pre-allocated array `@Nullable int[] out` to avoid GC churn.
@@ -4023,6 +4059,9 @@ class JavaEmitter:
             size = math_ret_info["size"]
             params_list.append(f"@Size(min = {size}) {j_arr_type} out")
             decl = f"    private static native void {native_name}({', '.join(params_list)});"
+        elif ret_info.get("is_struct_slice"):
+            java_elem = ret_info.get("java_elem_type") or ret_info["inner_info"]["java"]
+            decl = f"    @NonNull\n    private static native {java_elem}[] {native_name}({', '.join(params_list)});"
         elif ret_info.get("is_slice") and not ret_info.get("is_struct_slice"):
             java_elem = ret_info.get("java_elem_type", "int")
             clean_elem = java_elem.replace("@Entity", "").strip()

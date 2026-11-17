@@ -22,29 +22,38 @@ using namespace utils;
 
 TEST(BitSetTest, bitset256) {
     bitset256 b;
+    bitset256 ref;
 
     EXPECT_EQ(0, b.count());
-    EXPECT_TRUE(b == b);
+    EXPECT_TRUE(b == ref);
 
     b.set(0);
     EXPECT_EQ(1, b.count());
-    EXPECT_TRUE(b == b);
+    EXPECT_TRUE(b != ref);
+    ref.set(0);
+    EXPECT_TRUE(b == ref);
 
     b.set(64);
     EXPECT_EQ(2, b.count());
-    EXPECT_TRUE(b == b);
+    EXPECT_TRUE(b != ref);
+    ref.set(64);
+    EXPECT_TRUE(b == ref);
 
     b.set(128);
     EXPECT_EQ(3, b.count());
-    EXPECT_TRUE(b == b);
+    EXPECT_TRUE(b != ref);
+    ref.set(128);
+    EXPECT_TRUE(b == ref);
 
     b.set(192);
     EXPECT_EQ(4, b.count());
-    EXPECT_TRUE(b == b);
+    EXPECT_TRUE(b != ref);
+    ref.set(192);
+    EXPECT_TRUE(b == ref);
 
     b = ~b;
     EXPECT_EQ(252, b.count());
-    EXPECT_TRUE(b == b);
+    EXPECT_TRUE(b != ref);
 
     EXPECT_TRUE(b.any());
     EXPECT_TRUE((b & ~b).none());
@@ -102,6 +111,7 @@ TEST(BitSetTest, None) {
     bitset8 b;
     EXPECT_TRUE(b.none());
     b.set(1, true);
+    EXPECT_FALSE(b.none());
     b.reset();
     EXPECT_TRUE(b.none());
 }
