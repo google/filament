@@ -196,11 +196,6 @@ vec3 surfaceShading(const PixelParams pixel, const Light light, float occlusion)
     color += sheen;
 #endif
 
-#if defined(MATERIAL_HAS_DIFFUSE_TRANSMISSION)
-    // Kill NoL here since we applied it before
-    NoL = 1.0;
-#endif
-
 #if defined(MATERIAL_HAS_CLEAR_COAT)
     float Fcc;
     float clearCoat = clearCoatLobe(pixel, h, NoH, LoH, Fcc);
@@ -222,6 +217,13 @@ vec3 surfaceShading(const PixelParams pixel, const Light light, float occlusion)
     color += clearCoat;
 #endif
 #endif
+
+#if defined(MATERIAL_HAS_DIFFUSE_TRANSMISSION)
+    // We already applied NoL to the lobes, so we don't multiply by it again here.
+    return (color * light.colorIntensity.rgb) *
+            (light.colorIntensity.w * light.attenuation * occlusion);
+#else
     return (color * light.colorIntensity.rgb) *
             (light.colorIntensity.w * light.attenuation * NoL * occlusion);
+#endif
 }
