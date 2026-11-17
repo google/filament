@@ -40,7 +40,7 @@ vec4 Dither_InterleavedGradientNoise(vec4 rgba, const highp float temporalNoise0
     // remap from [0..1[ to [-0.5..0.5[
     noise -= 0.5;
 
-    return rgba + vec4(noise / 255.0);
+    return rgba + vec4(noise * (1.0 / 255.0));
 }
 
 vec4 Dither_TriangleNoise(vec4 rgba, const highp float temporalNoise01) {
@@ -55,7 +55,7 @@ vec4 Dither_TriangleNoise(vec4 rgba, const highp float temporalNoise01) {
 
     // noise is in [-1..1[
 
-    return rgba + vec4(noise / 255.0);
+    return rgba + vec4(noise * (1.0 / 255.0));
 }
 
 vec4 Dither_Vlachos(vec4 rgba, const highp float temporalNoise01) {
@@ -67,7 +67,7 @@ vec4 Dither_Vlachos(vec4 rgba, const highp float temporalNoise01) {
     // remap from [0..1[ to [-0.5..0.5[
     noiseRGB -= 0.5;
 
-    return vec4(rgba.rgb + (noiseRGB / 255.0), rgba.a);
+    return vec4(rgba.rgb + noiseRGB * (1.0 / 255.0), rgba.a);
 }
 
 vec4 Dither_TriangleNoiseRGB(vec4 rgba, const highp float temporalNoise01) {
@@ -84,7 +84,7 @@ vec4 Dither_TriangleNoiseRGB(vec4 rgba, const highp float temporalNoise01) {
 
     // noise is in [-1..1[
 
-    return rgba + noiseRGB.xyzx / 255.0;
+    return rgba + noiseRGB.xyzx * (1.0 / 255.0);
 }
 
 //------------------------------------------------------------------------------
