@@ -143,9 +143,9 @@ void filament_texelFetchGatherRG(const mediump sampler2D tex, const highp vec2 u
 }
 
 void filament_texelFetchGatherRGB(const mediump sampler2DArray tex, const highp vec3 uv,
-        out vec4 r, out vec4 g, out vec4 b) {
+        const highp ivec2 texSize, out vec4 r, out vec4 g, out vec4 b) {
     highp ivec2 p01, p11, p10, p00;
-    filament_gatherTexelCoords(uv.xy, textureSize(tex, 0).xy, p01, p11, p10, p00);
+    filament_gatherTexelCoords(uv.xy, texSize, p01, p11, p10, p00);
     int layer = int(uv.z);
     vec3 s01 = texelFetch(tex, ivec3(p01, layer), 0).rgb;
     vec3 s11 = texelFetch(tex, ivec3(p11, layer), 0).rgb;
@@ -154,6 +154,11 @@ void filament_texelFetchGatherRGB(const mediump sampler2DArray tex, const highp 
     r = vec4(s01.r, s11.r, s10.r, s00.r);
     g = vec4(s01.g, s11.g, s10.g, s00.g);
     b = vec4(s01.b, s11.b, s10.b, s00.b);
+}
+
+void filament_texelFetchGatherRGB(const mediump sampler2DArray tex, const highp vec3 uv,
+        out vec4 r, out vec4 g, out vec4 b) {
+    filament_texelFetchGatherRGB(tex, uv, textureSize(tex, 0).xy, r, g, b);
 }
 #endif // !defined(FILAMENT_HAS_FEATURE_TEXTURE_GATHER) || defined(TARGET_VULKAN_ENVIRONMENT)
 
@@ -195,6 +200,27 @@ vec4 filament_textureGatherLodOffset(const mediump sampler2D tex, const highp ve
     result = filament_textureLodOffsetGather(tex, uv, comp);
 #endif // defined(FILAMENT_HAS_FEATURE_TEXTURE_GATHER)
     return result;
+}
+
+void filament_textureGatherFetchRGB(const mediump sampler2DArray tex, const highp vec3 uv,
+        const highp ivec2 texSize, out vec4 r, out vec4 g, out vec4 b) {
+#if defined(FILAMENT_HAS_FEATURE_TEXTURE_GATHER)
+#   if defined(TARGET_VULKAN_ENVIRONMENT)
+    if (CONFIG_POWER_VR_SHADER_WORKAROUNDS) {
+        filament_texelFetchGatherRGB(tex, uv, texSize, r, g, b);
+    } else {
+        r = textureGather(tex, uv, 0);
+        g = textureGather(tex, uv, 1);
+        b = textureGather(tex, uv, 2);
+    }
+#   else
+    r = textureGather(tex, uv, 0);
+    g = textureGather(tex, uv, 1);
+    b = textureGather(tex, uv, 2);
+#   endif // defined(TARGET_VULKAN_ENVIRONMENT)
+#else
+    filament_texelFetchGatherRGB(tex, uv, texSize, r, g, b);
+#endif // defined(FILAMENT_HAS_FEATURE_TEXTURE_GATHER)
 }
 
 void filament_textureGatherFetchRGB(const mediump sampler2DArray tex, const highp vec3 uv,
