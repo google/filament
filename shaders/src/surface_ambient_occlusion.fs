@@ -80,7 +80,10 @@ float evaluateSSAO(out vec3 ssBentNormal) {
 
 float SpecularAO_Lagarde(float NoV, float visibility, float roughness) {
     // Lagarde and de Rousiers 2014, "Moving Frostbite to PBR"
-    return saturate(pow(NoV + visibility, exp2(-16.0 * roughness - 1.0)) - 1.0 + visibility);
+    if (visibility >= 1.0) {
+        return 1.0;
+    }
+    return saturate(exp2(log2(NoV + visibility) * exp2(-16.0 * roughness - 1.0)) - 1.0 + visibility);
 }
 
 float sphericalCapsIntersection(float cosCap1, float cosCap2, float cosDistance) {
