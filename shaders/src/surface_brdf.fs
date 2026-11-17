@@ -96,7 +96,7 @@ float D_Charlie(float roughness, float NoH) {
     float invAlpha  = 1.0 / roughness;
     float cos2h = NoH * NoH;
     float sin2h = max(1.0 - cos2h, 0.0078125); // 2^(-14/2), so sin2h^2 > 0 in fp16
-    return (2.0 + invAlpha) * pow(sin2h, invAlpha * 0.5) / (2.0 * PI);
+    return (2.0 + invAlpha) * pow(sin2h, invAlpha * 0.5) * (1.0 / (2.0 * PI));
 }
 
 float V_SmithGGXCorrelated(float roughness, float NoV, float NoL) {
@@ -148,7 +148,7 @@ vec3 F_Schlick(const vec3 f0, float f90, float VoH) {
 }
 
 vec3 F_Schlick(const vec3 f0, float VoH) {
-    float f = pow(1.0 - VoH, 5.0);
+    float f = pow5(1.0 - VoH);
     return f + f0 * (1.0 - f);
 }
 
