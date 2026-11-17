@@ -71,7 +71,7 @@ vec4 fog(highp vec3 view, const mediump samplerCube fogColorTexture) {
         // Add sun colored fog when looking towards the sun
         vec3 sunColor = frameUniforms.lightColorIntensity.rgb * frameUniforms.lightColorIntensity.w;
 
-        float sunAmount = (d > 0.0 && !isinf(d)) ?
+        float sunAmount = d > 0.0 ?
                 max(dot(view, frameUniforms.lightDirection) / d, 0.0) : 0.0;
         float sunInscattering = pow(sunAmount, frameUniforms.fogInscatteringSize);
 
