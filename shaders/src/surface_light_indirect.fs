@@ -89,13 +89,13 @@ vec3 diffuseIrradiance(const vec3 n) {
             return Irradiance_RoughnessOne(n);
         }
 #else
-        ivec2 s = textureSize(sampler0_iblSpecular, int(frameUniforms.iblRoughnessOneLevel));
-        float du = 1.0 / float(s.x);
-        float dv = 1.0 / float(s.y);
-        vec3 m0 = normalize(cross(n, vec3(0.0, 1.0, 0.0)));
+        int s = textureSize(sampler0_iblSpecular, int(frameUniforms.iblRoughnessOneLevel)).x;
+        float du = 1.0 / float(s);
+        vec3 up = abs(n.z) < 0.999 ? vec3(0.0, 0.0, 1.0) : vec3(1.0, 0.0, 0.0);
+        vec3 m0 = normalize(cross(n, up));
         vec3 m1 = cross(m0, n);
         vec3 m0du = m0 * du;
-        vec3 m1dv = m1 * dv;
+        vec3 m1dv = m1 * du;
         vec3 c;
         c  = Irradiance_RoughnessOne(n - m0du - m1dv);
         c += Irradiance_RoughnessOne(n + m0du - m1dv);
