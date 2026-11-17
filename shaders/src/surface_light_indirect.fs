@@ -485,10 +485,11 @@ void refractedRaySolidSphere(const vec3 r_in, float NoR_in, float sin2Theta_in,
     // Snell's Law for the first interface (entry into medium)
     // We use the pre-calculated sin^2(theta) to solve for the internal ray direction
     float k = 1.0 - etaIR * etaIR * sin2Theta_in;
-    vec3 rr = etaIR * r_in - (etaIR * NoR_in + sqrt(max(k, 0.0))) * n;
+    float cosThetaT = sqrt(max(k, 0.0));
+    vec3 rr = etaIR * r_in - (etaIR * NoR_in + cosThetaT) * n;
 
-    float NoR = dot(n, rr);
-    float d = thickness * -NoR;
+    float NoR = -cosThetaT;
+    float d = thickness * cosThetaT;
 
     ray.d = d;
     ray.position = shading_position + rr * d;
@@ -650,11 +651,6 @@ vec3 calculateDispersion(const PixelParams pixel, const vec3 n0, const float lod
     s1 = prefilteredRadiance(r1.direction, lod);
     s2 = prefilteredRadiance(r2.direction, lod);
     s3 = prefilteredRadiance(r3.direction, lod);
-    float ibl = frameUniforms.iblLuminance;
-    s0 *= ibl;
-    s1 *= ibl;
-    s2 *= ibl;
-    s3 *= ibl;
 #else
     // SSR Path: Calculate 4 UVs, then 4 Samples
     highp mat4 clipFromWorld = getClipFromWorldMatrix();
@@ -684,7 +680,11 @@ vec3 calculateDispersion(const PixelParams pixel, const vec3 n0, const float lod
 #endif
 
     // 6. Spectral Integration
-    return max(K0 * s0 + K1 * s1 + K2 * s2 + K3 * s3, 0.0);
+    vec3 Ft = max(K0 * s0 + K1 * s1 + K2 * s2 + K3 * s3, 0.0);
+#if REFRACTION_MODE == REFRACTION_MODE_CUBEMAP
+    Ft *= frameUniforms.iblLuminance;
+#endif
+    return Ft;
 }
 
 #endif
@@ -709,7 +709,11 @@ vec3 evaluateRefraction(const PixelParams pixel, const vec3 n0, vec3 E) {
 #endif
 
 #if defined(MATERIAL_HAS_DISPERSION) && (REFRACTION_TYPE == REFRACTION_TYPE_SOLID)
-    Ft = calculateDispersion(pixel, n0, lod);
+    if (pixel.dispersion > 0.0) {
+        Ft = calculateDispersion(pixel, n0, lod);
+    } else {
+        Ft = evaluateRefraction(pixel, n0, lod, pixel.etaIR, pixel.etaRI);
+    }
 #else
     Ft = evaluateRefraction(pixel, n0, lod, pixel.etaIR, pixel.etaRI);
 #endif
