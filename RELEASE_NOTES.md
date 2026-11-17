@@ -7,6 +7,11 @@ A new header is inserted each time a *tag* is created.
 Instead, if you are authoring a PR for the main branch, add your release note to
 [NEW_RELEASE_NOTES.md](./NEW_RELEASE_NOTES.md).
 
+## v1.81.1
+
+- utils: `bitset` is no longer over-aligned to 16 bytes, which fixes a crash (SIGBUS) creating
+  Vulkan descriptor-set layouts on 32-bit ARM
+
 ## v1.81.0
 
 - backend: added 16-bit normalized texture formats (`R16`, `RG16`, `RGB16`, `RGBA16`, and `*_SNORM`).
