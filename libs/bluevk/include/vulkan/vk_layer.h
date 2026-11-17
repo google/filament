@@ -27,7 +27,10 @@
 #define VK_CURRENT_CHAIN_VERSION 1
 
 // Typedef for use in the interfaces below
+#ifndef IS_DEFINED_PFN_GetPhysicalDeviceProcAddr
 typedef PFN_vkVoidFunction (VKAPI_PTR *PFN_GetPhysicalDeviceProcAddr)(VkInstance instance, const char* pName);
+#define IS_DEFINED_PFN_GetPhysicalDeviceProcAddr
+#endif
 
 // Version negotiation values
 typedef enum VkNegotiateLayerStructType {

@@ -22,7 +22,6 @@
 #include <filament/Material.h>
 
 #include <utils/compiler.h>
-#include <utils/CString.h>
 #include <utils/debug.h>
 #include <utils/FixedCapacityVector.h>
 #include <utils/Log.h>
@@ -34,6 +33,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <string_view>
 
 using namespace utils;
 using namespace filament::uberz;
@@ -53,8 +53,35 @@ constexpr static void debugSuitability(int index, const char* msg) {
     }
 }
 
-static bool strIsEqual(const CString& a, const char* b) {
-    return strncmp(a.c_str(), b, a.size()) == 0;
+std::string_view archiveFeatureName(ArchiveFeatureId id) noexcept {
+    using namespace std::string_view_literals;
+    switch (id) {
+        case ArchiveFeatureId::Sheen: return "Sheen"sv;
+        case ArchiveFeatureId::Transmission: return "Transmission"sv;
+        case ArchiveFeatureId::Volume: return "Volume"sv;
+        case ArchiveFeatureId::Ior: return "Ior"sv;
+        case ArchiveFeatureId::VertexColors: return "VertexColors"sv;
+        case ArchiveFeatureId::BaseColorTexture: return "BaseColorTexture"sv;
+        case ArchiveFeatureId::NormalTexture: return "NormalTexture"sv;
+        case ArchiveFeatureId::OcclusionTexture: return "OcclusionTexture"sv;
+        case ArchiveFeatureId::EmissiveTexture: return "EmissiveTexture"sv;
+        case ArchiveFeatureId::MetallicRoughnessTexture: return "MetallicRoughnessTexture"sv;
+        case ArchiveFeatureId::ClearCoatTexture: return "ClearCoatTexture"sv;
+        case ArchiveFeatureId::ClearCoatRoughnessTexture: return "ClearCoatRoughnessTexture"sv;
+        case ArchiveFeatureId::ClearCoatNormalTexture: return "ClearCoatNormalTexture"sv;
+        case ArchiveFeatureId::ClearCoat: return "ClearCoat"sv;
+        case ArchiveFeatureId::TextureTransforms: return "TextureTransforms"sv;
+        case ArchiveFeatureId::TransmissionTexture: return "TransmissionTexture"sv;
+        case ArchiveFeatureId::SheenColorTexture: return "SheenColorTexture"sv;
+        case ArchiveFeatureId::SheenRoughnessTexture: return "SheenRoughnessTexture"sv;
+        case ArchiveFeatureId::VolumeThicknessTexture: return "VolumeThicknessTexture"sv;
+        case ArchiveFeatureId::Specular: return "Specular"sv;
+        case ArchiveFeatureId::SpecularTexture: return "SpecularTexture"sv;
+        case ArchiveFeatureId::SpecularColorTexture: return "SpecularColorTexture"sv;
+        case ArchiveFeatureId::Dispersion: return "Dispersion"sv;
+        case ArchiveFeatureId::Count: break;
+    }
+    return ""sv;
 }
 
 void ArchiveCache::load(const void* archiveData, uint64_t archiveByteCount) {
@@ -92,18 +119,44 @@ void ArchiveCache::load(const void* archiveData, uint64_t archiveByteCount) {
         return;
     }
     mMaterials = FixedCapacityVector<Material*>(mArchive->specsCount, nullptr);
+    mSpecMasks = FixedCapacityVector<SpecFeatureMasks>(mArchive->specsCount);
+    for (uint64_t i = 0; i < mArchive->specsCount; ++i) {
+        const ArchiveSpec& spec = mArchive->specs[i];
+        SpecFeatureMasks masks{};
+        for (uint64_t j = 0; j < spec.flagsCount; ++j) {
+            const ArchiveFlag& flag = spec.flags[j];
+            const std::string_view flagName(flag.name);
+            bool matched = false;
+            for (uint8_t k = 0; k < static_cast<uint8_t>(ArchiveFeatureId::Count); ++k) {
+                const auto id = static_cast<ArchiveFeatureId>(k);
+                if (flagName == archiveFeatureName(id)) {
+                    if (flag.value != ArchiveFeature::UNSUPPORTED) {
+                        masks.supportedMask |= archiveFeatureBit(id);
+                    }
+                    if (flag.value == ArchiveFeature::REQUIRED) {
+                        masks.requiredMask |= archiveFeatureBit(id);
+                    }
+                    matched = true;
+                    break;
+                }
+            }
+            if (!matched && flag.value == ArchiveFeature::REQUIRED) {
+                masks.hasUnknownRequiredFlag = true;
+            }
+        }
+        mSpecMasks[i] = masks;
+    }
 }
 
-// This loops though all ubershaders and returns the first one that meets the given requirements.
+// This loops though all ubershaders and returns the cheapest one that meets the given requirements.
 Material* ArchiveCache::getMaterial(const ArchiveRequirements& reqs) {
     assert_invariant(mArchive && "Please call load() before requesting any materials.");
     if (mArchive == nullptr) {
         return nullptr;
     }
 
-    // Multiple specs may match our needs. We gather them all in a list and extract the
-    // cheapest one by picking the spec that defines the smallest number of flags/features.
-    std::vector<std::pair<uint64_t, const ArchiveSpec&>> suitableSpecs;
+    uint64_t bestIndex = UINT64_MAX;
+    uint16_t minSupportedFlags = UINT16_MAX;
 
     for (uint64_t i = 0; i < mArchive->specsCount; ++i) {
         const ArchiveSpec& spec = mArchive->specs[i];
@@ -117,65 +170,46 @@ Material* ArchiveCache::getMaterial(const ArchiveRequirements& reqs) {
             continue;
         }
 
-        bool specIsSuitable = true;
+        const SpecFeatureMasks& masks = mSpecMasks[i];
 
         // For each feature required by the mesh, this ubershader is suitable only if it includes a
         // feature flag for it and the feature flag is either OPTIONAL or REQUIRED.
-        for (const auto& req : reqs.features) {
-            const CString& meshRequirement = req.first;
-            if (req.second == false) {
-                continue;
-            }
-            bool found = false;
-            for (uint64_t j = 0; j < spec.flagsCount && !found; ++j) {
-                const ArchiveFlag& flag = spec.flags[j];
-                if (strIsEqual(meshRequirement, flag.name)) {
-                    if (flag.value != ArchiveFeature::UNSUPPORTED) {
-                        found = true;
+        if ((reqs.featuresMask & ~masks.supportedMask) != 0) {
+            if constexpr (DEBUG_SPEC_INDEX > 0) {
+                const uint32_t missing = reqs.featuresMask & ~masks.supportedMask;
+                for (uint8_t k = 0; k < static_cast<uint8_t>(ArchiveFeatureId::Count); ++k) {
+                    const auto id = static_cast<ArchiveFeatureId>(k);
+                    if (missing & archiveFeatureBit(id)) {
+                        debugSuitability(int(i), archiveFeatureName(id).data());
+                        break;
                     }
-                    break;
                 }
             }
-            if (!found) {
-                debugSuitability(int(i), meshRequirement.c_str());
-                specIsSuitable = false;
-                break;
-            }
+            continue;
         }
 
         // If this ubershader requires a certain feature to be enabled in the glTF, but the glTF
-        // mesh doesn't have it, then this ubershader is not suitable. This occurs very rarely, so
-        // it intentionally comes after the other suitability check.
-        for (uint64_t j = 0; j < spec.flagsCount && specIsSuitable; ++j) {
-            ArchiveFlag const& flag = spec.flags[j];
-            if (UTILS_UNLIKELY(flag.value == ArchiveFeature::REQUIRED)) {
-                // This allocates a new CString just to make a robin_map lookup, but this is rare
-                // because almost none of our feature flags are REQUIRED.
-                auto iter = reqs.features.find(CString(flag.name));
-                if (iter == reqs.features.end() || iter.value() == false) {
-                    debugSuitability(int(i), flag.name);
-                    specIsSuitable = false;
-                }
-            }
+        // mesh doesn't have it, then this ubershader is not suitable.
+        if (UTILS_UNLIKELY(masks.hasUnknownRequiredFlag ||
+                (masks.requiredMask & ~reqs.featuresMask) != 0)) {
+            debugSuitability(int(i), "required flag missing.");
+            continue;
         }
 
-        if (specIsSuitable) {
-            suitableSpecs.emplace_back(i, spec);
+        if (bestIndex == UINT64_MAX || spec.supportedFlagsCount < minSupportedFlags) {
+            bestIndex = i;
+            minSupportedFlags = spec.supportedFlagsCount;
         }
     }
 
-    if (!suitableSpecs.empty()) {
-        // Find the cheapest spec to build the material from
-        auto [index, spec] = *std::ranges::min_element(suitableSpecs,
-                [](const auto& a, const auto& b) {
-                    return a.second.supportedFlagsCount < b.second.supportedFlagsCount;
-                });
-        if (mMaterials[index] == nullptr) {
-            mMaterials[index] = Material::Builder()
+    if (bestIndex != UINT64_MAX) {
+        if (mMaterials[bestIndex] == nullptr) {
+            const ArchiveSpec& spec = mArchive->specs[bestIndex];
+            mMaterials[bestIndex] = Material::Builder()
                 .package(spec.package, spec.packageByteCount)
                 .build(mEngine);
         }
-        return mMaterials[index];
+        return mMaterials[bestIndex];
     }
 
     return nullptr;
@@ -196,21 +230,16 @@ Material* ArchiveCache::getDefaultMaterial() {
 void ArchiveCache::destroyMaterials() {
     for (const auto mat : mMaterials) mEngine.destroy(mat);
     mMaterials.clear();
+    mSpecMasks.clear();
 }
 
-FeatureMap ArchiveCache::getFeatureMap(const Material* material) const {
-    FeatureMap features;
+uint32_t ArchiveCache::getSupportedFeatures(const Material* material) const noexcept {
     for (size_t specIndex = 0; specIndex < mMaterials.size(); ++specIndex) {
         if (material == mMaterials[specIndex]) {
-            const ArchiveSpec& spec = mArchive->specs[specIndex];
-            for (uint64_t j = 0; j < spec.flagsCount; ++j) {
-                const ArchiveFlag& flag = spec.flags[j];
-                features[flag.name] = flag.value;
-            }
-            break;
+            return mSpecMasks[specIndex].supportedMask;
         }
     }
-    return features;
+    return 0;
 }
 
 ArchiveCache::~ArchiveCache() {

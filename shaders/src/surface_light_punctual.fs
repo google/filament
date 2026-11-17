@@ -173,7 +173,7 @@ Light getLight(const uint lightIndex) {
 }
 
 /**
- * Evaluates all punctual lights that my affect the current fragment.
+ * Evaluates all punctual lights that may affect the current fragment.
  * The result of the lighting computations is accumulated in the color
  * parameter, as linear HDR RGB.
  */

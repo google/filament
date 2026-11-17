@@ -56,7 +56,6 @@ public:
 
 private:
     DescriptorSet mDescriptorSet;
-    backend::BufferObjectHandle mShadowUbh;
 };
 
 } // namespace filament

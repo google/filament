@@ -105,6 +105,7 @@ Examples:
 static const char* APPLE_ASM_TEMPLATE = R"ASM(
     .global _{RESOURCES}PACKAGE
     .section __TEXT,__const
+    .p2align 3
 _{RESOURCES}PACKAGE:
     .incbin "{resources}.bin"
 )ASM";
@@ -113,6 +114,7 @@ _{RESOURCES}PACKAGE:
 static const char* ASM_TEMPLATE = R"ASM(
     .global {RESOURCES}PACKAGE
     .section .rodata
+    .balign 8
 {RESOURCES}PACKAGE:
     .incbin "{resources}.bin"
 )ASM";
@@ -469,7 +471,16 @@ int main(int argc, char* argv[]) {
     if (config.generateC) {
         xxdStream = openOutputFile(xxdPath);
         xxdStream << "#include <stdint.h>\n"
-                  << "const uint8_t " << packageSymbol << "[] = {\n";
+                  << "#if defined(_MSC_VER)\n"
+                  << "#define RESGEN_ALIGN8 __declspec(align(8))\n"
+                  << "#elif defined(__GNUC__) || defined(__clang__)\n"
+                  << "#define RESGEN_ALIGN8 __attribute__((aligned(8)))\n"
+                  << "#elif defined(__cplusplus)\n"
+                  << "#define RESGEN_ALIGN8 alignas(8)\n"
+                  << "#else\n"
+                  << "#define RESGEN_ALIGN8 _Alignas(8)\n"
+                  << "#endif\n"
+                  << "RESGEN_ALIGN8 const uint8_t " << packageSymbol << "[] = {\n";
     }
 
     std::vector<uint8_t> packageData;
@@ -523,6 +534,23 @@ int main(int argc, char* argv[]) {
         replaceAll(rname, ".", "_");
         std::transform(rname.begin(), rname.end(), rname.begin(), [](unsigned char c) { return std::toupper(c); });
         const std::string prname = packagePrefix + rname;
+
+        const size_t pad = (inPath != g_jsonMagicString) ? ((8u - (offset % 8u)) % 8u) : 0u;
+        if (pad > 0u) {
+            if (config.compressPackage) {
+                uncompressedPackageData.insert(uncompressedPackageData.end(), pad, 0u);
+            } else {
+                packageData.insert(packageData.end(), pad, 0u);
+            }
+            if (config.generateC) {
+                xxdStream << "// alignment padding\n";
+                for (size_t i = 0; i < pad; i++) {
+                    xxdStream << "0x00, ";
+                }
+                xxdStream << "\n\n";
+            }
+            offset += pad;
+        }
 
         if (config.compressPackage) {
             uncompressedPackageData.insert(uncompressedPackageData.end(), finalContent.begin(), finalContent.end());

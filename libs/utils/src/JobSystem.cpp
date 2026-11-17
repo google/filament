@@ -181,9 +181,11 @@ void JobSystem::setThreadAffinityById(size_t id) noexcept {
 #endif
 }
 
+// malloc() doesn't guarantee Job's alignment, so the job pool gets alignof(Job) - 1 extra bytes
+// and always fits MAX_JOB_COUNT jobs.
 UTILS_NOINLINE
 JobSystem::JobSystem(uint32_t const userThreadCount, uint32_t adoptableThreadsCount) noexcept
-    : mJobPool("JobSystem Job pool", MAX_JOB_COUNT * sizeof(Job)),
+    : mJobPool("JobSystem Job pool", MAX_JOB_COUNT * sizeof(Job) + alignof(Job) - 1),
       mJobStorageBase(static_cast<Job *>(mJobPool.getAllocator().getBase()))
 {
     FILAMENT_TRACING_ENABLE(FILAMENT_TRACING_CATEGORY_JOBSYSTEM);

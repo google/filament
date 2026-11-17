@@ -927,6 +927,8 @@ bool FTexture::validatePixelFormatAndType(TextureFormat const internalFormat,
     switch (internalFormat) {
         case TextureFormat::R8:
         case TextureFormat::R8_SNORM:
+        case TextureFormat::R16:
+        case TextureFormat::R16_SNORM:
         case TextureFormat::R16F:
         case TextureFormat::R32F:
             if (format != PixelDataFormat::R) {
@@ -947,6 +949,8 @@ bool FTexture::validatePixelFormatAndType(TextureFormat const internalFormat,
 
         case TextureFormat::RG8:
         case TextureFormat::RG8_SNORM:
+        case TextureFormat::RG16:
+        case TextureFormat::RG16_SNORM:
         case TextureFormat::RG16F:
         case TextureFormat::RG32F:
             if (format != PixelDataFormat::RG) {
@@ -971,6 +975,8 @@ bool FTexture::validatePixelFormatAndType(TextureFormat const internalFormat,
         case TextureFormat::SRGB8:
         case TextureFormat::RGB8_SNORM:
         case TextureFormat::R11F_G11F_B10F:
+        case TextureFormat::RGB16:
+        case TextureFormat::RGB16_SNORM:
         case TextureFormat::RGB16F:
         case TextureFormat::RGB32F:
             if (format != PixelDataFormat::RGB) {
@@ -995,6 +1001,8 @@ bool FTexture::validatePixelFormatAndType(TextureFormat const internalFormat,
         case TextureFormat::SRGB8_A8:
         case TextureFormat::RGBA8_SNORM:
         case TextureFormat::RGB10_A2:
+        case TextureFormat::RGBA16:
+        case TextureFormat::RGBA16_SNORM:
         case TextureFormat::RGBA16F:
         case TextureFormat::RGBA32F:
             if (format != PixelDataFormat::RGBA) {
@@ -1138,6 +1146,10 @@ bool FTexture::validatePixelFormatAndType(TextureFormat const internalFormat,
             }
             break;
 
+        case TextureFormat::R16:
+        case TextureFormat::RG16:
+        case TextureFormat::RGB16:
+        case TextureFormat::RGBA16:
         case TextureFormat::R16UI:
         case TextureFormat::RG16UI:
         case TextureFormat::RGB16UI:
@@ -1147,6 +1159,10 @@ bool FTexture::validatePixelFormatAndType(TextureFormat const internalFormat,
             }
             break;
 
+        case TextureFormat::R16_SNORM:
+        case TextureFormat::RG16_SNORM:
+        case TextureFormat::RGB16_SNORM:
+        case TextureFormat::RGBA16_SNORM:
         case TextureFormat::R16I:
         case TextureFormat::RG16I:
         case TextureFormat::RGB16I:

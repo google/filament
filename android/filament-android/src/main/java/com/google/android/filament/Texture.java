@@ -367,7 +367,15 @@ public class Texture {
         RGB_BPTC_SIGNED_FLOAT,
         RGB_BPTC_UNSIGNED_FLOAT,
         RGBA_BPTC_UNORM,
-        SRGB_ALPHA_BPTC_UNORM;
+        SRGB_ALPHA_BPTC_UNORM,
+        R16,
+        R16_SNORM,
+        RG16,
+        RG16_SNORM,
+        RGB16,
+        RGB16_SNORM,
+        RGBA16,
+        RGBA16_SNORM;
 
         /** @return the value of this enum constant as used by the native Filament engine. */
         public int toFilamentNative() { return ordinal(); }

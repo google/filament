@@ -101,6 +101,7 @@ FView::FView(FEngine& engine)
         : mCommonRenderableDescriptorSet("mCommonRenderableDescriptorSet",
                 engine.getPerRenderableDescriptorSetLayout()),
           mFroxelizer(engine),
+          mEngine(engine),
           mFogEntity(engine.getEntityManager().create()),
           mIsStereoSupported(engine.getDriverApi().isStereoSupported()),
           mUniforms(engine.getDriverApi()),
@@ -185,24 +186,36 @@ FView::FView(FEngine& engine)
     }
 #endif
 
-    // allocate UBOs
-    mLightUbh = driver.createBufferObject(CONFIG_MAX_LIGHT_COUNT * sizeof(LightsUib),
-            BufferObjectBinding::UNIFORM, BufferUsage::DYNAMIC);
-
     mIsDynamicResolutionSupported = driver.isFrameTimeSupported();
 
-    mDefaultColorGrading = mColorGrading = engine.getDefaultColorGrading();
-
+    BufferObjectHandle const dummyUbo = engine.getDummyUniformBuffer();
     for (auto&& colorPassDescriptorSet : mColorPassDescriptorSet) {
-        colorPassDescriptorSet.init(
-                engine,
-                mLightUbh,
-                mFroxelizer.getRecordBuffer(),
-                mFroxelizer.getFroxelBuffer());
+        colorPassDescriptorSet.init(engine, dummyUbo, dummyUbo, dummyUbo);
     }
 }
 
 FView::~FView() noexcept = default;
+
+const FColorGrading* FView::getColorGrading() const noexcept {
+    return mColorGrading ? mColorGrading : mEngine.getDefaultColorGrading();
+}
+
+UTILS_NOINLINE
+void FView::ensureDynamicLightingBuffers(FEngine& engine, DriverApi& driver) noexcept {
+    if (UTILS_UNLIKELY(!mLightUbh)) {
+        mLightUbh = driver.createBufferObject(CONFIG_MAX_LIGHT_COUNT * sizeof(LightsUib),
+                BufferObjectBinding::UNIFORM, BufferUsage::DYNAMIC);
+        mFroxelizer.ensureBuffersCreated(driver);
+        BufferObjectHandle const dummyUbo = engine.getDummyUniformBuffer();
+        BufferObjectHandle const recordUbo =
+                mFroxelizer.getRecordBuffer() ? mFroxelizer.getRecordBuffer() : dummyUbo;
+        BufferObjectHandle const froxelUbo =
+                mFroxelizer.getFroxelBuffer() ? mFroxelizer.getFroxelBuffer() : dummyUbo;
+        for (auto&& colorPassDescriptorSet : mColorPassDescriptorSet) {
+            colorPassDescriptorSet.init(engine, mLightUbh, recordUbo, froxelUbo);
+        }
+    }
+}
 
 void FView::invalidateSceneCache() noexcept {
     if (!mScene) {
@@ -236,7 +249,9 @@ void FView::terminate(FEngine& engine) {
     clearPickingQueries();
 
     DriverApi& driver = engine.getDriverApi();
-    driver.destroyBufferObject(mLightUbh);
+    if (mLightUbh) {
+        driver.destroyBufferObject(mLightUbh);
+    }
     driver.destroyBufferObject(mRenderableUbh);
     clearFrameHistory(engine);
 
@@ -840,6 +855,7 @@ void FView::prepare(FEngine& engine, DriverApi& driver, LinearAllocatorArena& ar
 
         // As soon as prepareVisibleLight finishes, we can kick-off the froxelization
         if (hasDynamicLighting()) {
+            ensureDynamicLightingBuffers(engine, driver);
             auto& froxelizer = mFroxelizer;
             if (froxelizer.prepare(driver, arena, viewport,
                     cameraInfo.projection, cameraInfo.zn, cameraInfo.zf,
@@ -961,8 +977,6 @@ void FView::prepare(FEngine& engine, DriverApi& driver, LinearAllocatorArena& ar
             auto const& skinning = sceneData.elementAt<FScene::SKINNING_BUFFER>(i);
             auto const& morphing = sceneData.elementAt<FScene::MORPHING_BUFFER>(i);
 
-            // FIXME: when only one is active the UBO handle of the other is null
-            //        (probably a problem on vulkan)
             if (UTILS_UNLIKELY(skinning.handle || morphing.handle)) {
                 FRenderableManager& rcm = engine.getRenderableManager();
                 auto const ci = rcm.getInstance(sceneData.elementAt<FScene::RENDERABLE_ENTITY>(i));
@@ -981,50 +995,34 @@ void FView::prepare(FEngine& engine, DriverApi& driver, LinearAllocatorArena& ar
 
                 descriptorSet.setBuffer(layout,
                         +PerRenderableBindingPoints::BONES_UNIFORMS,
-                        engine.getDummyUniformBuffer(), 0, sizeof(PerRenderableBoneUib));
-
-                descriptorSet.setBuffer(layout,
-                        +PerRenderableBindingPoints::MORPHING_UNIFORMS,
-                        engine.getDummyUniformBuffer(), 0, sizeof(PerRenderableMorphingUib));
-
-                descriptorSet.setSampler(layout,
-                        +PerRenderableBindingPoints::MORPH_TARGET_POSITIONS,
-                        engine.getDummyMorphTargetBuffer()->getPositionsHandle(), {});
-
-                descriptorSet.setSampler(layout,
-                        +PerRenderableBindingPoints::MORPH_TARGET_TANGENTS,
-                        engine.getDummyMorphTargetBuffer()->getTangentsHandle(), {});
+                        skinning.handle ? skinning.handle : engine.getDummyUniformBuffer(),
+                        0, sizeof(PerRenderableBoneUib));
 
                 descriptorSet.setSampler(layout,
                         +PerRenderableBindingPoints::BONES_INDICES_AND_WEIGHTS,
-                        engine.getZeroTexture(), {});
+                        skinning.boneIndicesAndWeightHandle
+                                ? skinning.boneIndicesAndWeightHandle
+                                : engine.getZeroTexture(), {});
 
-                if (UTILS_UNLIKELY(skinning.handle || morphing.handle)) {
-                    descriptorSet.setBuffer(layout,
-                            +PerRenderableBindingPoints::BONES_UNIFORMS,
-                            skinning.handle, 0, sizeof(PerRenderableBoneUib));
+                descriptorSet.setBuffer(layout,
+                        +PerRenderableBindingPoints::MORPHING_UNIFORMS,
+                        morphing.handle ? morphing.handle : engine.getDummyUniformBuffer(),
+                        0, sizeof(PerRenderableMorphingUib));
 
-                    descriptorSet.setSampler(layout,
-                            +PerRenderableBindingPoints::BONES_INDICES_AND_WEIGHTS,
-                            skinning.boneIndicesAndWeightHandle, {});
+                FMorphTargetBuffer const* const mtb = morphing.morphTargetBuffer;
+                FMorphTargetBuffer const* const dummyMtb = engine.getDummyMorphTargetBuffer();
 
-                    descriptorSet.setBuffer(layout,
-                            +PerRenderableBindingPoints::MORPHING_UNIFORMS,
-                            morphing.handle, 0, sizeof(PerRenderableMorphingUib));
+                descriptorSet.setSampler(layout,
+                        +PerRenderableBindingPoints::MORPH_TARGET_POSITIONS,
+                        (mtb && mtb->hasPositions())
+                                ? mtb->getPositionsHandle()
+                                : dummyMtb->getPositionsHandle(), {});
 
-                    const auto* mtb = morphing.morphTargetBuffer;
-                    if (mtb->hasPositions()) {
-                        descriptorSet.setSampler(layout,
-                                +PerRenderableBindingPoints::MORPH_TARGET_POSITIONS,
-                                mtb->getPositionsHandle(), {});
-                    }
-
-                    if (mtb->hasTangents()) {
-                        descriptorSet.setSampler(layout,
-                                +PerRenderableBindingPoints::MORPH_TARGET_TANGENTS,
-                                mtb->getTangentsHandle(), {});
-                    }
-                }
+                descriptorSet.setSampler(layout,
+                        +PerRenderableBindingPoints::MORPH_TARGET_TANGENTS,
+                        (mtb && mtb->hasTangents())
+                                ? mtb->getTangentsHandle()
+                                : dummyMtb->getTangentsHandle(), {});
 
                 descriptorSet.commit(layout, driver);
 

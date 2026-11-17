@@ -19,6 +19,8 @@
 
 #include <backend/BufferDescriptor.h>
 
+#include <math/vec3.h>
+
 #include <tsl/robin_map.h>
 
 #include <stddef.h>
@@ -30,6 +32,10 @@ struct cgltf_data;
 class DracoCache;
 
 struct cgltf_accessor;
+
+namespace utils {
+class JobSystem;
+}
 
 namespace filament::gltfio {
 
@@ -44,13 +50,18 @@ namespace filament::gltfio::utility {
 
 // Functions that are shared between the original implementation and the extended implementation.
 bool decodeDracoMeshes(cgltf_data const* gltf, cgltf_primitive const* prim, DracoCache* dracoCache);
-bool decodeMeshoptCompression(cgltf_data* data, bool* decoded = nullptr);
+bool decodeMeshoptCompression(cgltf_data* data, bool* decoded = nullptr,
+        utils::JobSystem* js = nullptr);
 bool primitiveHasVertexColor(cgltf_primitive* inPrim);
 uint32_t computeBindingSize(cgltf_accessor const* accessor);
 void convertBytesToShorts(uint16_t* dst, uint8_t const* src, size_t count);
 uint32_t computeBindingOffset(cgltf_accessor const* accessor);
 bool requiresConversion(cgltf_accessor const* accessor);
 bool requiresPacking(cgltf_accessor const* accessor);
+
+// Returns the xyz of accessor->min or ->max, decoded if the accessor is normalized
+// (KHR_mesh_quantization stores bounds in the quantized domain).
+math::float3 dequantizeBounds(cgltf_accessor const* accessor, float const* bound);
 
 // Returns true if the given accessor can safely be uploaded into an IndexBuffer whose capacity is
 // (count * componentSize), which is how AssetLoader sizes every IndexBuffer it creates.

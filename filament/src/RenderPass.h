@@ -27,6 +27,7 @@
 #include <private/filament/EngineEnums.h>
 #include <private/filament/Variant.h>
 
+#include <backend/BufferDescriptor.h>
 #include <backend/DriverApiForward.h>
 #include <backend/DriverEnums.h>
 #include <backend/Handle.h>
@@ -61,7 +62,6 @@ class FMaterialInstance;
 class FRenderPrimitive;
 class RenderPassBuilder;
 class ColorPassDescriptorSet;
-struct PerRenderableData;
 
 class RenderPass {
 public:
@@ -319,6 +319,7 @@ public:
     static constexpr RenderFlags HAS_INVERSE_FRONT_FACES   = 0x02;
     static constexpr RenderFlags IS_INSTANCED_STEREOSCOPIC = 0x04;
     static constexpr RenderFlags HAS_DEPTH_CLAMP           = 0x08;
+    static constexpr RenderFlags HAS_FOG_AS_POSTPROCESS    = 0x10;
 
     // Arena used for commands
     using Arena = utils::Arena<
@@ -495,7 +496,8 @@ private:
             math::float3 cameraForward, uint8_t instancedStereoEyeCount) noexcept;
 
     static void setupColorCommand(Command& cmdDraw, Variant variant, DynamicSpecConstKey specKey,
-            FMaterialInstance const* mi, bool inverseFrontFaces, bool hasDepthClamp) noexcept;
+            FMaterialInstance const* mi, bool inverseFrontFaces, bool hasDepthClamp,
+            bool hasFogAsPostProcess) noexcept;
 
     static void updateSummedPrimitiveCounts(
             FScene::RenderableSoa& renderableData, utils::Range<uint32_t> vr) noexcept;
@@ -505,7 +507,7 @@ private:
     backend::Viewport mScissorViewport{ 0, 0, INT32_MAX, INT32_MAX };
     Command const* /* const */ mCommandBegin = nullptr;   // Pointer to the first command
     Command const* /* const */ mCommandEnd = nullptr;     // Pointer to one past the last command
-    mutable std::vector<PerRenderableData> mInstancingStagingBuffer;
+    mutable backend::BufferDescriptor mInstancingStagingBuffer;
     mutable std::vector<Command*> mInstancingDescriptorSetPatch;
     BufferObjectSharedHandle mInstancedUboHandle; // ubo for instanced primitives
     DescriptorSetSharedHandle mInstancedDescriptorSetHandle; // a descriptor-set to hold the ubo

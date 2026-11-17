@@ -47,6 +47,7 @@
 #include <utils/debug.h>
 #include <utils/JobSystem.h>
 #include <utils/Logger.h>
+#include <utils/memalign.h>
 #include <utils/Panic.h>
 #include <utils/Range.h>
 #include <utils/Slice.h>
@@ -300,9 +301,9 @@ RenderPass::Command* RenderPass::instanceify(
     // hash of those parameters.
 
     UTILS_UNUSED uint32_t drawCallsSavedCount = 0;
-    PerRenderableData const* uboData = nullptr;
     uint32_t instancedPrimitiveOffset = 0;
     size_t const count = std::distance(curr, last);
+    std::vector<uint32_t> instancedIndices;
 
     auto equivalent = [](Command const& lhs, Command const& rhs) {
         // This predicate must also filter out commands that are not eligible for auto-instancing.
@@ -331,25 +332,21 @@ RenderPass::Command* RenderPass::instanceify(
                lhs.info.rasterState == rhs.info.rasterState;
     };
 
-    auto processor = [this, eyeCount, count,
-            &uboData, &instancedPrimitiveOffset, &drawCallsSavedCount,
-            &stagingBuffer = mInstancingStagingBuffer,
+    auto processor = [eyeCount, count,
+            &instancedPrimitiveOffset, &drawCallsSavedCount, &instancedIndices,
             &descriptorSetPatch = mInstancingDescriptorSetPatch]
             (Command* const dst, Command* const begin, Command* const end) mutable {
 
         uint32_t const instanceCount = std::distance(begin, end);
         drawCallsSavedCount += instanceCount - 1;
 
-        if (UTILS_UNLIKELY(stagingBuffer.empty())) {
-            stagingBuffer.resize(count);
-            descriptorSetPatch.reserve(count);
-            uboData = mRenderableSoa.data<FScene::UBO>();
-            assert_invariant(uboData);
+        if (UTILS_UNLIKELY(instancedIndices.empty())) {
+            instancedIndices.reserve(std::min<size_t>(count, CONFIG_MAX_INSTANCES));
+            descriptorSetPatch.reserve(std::min<size_t>(count / 2, 32));
         }
 
-        assert_invariant(instancedPrimitiveOffset + instanceCount <= stagingBuffer.size());
         for (uint32_t i = 0; i < instanceCount; i++) {
-            stagingBuffer[instancedPrimitiveOffset + i] = uboData[begin[i].info.index];
+            instancedIndices.push_back(begin[i].info.index);
         }
 
         // Modify the command at its final destination
@@ -362,7 +359,29 @@ RenderPass::Command* RenderPass::instanceify(
     };
 
     auto const end = compact<CONFIG_MAX_INSTANCES>(curr, last, equivalent, processor);
-    // if (!mInstancingStagingBuffer.empty()) {
+
+    assert_invariant(instancedPrimitiveOffset == instancedIndices.size());
+    if (UTILS_UNLIKELY(!instancedIndices.empty())) {
+        PerRenderableData const* const uboData = mRenderableSoa.data<FScene::UBO>();
+        assert_invariant(uboData);
+
+        size_t const uploadSize = sizeof(PerRenderableData) * instancedIndices.size();
+        PerRenderableData* const stagingData = static_cast<PerRenderableData*>(
+                utils::aligned_alloc(uploadSize, alignof(PerRenderableData)));
+        assert_invariant(stagingData);
+
+        for (size_t i = 0, n = instancedIndices.size(); i < n; i++) {
+            stagingData[i] = uboData[instancedIndices[i]];
+        }
+
+        assert_invariant(mInstancingStagingBuffer.buffer == nullptr);
+        mInstancingStagingBuffer = BufferDescriptor{
+            stagingData, uploadSize,
+            [](void* const b, size_t, void*) { utils::aligned_free(b); }
+        };
+    }
+
+    // if (mInstancingStagingBuffer.buffer != nullptr) {
     //     slog.d << "auto-instancing, saving " << drawCallsSavedCount << " draw calls, out of "
     //             << count << io::endl;
     // }
@@ -371,10 +390,23 @@ RenderPass::Command* RenderPass::instanceify(
 
 
 void RenderPass::finalize(FEngine const& engine, DriverApi& driver) {
+    static_assert(sizeof(PerRenderableUib) == CONFIG_MAX_INSTANCES * sizeof(PerRenderableData),
+            "PerRenderableUib size must match CONFIG_MAX_INSTANCES * sizeof(PerRenderableData)");
+
     mFinalized = true;
-    if (UTILS_UNLIKELY(!mInstancingStagingBuffer.empty())) {
-        auto const* p = mInstancingStagingBuffer.data();
-        size_t const size = sizeof(PerRenderableData) * mInstancingStagingBuffer.size();
+    if (UTILS_UNLIKELY(mInstancingStagingBuffer.buffer != nullptr)) {
+        assert_invariant(!mInstancingDescriptorSetPatch.empty());
+
+        // Every patched instanced command binds mInstancedDescriptorSetHandle with a dynamic
+        // offset of `curr->info.index * sizeof(PerRenderableData)` and a bound range of
+        // `sizeof(PerRenderableUib)`. Since mInstancingDescriptorSetPatch is ordered by
+        // increasing `info.index`, `maxDynamicOffset + sizeof(PerRenderableUib)` is the exact
+        // minimum UBO size that keeps every dynamic bind in-bounds across all backends.
+        size_t const maxDynamicOffset =
+                size_t(mInstancingDescriptorSetPatch.back()->info.index) *
+                sizeof(PerRenderableData);
+        size_t const uboSize = maxDynamicOffset + sizeof(PerRenderableUib);
+        assert_invariant(mInstancingStagingBuffer.size <= uboSize);
 
         // Create a temporary UBO for holding the per-renderable data of each primitive,
         // The `curr->info.index` is updated so that this (now instanced) command can
@@ -384,7 +416,7 @@ void RenderPass::finalize(FEngine const& engine, DriverApi& driver) {
 
         // create a temporary UBO for instancing
         mInstancedUboHandle = BufferObjectSharedHandle{
-            driver.createBufferObject(size + sizeof(PerRenderableUib),
+            driver.createBufferObject(uboSize,
                     BufferObjectBinding::UNIFORM, BufferUsage::STATIC), driver };
 
         // We also need a descriptor-set to hold the custom UBO. This works because
@@ -401,9 +433,8 @@ void RenderPass::finalize(FEngine const& engine, DriverApi& driver) {
                 +PerRenderableBindingPoints::OBJECT_UNIFORMS,
                 mInstancedUboHandle, 0, sizeof(PerRenderableUib));
 
-        driver.updateBufferObjectUnsynchronized(mInstancedUboHandle,
-            BufferDescriptor::make(p, size,
-                [data = std::move(mInstancingStagingBuffer)](void*, size_t) {}), 0);
+        driver.updateBufferObjectUnsynchronized(
+                mInstancedUboHandle, std::move(mInstancingStagingBuffer), 0);
 
         // patch the commands with the descriptor set
         for (Command* const curr : mInstancingDescriptorSetPatch) {
@@ -411,8 +442,11 @@ void RenderPass::finalize(FEngine const& engine, DriverApi& driver) {
             assert_invariant(!curr[0].info.dsh);
             curr[0].info.dsh = mInstancedDescriptorSetHandle;
         }
-        mInstancingDescriptorSetPatch.clear();
-        assert_invariant(mInstancingStagingBuffer.empty());
+        // The patch list is no longer needed, but this RenderPass outlives the frame's
+        // FrameGraph execution. Swap with a temporary to release the heap storage now;
+        // clear() or `= {}` (initializer_list assignment) would both retain the capacity.
+        std::vector<Command*>{}.swap(mInstancingDescriptorSetPatch);
+        assert_invariant(mInstancingStagingBuffer.buffer == nullptr);
     }
 }
 
@@ -421,12 +455,13 @@ UTILS_ALWAYS_INLINE // This function exists only to make the code more readable.
 inline              // and we don't need it in the compilation unit
 void RenderPass::setupColorCommand(Command& cmdDraw, Variant variant, DynamicSpecConstKey const specKey,
         FMaterialInstance const* const UTILS_RESTRICT mi,
-        bool const inverseFrontFaces, bool const hasDepthClamp) noexcept {
+        bool const inverseFrontFaces, bool const hasDepthClamp,
+        bool const hasFogAsPostProcess) noexcept {
 
     FMaterial const * const UTILS_RESTRICT ma = mi->getMaterial();
     variant = Variant::filterVariant(variant, ma->isVariantLit());
 
-    DynamicSpecConstKey const dynamicSpecConstKey =
+    DynamicSpecConstKey dynamicSpecConstKey =
             ma->getDefinition().filterProgramSpecKey(variant, specKey);
 
     // Below, we evaluate both commands to avoid a branch
@@ -440,6 +475,13 @@ void RenderPass::setupColorCommand(Command& cmdDraw, Variant variant, DynamicSpe
     bool const hasScreenSpaceRefraction = ma->getRefractionMode() == RefractionMode::SCREEN_SPACE;
     bool const isBlendingCommand = !hasScreenSpaceRefraction &&
             (blendingMode != BlendingMode::OPAQUE && blendingMode != BlendingMode::MASKED);
+
+    // When fog is applied as a post-process, non-blended commands must be drawn without fog.
+    // This must happen before computing the sort key below so that it matches the program
+    // actually used (see LocalProgramCache::filterForGetProgram()).
+    if (UTILS_UNLIKELY(hasFogAsPostProcess && !isBlendingCommand)) {
+        dynamicSpecConstKey.setFog(false);
+    }
 
     RasterState rasterState = mi->getRasterState();
 
@@ -582,6 +624,9 @@ RenderPass::Command* RenderPass::generateCommandsImpl(CommandTypeFlags extraFlag
 
     bool const hasDepthClamp =
             renderFlags & HAS_DEPTH_CLAMP;
+
+    bool const hasFogAsPostProcess =
+            renderFlags & HAS_FOG_AS_POSTPROCESS;
 
     bool const isPickingVariant = Variant::isPickingVariant(variant);
     bool const depthColorWrite = isPickingVariant || Variant::isDepthMomentsVariant(variant);
@@ -742,7 +787,7 @@ RenderPass::Command* RenderPass::generateCommandsImpl(CommandTypeFlags extraFlag
 
             if constexpr (isColorPass) {
                 setupColorCommand(cmd, renderableVariant, renderableSpecKey, mi,
-                        inverseFrontFaces, hasDepthClamp);
+                        inverseFrontFaces, hasDepthClamp, hasFogAsPostProcess);
                 const bool blendPass = Pass(cmd.key & PASS_MASK) == Pass::BLENDED;
                 if (blendPass) {
                     // TODO: at least for transparent objects, AABB should be per primitive
@@ -1192,7 +1237,10 @@ void RenderPass::Executor::execute(FEngine const& engine, DriverApi& driver,
                         +DescriptorSetBindingPoints::PER_RENDERABLE,
                         {{ offset, info.skinningOffset }, driver});
 
-                if (UTILS_UNLIKELY(info.hasMorphing)) {
+                // Both skinning and morphing share Variant::SKINNING_OR_MORPHING, whose vertex shader
+                // declares pushConstants.morphingBufferOffset; WebGPU requires immediate data to
+                // be populated whenever the bound shader variant references it.
+                if (UTILS_UNLIKELY(info.materialVariant.hasSkinningOrMorphing())) {
                     driver.setPushConstant(ShaderStage::VERTEX,
                             +PushConstantIds::MORPHING_BUFFER_OFFSET, int32_t(info.morphingOffset));
                 }

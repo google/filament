@@ -55,7 +55,7 @@ struct MaterialPushConstant;
 class MaterialParser {
 public:
     MaterialParser(utils::FixedCapacityVector<backend::ShaderLanguage> preferredLanguages,
-            const void* data, size_t size);
+            const void* data, size_t size, bool copyPayload = true);
 
     MaterialParser(MaterialParser const& rhs) noexcept = delete;
     MaterialParser& operator=(MaterialParser const& rhs) noexcept = delete;
@@ -68,6 +68,7 @@ public:
 
     bool operator==(MaterialParser const& rhs) const noexcept;
 
+    bool parseChunkContainer() noexcept;
     ParseResult parse() noexcept;
 
     // Compute the CRC32 of the material or return the cached value.
@@ -81,7 +82,6 @@ public:
     bool getMaterialVersion(uint32_t* value) const noexcept;
     bool getFeatureLevel(uint8_t* value) const noexcept;
     bool getName(utils::CString*) const noexcept;
-    bool getCacheId(uint64_t* cacheId) const noexcept;
     bool getUIB(BufferInterfaceBlock* uib) const noexcept;
     bool getSIB(SamplerInterfaceBlock* sib) const noexcept;
     bool getSubpasses(SubpassInfo* subpass) const noexcept;
@@ -159,7 +159,7 @@ private:
     struct MaterialParserDetails {
         MaterialParserDetails(
                 utils::FixedCapacityVector<backend::ShaderLanguage> preferredLanguages,
-                const void* data, size_t size);
+                const void* data, size_t size, bool copyPayload);
 
         template<typename T>
         bool getFromSimpleChunk(filamat::ChunkType type, T* value) const noexcept;
@@ -170,8 +170,9 @@ private:
         class ManagedBuffer {
             void* mStart = nullptr;
             size_t mSize = 0;
+            bool mOwnsBuffer = true;
         public:
-            explicit ManagedBuffer(const void* start, size_t size);
+            explicit ManagedBuffer(const void* start, size_t size, bool copyPayload = true);
             ~ManagedBuffer() noexcept;
             ManagedBuffer(ManagedBuffer const& rhs) = delete;
             ManagedBuffer& operator=(ManagedBuffer const& rhs) = delete;

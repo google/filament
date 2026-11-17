@@ -696,8 +696,8 @@ void FRenderableManager::create(
                         .skinningBufferMode = true };
             }
         } else {
-            if (UTILS_UNLIKELY(boneCount > 0 || targetCount > 0)) {
-                setSkinning(ci, boneCount > 0);
+            if (UTILS_UNLIKELY(boneCount > 0)) {
+                setSkinning(ci, true);
                 Bones& bones = manager[ci].bones;
                 // Note that we are sizing the bones UBO according to CONFIG_MAX_BONE_COUNT rather than
                 // mSkinningBoneCount. According to the OpenGL ES 3.2 specification in 7.6.3 Uniform
@@ -720,65 +720,51 @@ void FRenderableManager::create(
                         .offset = 0,
                         .skinningBufferMode = false };
 
-                if (boneCount) {
-                    if (builder->mUserBones) {
-                        FSkinningBuffer::setBones(mEngine, bones.handle,
-                                builder->mUserBones, boneCount, 0);
-                    } else if (builder->mUserBoneMatrices) {
-                        FSkinningBuffer::setBones(mEngine, bones.handle,
-                                builder->mUserBoneMatrices, boneCount, 0);
-                    } else {
-                        // initialize the bones to identity
-                        auto* out = driver.allocatePod<PerRenderableBoneUib::BoneData>(boneCount);
-                        std::uninitialized_fill_n(out, boneCount, FSkinningBuffer::makeBone({}));
-                        driver.updateBufferObject(bones.handle, {
-                                out, boneCount * sizeof(PerRenderableBoneUib::BoneData) }, 0);
-                    }
-                }
-                else {
-                    // When boneCount is 0, do an initialization for the bones uniform array to
-                    // avoid crash on adreno gpu.
-                    if (UTILS_UNLIKELY(driver.isWorkaroundNeeded(
-                            Workaround::ADRENO_UNIFORM_ARRAY_CRASH))) {
-                        auto *initBones = driver.allocatePod<PerRenderableBoneUib::BoneData>(1);
-                        std::uninitialized_fill_n(initBones, 1, FSkinningBuffer::makeBone({}));
-                        driver.updateBufferObject(bones.handle, {
-                                initBones, sizeof(PerRenderableBoneUib::BoneData) }, 0);
-                    }
+                if (builder->mUserBones) {
+                    FSkinningBuffer::setBones(mEngine, bones.handle,
+                            builder->mUserBones, boneCount, 0);
+                } else if (builder->mUserBoneMatrices) {
+                    FSkinningBuffer::setBones(mEngine, bones.handle,
+                            builder->mUserBoneMatrices, boneCount, 0);
+                } else {
+                    // initialize the bones to identity
+                    auto* out = driver.allocatePod<PerRenderableBoneUib::BoneData>(boneCount);
+                    std::uninitialized_fill_n(out, boneCount, FSkinningBuffer::makeBone({}));
+                    driver.updateBufferObject(bones.handle, {
+                            out, boneCount * sizeof(PerRenderableBoneUib::BoneData) }, 0);
                 }
             }
         }
 
-        // Create and initialize all needed MorphTargets.
-        // It's required to avoid branches in hot loops.
-        FMorphTargetBuffer* morphTargetBuffer = builder->mMorphTargetBuffer;
-        if (morphTargetBuffer == nullptr) {
-            morphTargetBuffer = mEngine.getDummyMorphTargetBuffer();
-        }
-
-        // Always create skinning and morphing resources if one of them is enabled because
-        // the shader always handles both. See Variant::SKINNING_OR_MORPHING.
-        if (UTILS_UNLIKELY(boneCount > 0 || targetCount > 0)) {
-
+        if (UTILS_UNLIKELY(boneIndicesAndWeights.count > 0)) {
             Bones& bones = manager[ci].bones;
             bones.handleTexture = FSkinningBuffer::createIndicesAndWeightsHandle(
                     engine, boneIndicesAndWeights.count);
-            if (boneIndicesAndWeights.count > 0) {
-                FSkinningBuffer::setIndicesAndWeightsData(engine,
-                        bones.handleTexture,
-                        boneIndicesAndWeights.data,
-                        boneIndicesAndWeights.count);
+            FSkinningBuffer::setIndicesAndWeightsData(engine,
+                    bones.handleTexture,
+                    boneIndicesAndWeights.data,
+                    boneIndicesAndWeights.count);
+        }
+
+        if (UTILS_UNLIKELY(targetCount > 0)) {
+            FMorphTargetBuffer* morphTargetBuffer = builder->mMorphTargetBuffer;
+            if (morphTargetBuffer == nullptr) {
+                morphTargetBuffer = mEngine.getDummyMorphTargetBuffer();
             }
 
             // Instead of using a UBO per primitive, we could also have a single UBO for all primitives
             // and use bindUniformBufferRange which might be more efficient.
             MorphWeights& morphWeights = manager[ci].morphWeights;
-            morphWeights = MorphWeights {
+            morphWeights = MorphWeights{
                 .handle = driver.createBufferObject(
                         sizeof(PerRenderableMorphingUib),
                         BufferObjectBinding::UNIFORM,
                         BufferUsage::DYNAMIC),
                 .count = targetCount };
+
+            auto* const out = driver.allocatePod<float4>(targetCount);
+            std::uninitialized_fill_n(out, targetCount, float4{ 0.0f });
+            driver.updateBufferObject(morphWeights.handle, { out, targetCount * sizeof(float4) }, 0);
 
             Slice<FRenderPrimitive> const primitives = mManager[ci].primitives;
             mManager[ci].morphTargetBuffer = morphTargetBuffer;
@@ -787,14 +773,6 @@ void FRenderableManager::create(
                     auto const& [offset] = builder->mEntries[i].morphing;
                     primitives[i].setMorphingBufferOffset(offset);
                 }
-            }
-
-            // When targetCount equal 0, boneCount>0 in this case, do an initialization for the
-            // morphWeights uniform array to avoid crash on adreno gpu.
-            if (UTILS_UNLIKELY(targetCount == 0 &&
-                    driver.isWorkaroundNeeded(Workaround::ADRENO_UNIFORM_ARRAY_CRASH))) {
-                float const initWeights[1] = { 0 };
-                setMorphWeights(ci, initWeights, 1, 0);
             }
         }
     }

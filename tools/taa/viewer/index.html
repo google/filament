@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Filament taa_harness — Result Viewer</title>
+  <link rel="stylesheet" href="/styles.css">
+  <script src="/app.js" defer></script>
+</head>
+<body>
+  <div id="app-shell" class="app-shell">
+    <header class="topbar">
+      <div class="brand">
+        <span class="brand-dot"></span>
+        <span class="brand-title">taa_harness</span>
+        <span class="brand-sub">Interactive Upscaler &amp; TAA Inspector</span>
+      </div>
+      <div id="run-pills" class="run-pills" aria-label="Loaded runs"></div>
+      <div class="topbar-actions">
+        <button id="btn-scorecard" type="button" class="btn btn-subtle" title="Toggle 4-axis qualification scorecard">
+          Scorecard
+        </button>
+        <button id="btn-shortcuts" type="button" class="btn btn-subtle" title="Keyboard shortcuts (?)">
+          ?
+        </button>
+      </div>
+    </header>
+
+    <div id="warning-banner" class="warning-banner hidden" role="status"></div>
+    <section id="scorecard-drawer" class="scorecard-drawer hidden" aria-label="Qualification scorecard"></section>
+
+    <div class="toolbar">
+      <div class="toolbar-group">
+        <span class="toolbar-label">Layout</span>
+        <div id="layout-buttons" class="segmented">
+          <button type="button" data-layout="grid" class="seg-btn active" title="Synchronized side-by-side grid (G)">Grid</button>
+          <button type="button" data-layout="split" class="seg-btn" title="Draggable A|B split curtain (S)">Split A|B</button>
+          <button type="button" data-layout="flip" class="seg-btn" title="Single full-stage instant flip (F, 1..9, R)">Flip</button>
+        </div>
+      </div>
+
+      <div id="split-controls" class="toolbar-group hidden">
+        <label class="toolbar-label" for="select-split-a">A</label>
+        <select id="select-split-a" class="ctrl-select"></select>
+        <label class="toolbar-label" for="select-split-b">B</label>
+        <select id="select-split-b" class="ctrl-select"></select>
+        <button id="btn-split-axis" type="button" class="btn btn-xs" title="Toggle vertical / horizontal split">Vert</button>
+      </div>
+
+      <div id="flip-controls" class="toolbar-group hidden">
+        <label class="toolbar-label" for="select-flip-source">Active</label>
+        <select id="select-flip-source" class="ctrl-select"></select>
+        <button id="btn-flip-ab" type="button" class="btn btn-xs" title="Swap between first two sources (B)">Swap A/B</button>
+      </div>
+
+      <div class="toolbar-group">
+        <label class="toolbar-label" for="select-layer">Layer</label>
+        <select id="select-layer" class="ctrl-select">
+          <option value="capture">Rendered Capture</option>
+          <option value="heatmap">Thresholded Error Heatmap</option>
+          <option value="signed">Signed Luma Bias (+/-)</option>
+          <option value="flicker">Temporal Flicker (sigma_t)</option>
+          <option value="diff_png">Harness Diff PNG</option>
+        </select>
+      </div>
+
+      <div id="heatmap-controls" class="toolbar-group hidden">
+        <label class="toolbar-label" for="select-compare-ref">Compare</label>
+        <select id="select-compare-ref" class="ctrl-select"></select>
+
+        <label id="label-error-mode" class="toolbar-label" for="select-error-mode">Metric</label>
+        <select id="select-error-mode" class="ctrl-select">
+          <option value="linear_rgb">Linear RGB RMSE</option>
+          <option value="linear_luma">Linear Luma |dY|</option>
+          <option value="srgb_lsb">Max sRGB dLSB (0..255)</option>
+        </select>
+
+        <select id="select-flicker-mode" class="ctrl-select hidden">
+          <option value="residual">Residual (Capture - Ref)</option>
+          <option value="raw">Raw Capture</option>
+        </select>
+
+        <label class="toolbar-label" for="slider-threshold">Floor tau</label>
+        <input id="slider-threshold" type="range" min="0" max="0.15" step="0.001" value="0.020" class="ctrl-slider">
+        <span id="readout-threshold" class="mono-readout">0.020</span>
+        <button id="btn-msaa-floor" type="button" class="btn btn-xs" title="Set floor to MSAA noise floor (or default 0.020)">Auto Floor</button>
+
+        <label class="toolbar-label" for="slider-gain">Gain</label>
+        <input id="slider-gain" type="range" min="1" max="32" step="1" value="8" class="ctrl-slider ctrl-slider-short">
+        <span id="readout-gain" class="mono-readout">8x</span>
+      </div>
+
+      <div class="toolbar-group">
+        <label class="toolbar-label" for="select-mask">Mask</label>
+        <select id="select-mask" class="ctrl-select">
+          <option value="off">Off</option>
+          <option value="outline">Silhouette Outline</option>
+          <option value="gate">Gate Error to Silhouette</option>
+        </select>
+        <button id="btn-hotspots" type="button" class="btn btn-xs" title="Toggle 8x8 inner-core P95 hotspot grid (H)">
+          8x8 Hotspots
+        </button>
+      </div>
+
+      <div class="toolbar-group toolbar-group-right">
+        <span class="toolbar-label">Zoom</span>
+        <div id="zoom-buttons" class="segmented">
+          <button type="button" data-zoom="0" class="seg-btn active">Fit</button>
+          <button type="button" data-zoom="1" class="seg-btn">1x</button>
+          <button type="button" data-zoom="2" class="seg-btn">2x</button>
+          <button type="button" data-zoom="4" class="seg-btn">4x</button>
+          <button type="button" data-zoom="8" class="seg-btn">8x</button>
+          <button type="button" data-zoom="16" class="seg-btn">16x</button>
+        </div>
+        <button id="btn-reset-view" type="button" class="btn btn-xs" title="Reset pan and zoom (0)">Reset</button>
+      </div>
+    </div>
+
+    <div class="workspace">
+      <aside class="sidebar" aria-label="Scenarios">
+        <div class="sidebar-header">
+          <div class="sidebar-title-row">
+            <span class="panel-heading">Scenarios</span>
+            <select id="select-scenario-sort" class="ctrl-select ctrl-select-xs" title="Sort scenarios">
+              <option value="default">Suite Order</option>
+              <option value="delta_edge">Worst dEdge RMSE</option>
+              <option value="ghost_peak">Worst Ghost Peak</option>
+              <option value="flicker">Worst Flicker</option>
+            </select>
+          </div>
+          <div id="category-filters" class="filter-pills">
+            <button type="button" data-cat="all" class="pill-btn active">All</button>
+            <button type="button" data-cat="Static" class="pill-btn">Static</button>
+            <button type="button" data-cat="Motion" class="pill-btn">Motion</button>
+            <button type="button" data-cat="Perf" class="pill-btn">Perf</button>
+          </div>
+        </div>
+        <div id="scenario-list" class="scenario-list" role="listbox" aria-label="Scenario list"></div>
+      </aside>
+
+      <main class="center-column">
+        <div id="viewport-stage" class="viewport-stage">
+          <div id="loading-indicator" class="loading-indicator hidden">Loading frames...</div>
+          <div id="tiles-container" class="tiles-container"></div>
+        </div>
+
+        <section class="timeline-dock" aria-label="Timeline and per-frame metrics">
+          <div class="transport-bar">
+            <div class="transport-btns">
+              <button id="btn-first" type="button" class="btn btn-xs" title="First frame (Home)">|&lt;</button>
+              <button id="btn-prev" type="button" class="btn btn-xs" title="Previous frame (Left Arrow)">&lt;</button>
+              <button id="btn-play" type="button" class="btn btn-primary btn-xs" title="Play / Pause (Space)">Play</button>
+              <button id="btn-next" type="button" class="btn btn-xs" title="Next frame (Right Arrow)">&gt;</button>
+              <button id="btn-last" type="button" class="btn btn-xs" title="Last frame (End)">&gt;|</button>
+            </div>
+
+            <input id="slider-frame" type="range" min="0" max="15" step="1" value="0" class="frame-slider" aria-label="Frame scrubber">
+            <span id="frame-status" class="frame-status mono-readout">Frame 00 / 00</span>
+
+            <div class="transport-options">
+              <label class="toolbar-label" for="select-loop-mode">Mode</label>
+              <select id="select-loop-mode" class="ctrl-select ctrl-select-xs">
+                <option value="loop">Loop</option>
+                <option value="pingpong">Ping-Pong</option>
+              </select>
+
+              <label class="toolbar-label" for="select-fps">FPS</label>
+              <select id="select-fps" class="ctrl-select ctrl-select-xs">
+                <option value="2">2</option>
+                <option value="4">4</option>
+                <option value="8" selected>8</option>
+                <option value="15">15</option>
+                <option value="30">30</option>
+                <option value="60">60</option>
+              </select>
+
+              <label class="toolbar-label" for="select-chart-metric">Curve</label>
+              <select id="select-chart-metric" class="ctrl-select ctrl-select-xs">
+                <option value="edge_rmse">edge_rmse</option>
+                <option value="rmse">rmse</option>
+                <option value="gmsd">gmsd</option>
+                <option value="hotspot_top10_rmse">hotspot_top10_rmse</option>
+                <option value="wake_ghosting">wake_ghosting</option>
+                <option value="sharpness">sharpness</option>
+                <option value="edge_sharpness">edge_sharpness</option>
+                <option value="frame_gpu_ms">frame_gpu_ms</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="chart-wrap">
+            <canvas id="timeline-chart" class="timeline-chart"></canvas>
+          </div>
+        </section>
+      </main>
+
+      <aside class="inspector" aria-label="Pixel loupe and scenario metrics">
+        <div class="inspector-section">
+          <div class="inspector-header-row">
+            <span class="panel-heading">Pixel Loupe (16x16)</span>
+            <span id="loupe-coords" class="mono-readout">(x: --, y: --)</span>
+          </div>
+          <div class="loupe-row">
+            <canvas id="loupe-canvas" width="160" height="160" class="loupe-canvas"></canvas>
+            <div class="loupe-meta">
+              <div id="loupe-pin-badge" class="pin-badge">Hover viewport (click to pin)</div>
+              <label class="toolbar-label" for="select-loupe-source">Loupe Source</label>
+              <select id="select-loupe-source" class="ctrl-select ctrl-select-xs"></select>
+              <button id="btn-unpin" type="button" class="btn btn-xs hidden">Unpin Pixel</button>
+            </div>
+          </div>
+          <div id="pixel-values-table" class="pixel-values-table"></div>
+        </div>
+
+        <div class="inspector-section">
+          <div class="inspector-header-row">
+            <span class="panel-heading">Pixel Luma Over Time</span>
+            <span class="mono-subtle">0..N-1</span>
+          </div>
+          <canvas id="waveform-canvas" width="300" height="104" class="waveform-canvas"></canvas>
+        </div>
+
+        <div class="inspector-section inspector-section-grow">
+          <div class="inspector-header-row">
+            <span class="panel-heading">Scenario Metrics</span>
+          </div>
+          <div id="scenario-metrics-table" class="scenario-metrics-table"></div>
+        </div>
+      </aside>
+    </div>
+  </div>
+
+  <div id="shortcuts-modal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="shortcuts-title">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h2 id="shortcuts-title" class="modal-title">Keyboard &amp; Mouse Shortcuts</h2>
+        <button id="btn-close-shortcuts" type="button" class="btn btn-xs">Close (Esc)</button>
+      </div>
+      <div class="shortcuts-grid">
+        <div class="sc-key">Space</div><div class="sc-desc">Play / Pause sequence</div>
+        <div class="sc-key">Left / Right</div><div class="sc-desc">Step backward / forward 1 frame</div>
+        <div class="sc-key">Home / End</div><div class="sc-desc">Jump to first / last frame</div>
+        <div class="sc-key">G / S / F</div><div class="sc-desc">Switch layout: Grid / Split A|B / Flip</div>
+        <div class="sc-key">1 .. 9</div><div class="sc-desc">Select run 1..9 in Flip mode (or toggle in Grid)</div>
+        <div class="sc-key">R</div><div class="sc-desc">Switch to Ground Truth Reference (Flip mode)</div>
+        <div class="sc-key">B</div><div class="sc-desc">Swap A / B sources in Flip or Split mode</div>
+        <div class="sc-key">E</div><div class="sc-desc">Toggle Rendered Capture vs Thresholded Error Heatmap</div>
+        <div class="sc-key">H</div><div class="sc-desc">Toggle 8x8 inner-core P95 Hotspot Grid overlay</div>
+        <div class="sc-key">M</div><div class="sc-desc">Cycle Silhouette Mask (Off / Outline / Gate)</div>
+        <div class="sc-key">Wheel / Drag</div><div class="sc-desc">Pixel-exact zoom around cursor / synchronized pan</div>
+        <div class="sc-key">Click Canvas</div><div class="sc-desc">Pin / unpin pixel (x, y) for Loupe &amp; Luma trace</div>
+        <div class="sc-key">0</div><div class="sc-desc">Reset zoom &amp; pan to Fit</div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

@@ -28,6 +28,8 @@
 #include <spirv_glsl.hpp>
 #include <spirv-tools/libspirv.h>
 
+#include <smolv.h>
+
 #include <chrono>
 #include <fstream>
 #include <iomanip>
@@ -656,12 +658,23 @@ static bool parseChunks(Config config, void* data, size_t size) {
         }
 
         size_t dictSize = 0;
+        size_t compressedDictSize = 0;
         for (uint32_t i = 0; i < dictionary.size(); i++) {
-            // Null-terminated string sizes map physically 1:1 with uncompressed Dictionary byte bounds
-            dictSize += dictionary[i].size();
+            if (config.printDictionarySPIRV) {
+                dictSize += smolv::GetDecodedBufferSize(dictionary[i].data(), dictionary[i].size());
+                compressedDictSize += dictionary[i].size();
+            } else {
+                // Null-terminated string sizes map physically 1:1 with uncompressed Dictionary byte bounds
+                dictSize += dictionary[i].size();
+            }
         }
 
-        std::cout << "Dictionary size: " << dictSize << " bytes" << std::endl;
+        if (config.printDictionarySPIRV) {
+            std::cout << "Dictionary size: " << dictSize << " bytes (compressed: "
+                      << compressedDictSize << " bytes)" << std::endl;
+        } else {
+            std::cout << "Dictionary size: " << dictSize << " bytes" << std::endl;
+        }
         if (hasCounts) {
             std::cout << "Indices size: " << indicesSize << " bytes" << std::endl;
         }
@@ -674,7 +687,17 @@ static bool parseChunks(Config config, void* data, size_t size) {
                 continue;
             }
 
-            std::string str((const char*)i.data());
+            if (config.printDictionarySPIRV) {
+                size_t const decodedBlobSize = smolv::GetDecodedBufferSize(i.data(), i.size());
+                std::cout << std::setw(4) << index << " | "
+                          << decodedBlobSize << " bytes (compressed: " << i.size() << " bytes)"
+                          << std::endl;
+                index++;
+                continue;
+            }
+
+            std::string str(reinterpret_cast<const char*>(i.data()),
+                    i.size() > 0 ? i.size() - 1 : 0);
             // Replace \n with literal \n
             size_t pos = 0;
             while ((pos = str.find('\n', pos)) != std::string::npos) {
