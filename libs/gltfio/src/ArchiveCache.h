@@ -57,6 +57,9 @@ namespace filament::gltfio {
         Count
     };
 
+    static_assert(
+        static_cast<uint8_t>(ArchiveFeatureId::Count) <= 32, "Too many archive features (> 32)");
+
     inline constexpr uint32_t archiveFeatureBit(ArchiveFeatureId id) noexcept {
         return 1u << static_cast<uint8_t>(id);
     }

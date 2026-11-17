@@ -33,7 +33,10 @@
 #include <meshoptimizer.h>
 
 #include <algorithm>
+#include <cstdlib>
 #include <limits>
+#include <memory>
+#include <utility>
 #include <vector>
 
 namespace filament::gltfio::utility {
@@ -97,36 +100,34 @@ bool decodeDracoMeshes(cgltf_data const* gltf, cgltf_primitive const* prim,
 }
 
 bool decodeMeshoptCompression(cgltf_data* data, bool* decoded, JobSystem* js) {
+    struct FreeDeleter {
+        void operator()(void* ptr) const noexcept { free(ptr); }
+    };
+    using ScopedMalloc = std::unique_ptr<uint8_t, FreeDeleter>;
+
     struct MeshoptDecodeTask {
         cgltf_buffer_view* view;
         cgltf_meshopt_compression const* compression;
         uint8_t const* source;
-        void* destination;
+        ScopedMalloc destination;
         int error = 0;
     };
     std::vector<MeshoptDecodeTask> tasks;
 
-    auto freePendingAllocations = [&tasks]() {
-        for (auto const& task : tasks) {
-            free(task.destination);
-        }
-    };
-
     for (size_t i = 0; i < data->buffer_views_count; ++i) {
-        if (!data->buffer_views[i].has_meshopt_compression) {
+        cgltf_buffer_view& view = data->buffer_views[i];
+        if (!view.has_meshopt_compression || view.data != nullptr) {
             continue;
         }
-        cgltf_meshopt_compression* compression = &data->buffer_views[i].meshopt_compression;
+        cgltf_meshopt_compression* compression = &view.meshopt_compression;
         if (!compression->buffer || !compression->buffer->data) {
             slog.e << "gltfio: meshopt decompression failed, missing buffer data." << io::endl;
-            freePendingAllocations();
             return false;
         }
 
         if (compression->offset > compression->buffer->size ||
             compression->size > compression->buffer->size - compression->offset) {
             slog.e << "gltfio: meshopt decompression failed, buffer bounds exceeded." << io::endl;
-            freePendingAllocations();
             return false;
         }
 
@@ -134,7 +135,6 @@ bool decodeMeshoptCompression(cgltf_data* data, bool* decoded, JobSystem* js) {
 
         if (compression->stride == 0) {
             slog.e << "gltfio: meshopt decompression failed, stride is 0." << io::endl;
-            freePendingAllocations();
             return false;
         }
 
@@ -143,7 +143,6 @@ bool decodeMeshoptCompression(cgltf_data* data, bool* decoded, JobSystem* js) {
             slog.e << "gltfio: meshopt decompression exceeds maximum count of " << theoreticalMaxCount
                    << " (actual=" << compression->count << ") given stride of " << compression->stride
                    << "." << io::endl;
-            freePendingAllocations();
             return false;
         }
 
@@ -154,7 +153,6 @@ bool decodeMeshoptCompression(cgltf_data* data, bool* decoded, JobSystem* js) {
                 if (compression->stride % 4 != 0 || compression->stride > 256) {
                     slog.e << "gltfio: meshopt decompression failed, "
                            << "invalid attributes stride." << io::endl;
-                    freePendingAllocations();
                     return false;
                 }
                 break;
@@ -163,7 +161,6 @@ bool decodeMeshoptCompression(cgltf_data* data, bool* decoded, JobSystem* js) {
                 if (compression->count % 3 != 0) {
                     slog.e << "gltfio: meshopt decompression failed, "
                            << "count must be divisible by 3 for TRIANGLES mode." << io::endl;
-                    freePendingAllocations();
                     return false;
                 }
                 [[fallthrough]];
@@ -172,21 +169,18 @@ bool decodeMeshoptCompression(cgltf_data* data, bool* decoded, JobSystem* js) {
                 if (compression->stride != 2 && compression->stride != 4) {
                     slog.e << "gltfio: meshopt decompression failed, "
                            << "stride must be 2 or 4 for index decoding." << io::endl;
-                    freePendingAllocations();
                     return false;
                 }
                 // Filters are only applicable to vertex attribute buffers.
                 if (compression->filter != cgltf_meshopt_compression_filter_none) {
                     slog.e << "gltfio: meshopt decompression failed, "
                            << "filter is not allowed for index decoding." << io::endl;
-                    freePendingAllocations();
                     return false;
                 }
                 break;
             default:
                 slog.e << "gltfio: meshopt decompression failed, unsupported mode ("
                        << static_cast<int>(compression->mode) << ")." << io::endl;
-                freePendingAllocations();
                 return false;
         }
 
@@ -198,7 +192,6 @@ bool decodeMeshoptCompression(cgltf_data* data, bool* decoded, JobSystem* js) {
                 if (compression->stride != 4 && compression->stride != 8) {
                     slog.e << "gltfio: meshopt decompression failed, "
                            << "octahedral filter requires stride 4 or 8." << io::endl;
-                    freePendingAllocations();
                     return false;
                 }
                 break;
@@ -207,7 +200,6 @@ bool decodeMeshoptCompression(cgltf_data* data, bool* decoded, JobSystem* js) {
                 if (compression->stride != 8) {
                     slog.e << "gltfio: meshopt decompression failed, "
                            << "quaternion filter requires stride 8." << io::endl;
-                    freePendingAllocations();
                     return false;
                 }
                 break;
@@ -216,39 +208,36 @@ bool decodeMeshoptCompression(cgltf_data* data, bool* decoded, JobSystem* js) {
                 if (compression->stride % 4 != 0) {
                     slog.e << "gltfio: meshopt decompression failed, "
                            << "exponential filter requires stride multiple of 4." << io::endl;
-                    freePendingAllocations();
                     return false;
                 }
                 break;
             default:
                 slog.e << "gltfio: meshopt decompression failed, unsupported filter ("
                        << static_cast<int>(compression->filter) << ")." << io::endl;
-                freePendingAllocations();
                 return false;
         }
 
         const size_t decodedSize = compression->count * compression->stride;
 
-        // This memory is freed by cgltf.
-        void* destination = malloc(decodedSize);
+        // Ownership is transferred to cgltf_buffer_view::data on success (freed by cgltf_free).
+        ScopedMalloc destination(static_cast<uint8_t*>(malloc(decodedSize)));
         if (UTILS_UNLIKELY(!destination)) {
             slog.e << "gltfio: meshopt decompression allocation failed ("
                    << decodedSize << " bytes)" << io::endl;
-            freePendingAllocations();
             return false;
         }
 
         tasks.push_back({
-            .view = &data->buffer_views[i],
+            .view = &view,
             .compression = compression,
             .source = source,
-            .destination = destination,
+            .destination = std::move(destination),
         });
     }
 
     auto runTask = [](MeshoptDecodeTask* task) {
         cgltf_meshopt_compression const* compression = task->compression;
-        void* destination = task->destination;
+        void* destination = task->destination.get();
         uint8_t const* source = task->source;
         int error = 0;
         switch (compression->mode) {
@@ -317,16 +306,17 @@ bool decodeMeshoptCompression(cgltf_data* data, bool* decoded, JobSystem* js) {
         }
     }
 
-    for (size_t i = 0; i < tasks.size(); ++i) {
-        if (tasks[i].error != 0) {
-            slog.e << "gltfio: meshopt decompression failed with error " << tasks[i].error
+    for (auto const& task : tasks) {
+        if (task.error != 0) {
+            slog.e << "gltfio: meshopt decompression failed with error " << task.error
                    << io::endl;
-            for (size_t j = i; j < tasks.size(); ++j) {
-                free(tasks[j].destination);
-            }
             return false;
         }
-        tasks[i].view->data = tasks[i].destination;
+    }
+
+    for (auto& task : tasks) {
+        assert_invariant(task.view->data == nullptr);
+        task.view->data = task.destination.release();
     }
 
     if (decoded) {
