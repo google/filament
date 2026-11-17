@@ -60,6 +60,7 @@
 
 namespace filament {
 
+class ColorPassDescriptorSet;
 class FColorGrading;
 class FEngine;
 class FMaterial;
@@ -323,6 +324,13 @@ public:
             Viewport const& vp, FrameGraphTexture::Descriptor const& outDesc,
             backend::SamplerMagFilter filterMag,
             backend::SamplerMinFilter filterMin) noexcept;
+
+    // Multiview color blitter. Copies each layer of `input` into the same layer of a layered
+    // output, so the result can be forwarded to a multiview render target.
+    FrameGraphId<FrameGraphTexture> blitMultiview(FrameGraph& fg, bool translucent,
+            FrameGraphId<FrameGraphTexture> input,
+            FrameGraphTexture::Descriptor const& outDesc,
+            ColorPassDescriptorSet const& colorPassDescriptorSet) noexcept;
 
     // depth blitter using shaders
     FrameGraphId<FrameGraphTexture> blitDepth(FrameGraph& fg,

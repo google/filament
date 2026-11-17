@@ -1753,10 +1753,28 @@ void FRenderer::renderJob(DriverApi& driver, LinearAllocatorArena& arena, FView&
                     colorGradingConfig.asSubpass ||
                     hasScreenSpaceRefraction ||
                     ssReflectionsOptions.enabled))) {
-            input = ppm.blit(fg, blendModeTranslucent, input, xvp, {
-                            .width = vp.width, .height = vp.height,
-                            .format = colorGradingConfig.ldrFormat },
-                    SamplerMagFilter::NEAREST, SamplerMinFilter::NEAREST);
+            if (isRenderingMultiview && !engine.debug.stereo.combine_multiview_images) {
+                // The refraction color buffer has a single layer, and SSR history is sampled
+                // as a 2D texture, so neither can feed a multiview target.
+                FILAMENT_CHECK_PRECONDITION(!hasScreenSpaceRefraction &&
+                        !ssReflectionsOptions.enabled)
+                        << "Multiview rendering doesn't support screen-space reflections or "
+                           "screen-space refraction.";
+                // blit() reads and writes a single layer, so multiview needs a blit that copies
+                // every eye's layer. Multiview has no post-processing, so `input` matches `vp`.
+                assert_invariant(xvp == svp);
+                input = ppm.blitMultiview(fg, blendModeTranslucent, input, {
+                                .width = vp.width, .height = vp.height,
+                                .depth = engine.getConfig().stereoscopicEyeCount,
+                                .type = SamplerType::SAMPLER_2D_ARRAY,
+                                .format = colorGradingConfig.ldrFormat },
+                        view.getColorPassDescriptorSet());
+            } else {
+                input = ppm.blit(fg, blendModeTranslucent, input, xvp, {
+                                .width = vp.width, .height = vp.height,
+                                .format = colorGradingConfig.ldrFormat },
+                        SamplerMagFilter::NEAREST, SamplerMinFilter::NEAREST);
+            }
         }
     }
 
