@@ -172,10 +172,6 @@ float F_Schlick(float f0, float f90, float VoH) {
 
 // Schlick with a reflectance of one at grazing incidence, which is what an interface between two
 // dielectrics has; fresnel() below substitutes a shadowing term for that.
-float F_SchlickIridescence(float f0, float cosTheta) {
-    return f0 + (1.0 - f0) * pow5(saturate(1.0 - cosTheta));
-}
-
 vec3 F_SchlickIridescence(const vec3 f0, float cosTheta) {
     return f0 + (1.0 - f0) * pow5(saturate(1.0 - cosTheta));
 }
@@ -192,35 +188,51 @@ vec3 f0ToIor(const vec3 f0) {
     return (1.0 + r) / (1.0 - r);
 }
 
-// The XYZ sensitivity curves in Fourier space at one optical path difference and phase: four
-// Gaussians, one per curve plus the second lobe of x.
-highp vec3 evaluateIridescenceSensitivity(highp float opd, const highp vec3 shift) {
+// Evaluate the XYZ sensitivity curves in Fourier space at m = 1 and m = 2 for optical path
+// difference opd (in nanometers) and first-order phase signs s1 in {-1, +1}^3: four Gaussians, one
+// per curve plus the second lobe of x. Since 2 * phi is always a multiple of 2 * PI, the m = 2
+// cosines and Gaussians follow algebraically from m = 1 with no extra transcendentals.
+void evaluateIridescenceSensitivity(highp float opd, const highp vec3 s1,
+        out highp vec3 rgb1, out highp vec3 rgb2) {
     // the path difference arrives in nanometers and the fits are in inverse meters
     highp float phase = 2.0 * PI * opd * 1.0e-9;
+    highp float phase2 = phase * phase;
 
-    highp vec3 value    = vec3(5.4856e-13, 4.4201e-13, 5.2481e-13);
-    highp vec3 position = vec3(1.6810e+06, 1.7953e+06, 2.2084e+06);
-    highp vec3 variance = vec3(4.3278e+09, 9.3046e+09, 6.6121e+09);
+    const highp float LOG2_E = 1.44269504;
+    const highp vec3 position = vec3(1.6810e+06, 1.7953e+06, 2.2084e+06);
+    const highp vec3 negVarLog2E = -vec3(4.3278e+09, 9.3046e+09, 6.6121e+09) * LOG2_E;
+    const highp float negVarX2Log2E = -4.5282e+09 * LOG2_E;
 
-    highp vec3 xyz = value * sqrt(2.0 * PI * variance) * cos(position * phase + shift) *
-            exp(-variance * phase * phase);
-    xyz.x += 9.7470e-14 * sqrt(2.0 * PI * 4.5282e+09) *
-            cos(2.2399e+06 * phase + shift.x) * exp(-4.5282e+09 * phase * phase);
-    xyz /= 1.0685e-7;
+    // value * sqrt(2.0 * PI * variance) / 1.0685e-7
+    const highp vec3 scale = vec3(0.84659000, 1.00022189, 1.00112249);
+    const highp float scaleX2 = 0.15386831;
 
-    highp mat3 XYZ_TO_REC709 = mat3(
+    const highp mat3 XYZ_TO_REC709 = mat3(
          3.2404542, -0.9692660,  0.0556434,
         -1.5371385,  1.8760108, -0.2040259,
         -0.4985314,  0.0415560,  1.0572252);
 
-    return XYZ_TO_REC709 * xyz;
+    highp vec3 c1 = cos(position * phase);
+    highp float c1X2 = cos(2.2399e+06 * phase);
+    highp vec3 g1 = exp2(negVarLog2E * phase2);
+    highp float g1X2 = exp2(negVarX2Log2E * phase2);
+
+    highp vec3 xyz1 = scale * (s1 * c1) * g1;
+    xyz1.x += scaleX2 * (s1.x * c1X2) * g1X2;
+    rgb1 = XYZ_TO_REC709 * xyz1;
+
+    highp vec3 g1Sq = g1 * g1;
+    highp float g1X2Sq = g1X2 * g1X2;
+    highp vec3 xyz2 = scale * (2.0 * c1 * c1 - 1.0) * (g1Sq * g1Sq);
+    xyz2.x += scaleX2 * (2.0 * c1X2 * c1X2 - 1.0) * (g1X2Sq * g1X2Sq);
+    rgb2 = XYZ_TO_REC709 * xyz2;
 }
 
 // Fresnel of a base surface under a film of the given IOR and thickness in nanometers. The stack is
 // air, the film and the base; the film absorbs nothing, so what leaves is the geometric series of
 // what bounces between its two interfaces, expanded to the second order as the specification does.
 vec3 F_Iridescence(float outsideIor, float filmIor, const vec3 baseF0,
-        highp float thicknessNm, float cosTheta1) {
+        highp float thicknessNm, float cosTheta1, float weightCosTheta1) {
     // A film thin enough not to be there must behave as though it is not, or a thickness map whose
     // minimum is zero shows an edge where the first interface appears.
     float iridescenceIor = mix(outsideIor, filmIor, smoothstep(0.0, 0.03, thicknessNm));
@@ -232,7 +244,8 @@ vec3 F_Iridescence(float outsideIor, float filmIor, const vec3 baseF0,
     }
     float cosTheta2 = sqrt(cosTheta2Sq);
 
-    float R12 = F_SchlickIridescence(iorToF0(iridescenceIor, outsideIor), cosTheta1);
+    float R120 = iorToF0(iridescenceIor, outsideIor);
+    float R12 = R120 + (1.0 - R120) * weightCosTheta1;
     float T121 = 1.0 - R12;
 
     // the clamp short of one is what keeps a white conductor's f0 from taking f0ToIor() to infinity
@@ -241,34 +254,34 @@ vec3 F_Iridescence(float outsideIor, float filmIor, const vec3 baseF0,
 
     highp float opd = 2.0 * iridescenceIor * thicknessNm * cosTheta2;
 
-    // the phase each reflection picks up, approximated as nothing entering a denser medium and half
-    // a turn entering a thinner one
-    float phi21 = PI - (iridescenceIor < outsideIor ? PI : 0.0);
-    highp vec3 phi = phi21 + vec3(
-            baseIor.x < iridescenceIor ? PI : 0.0,
-            baseIor.y < iridescenceIor ? PI : 0.0,
-            baseIor.z < iridescenceIor ? PI : 0.0);
+    // Each reflection picks up half a turn entering a thinner medium and nothing entering a denser
+    // one, so m = 1 flips the cosine sign when only one interface inverts.
+    bool flip21 = iridescenceIor < outsideIor;
+    highp vec3 s1 = vec3(
+            (baseIor.x < iridescenceIor) != flip21 ? 1.0 : -1.0,
+            (baseIor.y < iridescenceIor) != flip21 ? 1.0 : -1.0,
+            (baseIor.z < iridescenceIor) != flip21 ? 1.0 : -1.0);
 
     vec3 R123 = clamp(R12 * R23, 1e-5, 0.9999);
     vec3 r123 = sqrt(R123);
     vec3 Rs = (T121 * T121) * R23 / (1.0 - R123);
 
-    vec3 I = R12 + Rs;
-    vec3 Cm = Rs - T121;
+    vec3 C1 = 2.0 * (Rs - T121) * r123;
+    vec3 C2 = C1 * r123;
 
-    for (int m = 1; m <= 2; m++) {
-        Cm *= r123;
-        I += Cm * 2.0 * evaluateIridescenceSensitivity(float(m) * opd, float(m) * phi);
-    }
+    highp vec3 rgb1;
+    highp vec3 rgb2;
+    evaluateIridescenceSensitivity(opd, s1, rgb1, rgb2);
 
+    vec3 I = (R12 + Rs) + C1 * rgb1 + C2 * rgb2;
     return max(I, vec3(0.0));
 }
 
 // Inverse of F_SchlickIridescence: the f0 whose Schlick curve passes through F at this angle.
-vec3 F_IridescenceToF0(const vec3 F, float cosTheta) {
+vec3 F_IridescenceToF0(const vec3 F, float weightCosTheta) {
     // Schlick reaches one at grazing incidence whatever f0 was, so no f0 reproduces anything else
     // there; the clamp keeps the division finite as that is approached
-    float weight = min(pow5(saturate(1.0 - cosTheta)), 0.9999);
+    float weight = min(weightCosTheta, 0.9999);
 
     return saturate((F - weight) / (1.0 - weight));
 }
@@ -281,9 +294,13 @@ vec3 F_IridescenceToF0(const vec3 F, float cosTheta) {
 // lobe for an ordinary surface either.
 vec3 iridescentF0(const vec3 baseF0, float NoV, float iridescence, float iridescenceIor,
         highp float thicknessNm) {
-    vec3 F = F_Iridescence(1.0, iridescenceIor, baseF0, thicknessNm, NoV);
+    if (iridescence <= 0.0) {
+        return baseF0;
+    }
+    float weightNoV = pow5(saturate(1.0 - NoV));
+    vec3 F = F_Iridescence(1.0, iridescenceIor, baseF0, thicknessNm, NoV, weightNoV);
 
-    return mix(baseF0, F_IridescenceToF0(F, NoV), iridescence);
+    return mix(baseF0, F_IridescenceToF0(F, weightNoV), iridescence);
 }
 
 #endif // MATERIAL_HAS_IRIDESCENCE
