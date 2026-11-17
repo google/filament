@@ -50,8 +50,7 @@ float evaluateSSAO(out vec3 ssBentNormal) {
         b.z = f.x * (1.0 - f.y);
         b.w = (1.0 - f.x) * (1.0 - f.y);
 
-        highp mat4 m = getViewFromWorldMatrix();
-        highp float d = dot(vec3(m[0].z, m[1].z, m[2].z), shading_position) + m[3].z;
+        highp float d = getViewSpaceZ();
         highp vec4 w = (vec4(d) - depths) * frameUniforms.aoSamplingQualityAndEdgeDistance;
         w = max(vec4(MEDIUMP_FLT_MIN), 1.0 - w * w) * b;
         highp vec4 weights = w / (w.x + w.y + w.z + w.w);

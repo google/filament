@@ -756,7 +756,7 @@ void evaluateIBL(const MaterialInputs material, const PixelParams pixel, inout v
         if (pixel.perceptualRoughness < maxPerceptualRoughness) {
             // distance to camera plane
             const float invLog2sqrt5 = 0.8614;
-            float d = -mulMat4x4Float3(getViewFromWorldMatrix(), getWorldPosition()).z;
+            float d = -getViewSpaceZ();
             float lod = max(0.0, (log2(pixel.roughness / d) + frameUniforms.refractionLodOffset) * invLog2sqrt5);
             highp vec2 ssrUv = uvToRenderTargetUV(getNormalizedPhysicalViewportCoord().xy);
             ssrFr = textureLod(sampler0_ssr, vec3(ssrUv, 1.0), lod);
