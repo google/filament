@@ -36,10 +36,6 @@ FFilamentAsset::~FFilamentAsset() {
     // Free transient load-time data if they haven't been freed yet.
     releaseSourceData();
 
-    for (FFilamentInstance* instance : mInstances) {
-        mEntityManager->destroy(instance->mRoot);
-    }
-
     delete mWireframe;
 
     // Destroy name components.
@@ -52,7 +48,6 @@ FFilamentAsset::~FFilamentAsset() {
     // Destroy gltfio node components.
     for (auto entity : mEntities) {
         mNodeManager->destroy(entity);
-
     }
 
     // Destroy gltfio trs transform components.
@@ -63,12 +58,16 @@ FFilamentAsset::~FFilamentAsset() {
     // Destroy all renderable, light, transform, and camera components,
     // then destroy the actual entities. This includes instances.
     if (!mDetachedFilamentComponents) {
-        mEngine->destroy(mRoot);
-        mEntityManager->destroy(mRoot);
         for (auto entity : mEntities) {
             mEngine->destroy(entity);
             mEntityManager->destroy(entity);
         }
+        for (FFilamentInstance* instance : mInstances) {
+            mEngine->destroy(instance->mRoot);
+            mEntityManager->destroy(instance->mRoot);
+        }
+        mEngine->destroy(mRoot);
+        mEntityManager->destroy(mRoot);
     }
 
     // FilamentInstances need to be destroyed after the renderables have been destroyed

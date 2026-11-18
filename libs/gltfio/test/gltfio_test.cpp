@@ -3680,6 +3680,117 @@ TEST_F(glTFIOTest, ParallelMeshoptDecoding) {
     }
 }
 
+// Issue #10852: AssetLoader::destroyAsset() must destroy each instance root's transform component
+// directly rather than relying on Engine::gc() (which is skipped by renderStandaloneView()).
+TEST_F(glTFIOTest, DestroyAssetReleasesInstanceTransform) {
+    constexpr char gltf[] =
+            R"({"asset":{"version":"2.0"},"scene":0,"scenes":[{"nodes":[0]}],"nodes":[{}]})";
+    AssetLoader* loader = AssetLoader::create({ mEngine, mMaterialProvider });
+    ASSERT_NE(loader, nullptr);
+    TransformManager& transforms = mEngine->getTransformManager();
+    EntityManager& em = EntityManager::get();
+    size_t const before = transforms.getComponentCount();
+
+    // Single-instance asset via createAsset().
+    {
+        FilamentAsset* asset = loader->createAsset(
+                reinterpret_cast<uint8_t const*>(gltf), sizeof(gltf) - 1);
+        ASSERT_NE(asset, nullptr);
+        Entity const assetRoot = asset->getRoot();
+        Entity const instanceRoot = asset->getInstance()->getRoot();
+        EXPECT_TRUE(transforms.hasComponent(assetRoot));
+        EXPECT_TRUE(transforms.hasComponent(instanceRoot));
+
+        loader->destroyAsset(asset);
+        loader->gc();
+        EXPECT_EQ(before, transforms.getComponentCount());
+        EXPECT_FALSE(transforms.hasComponent(assetRoot));
+        EXPECT_FALSE(transforms.hasComponent(instanceRoot));
+        EXPECT_FALSE(em.isAlive(assetRoot));
+        EXPECT_FALSE(em.isAlive(instanceRoot));
+    }
+
+    // Multi-instance asset via createInstancedAsset() plus dynamic createInstance().
+    {
+        constexpr size_t kInitialInstances = 3;
+        FilamentInstance* instances[kInitialInstances] = {};
+        FilamentAsset* asset = loader->createInstancedAsset(
+                reinterpret_cast<uint8_t const*>(gltf), sizeof(gltf) - 1,
+                instances, kInitialInstances);
+        ASSERT_NE(asset, nullptr);
+        FilamentInstance* extraInstance = loader->createInstance(asset);
+        ASSERT_NE(extraInstance, nullptr);
+
+        Entity const assetRoot = asset->getRoot();
+        std::array<Entity, kInitialInstances + 1> const instanceRoots = {
+            instances[0]->getRoot(),
+            instances[1]->getRoot(),
+            instances[2]->getRoot(),
+            extraInstance->getRoot(),
+        };
+        for (Entity const root : instanceRoots) {
+            EXPECT_TRUE(transforms.hasComponent(root));
+            EXPECT_TRUE(em.isAlive(root));
+        }
+
+        loader->destroyAsset(asset);
+        loader->gc();
+        EXPECT_EQ(before, transforms.getComponentCount());
+        EXPECT_FALSE(em.isAlive(assetRoot));
+        for (Entity const root : instanceRoots) {
+            EXPECT_FALSE(transforms.hasComponent(root));
+            EXPECT_FALSE(em.isAlive(root));
+        }
+    }
+
+    AssetLoader::destroy(&loader);
+}
+
+TEST_F(glTFIOTest, DestroyAssetPreservesDetachedInstanceTransform) {
+    constexpr char gltf[] =
+            R"({"asset":{"version":"2.0"},"scene":0,"scenes":[{"nodes":[0]}],"nodes":[{}]})";
+    AssetLoader* loader = AssetLoader::create({ mEngine, mMaterialProvider });
+    ASSERT_NE(loader, nullptr);
+    TransformManager& transforms = mEngine->getTransformManager();
+    EntityManager& em = EntityManager::get();
+    size_t const before = transforms.getComponentCount();
+
+    FilamentAsset* asset = loader->createAsset(
+            reinterpret_cast<uint8_t const*>(gltf), sizeof(gltf) - 1);
+    ASSERT_NE(asset, nullptr);
+
+    Entity const assetRoot = asset->getRoot();
+    Entity const instanceRoot = asset->getInstance()->getRoot();
+    ASSERT_EQ(asset->getEntityCount(), 1u);
+    Entity const nodeEntity = asset->getEntities()[0];
+
+    asset->detachFilamentComponents();
+    EXPECT_TRUE(asset->areFilamentComponentsDetached());
+
+    loader->destroyAsset(asset);
+    loader->gc();
+
+    // All entities and their transform hierarchy (assetRoot -> instanceRoot -> nodeEntity) must
+    // remain alive and intact when Filament components were detached before destroyAsset().
+    EXPECT_EQ(transforms.getComponentCount(), before + 3);
+    EXPECT_TRUE(em.isAlive(assetRoot));
+    EXPECT_TRUE(em.isAlive(instanceRoot));
+    EXPECT_TRUE(em.isAlive(nodeEntity));
+    ASSERT_TRUE(transforms.hasComponent(assetRoot));
+    ASSERT_TRUE(transforms.hasComponent(instanceRoot));
+    ASSERT_TRUE(transforms.hasComponent(nodeEntity));
+    EXPECT_EQ(transforms.getParent(transforms.getInstance(nodeEntity)), instanceRoot);
+    EXPECT_EQ(transforms.getParent(transforms.getInstance(instanceRoot)), assetRoot);
+
+    for (Entity const entity : { nodeEntity, instanceRoot, assetRoot }) {
+        mEngine->destroy(entity);
+        em.destroy(entity);
+    }
+    EXPECT_EQ(transforms.getComponentCount(), before);
+
+    AssetLoader::destroy(&loader);
+}
+
 #undef EXPECT_FLOAT3_EQ
 
 int main(int argc, char** argv) {
