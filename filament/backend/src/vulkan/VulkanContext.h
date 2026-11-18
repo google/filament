@@ -241,6 +241,10 @@ public:
         return mHostQueryResetFeatures.hostQueryReset == VK_TRUE;
     }
 
+    inline bool isPipelineBinarySupported() const noexcept {
+        return mPipelineBinaryFeatures.pipelineBinaries == VK_TRUE;
+    }
+
     inline bool pipelineCreationFeedbackSupported() const noexcept {
         return mPipelineCreationFeedbackSupported;
     }
@@ -324,6 +328,9 @@ private:
     };
     VkPhysicalDeviceHostQueryResetFeaturesEXT mHostQueryResetFeatures = {
         .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_HOST_QUERY_RESET_FEATURES_EXT,
+    };
+    VkPhysicalDevicePipelineBinaryFeaturesKHR mPipelineBinaryFeatures = {
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PIPELINE_BINARY_FEATURES_KHR,
     };
     VkExternalFenceHandleTypeFlags mFenceExportFlags = {};
 

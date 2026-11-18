@@ -333,6 +333,9 @@ ExtensionSet getDeviceExtensions(VkPhysicalDevice device, bool enableDebugUtils 
 #endif
         VK_KHR_MULTIVIEW_EXTENSION_NAME,
 
+        // Required for VK_KHR_pipeline_binary
+        VK_KHR_PIPELINE_BINARY_EXTENSION_NAME,
+
         // Required for dynamic rendering
         VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME,
         VK_EXT_VERTEX_INPUT_DYNAMIC_STATE_EXTENSION_NAME,
@@ -1157,6 +1160,13 @@ void VulkanPlatform::queryAndSetDeviceFeatures(Platform::DriverConfig const& dri
         chainStruct(&context.mPhysicalDeviceFeatures, &context.mHostQueryResetFeatures);
     }
 
+    if (setContains(deviceExts, VK_KHR_PIPELINE_BINARY_EXTENSION_NAME)) {
+        context.mPipelineBinaryFeatures = {
+            .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PIPELINE_BINARY_FEATURES_KHR,
+        };
+        chainStruct(&context.mPhysicalDeviceFeatures, &context.mPipelineBinaryFeatures);
+    }
+
     VkPhysicalDevicePipelineProtectedAccessFeaturesEXT pipelineProtectedAccessFeatures = {
         .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PIPELINE_PROTECTED_ACCESS_FEATURES_EXT,
     };
@@ -1558,6 +1568,12 @@ void VulkanPlatform::createLogicalDeviceAndQueues(
 
     if (setContains(deviceExtensions, VK_EXT_COLOR_WRITE_ENABLE_EXTENSION_NAME)) {
         chainStruct(&deviceCreateInfo, &context.mColorWriteEnableFeatures);
+    }
+
+    // Enable pipeline binaries if supported by the device extensions
+    if (setContains(deviceExtensions, VK_KHR_PIPELINE_BINARY_EXTENSION_NAME) &&
+        context.isPipelineBinarySupported()) {
+        chainStruct(&deviceCreateInfo, &context.mPipelineBinaryFeatures);
     }
 
     VkPhysicalDeviceHostQueryResetFeaturesEXT hostQueryReset = {
