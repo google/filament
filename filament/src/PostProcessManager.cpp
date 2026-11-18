@@ -3952,6 +3952,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::blit(FrameGraph& fg, bool co
     return ppQuadBlit->output;
 }
 
+#ifdef FILAMENT_ENABLE_MULTIVIEW
 FrameGraphId<FrameGraphTexture> PostProcessManager::blitMultiview(FrameGraph& fg,
         bool const translucent, FrameGraphId<FrameGraphTexture> const input,
         FrameGraphTexture::Descriptor const& outDesc,
@@ -3975,8 +3976,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::blitMultiview(FrameGraph& fg
                         FrameGraphTexture::Usage::COLOR_ATTACHMENT);
                 builder.declareRenderPass(builder.getName(data.output), {
                         .attachments = { .color = { data.output }},
-                        .layerCount = uint8_t(outDesc.depth),
-                        .clearFlags = TargetBufferFlags::DEPTH });
+                        .layerCount = uint8_t(outDesc.depth) });
             },
             [=, this, &colorPassDescriptorSet](FrameGraphResources const& resources,
                     auto const& data, DriverApi& driver) {
@@ -4015,6 +4015,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::blitMultiview(FrameGraph& fg
 
     return ppQuadBlit->output;
 }
+#endif
 
 FrameGraphId<FrameGraphTexture> PostProcessManager::blitDepth(FrameGraph& fg,
         FrameGraphId<FrameGraphTexture> const input) noexcept {

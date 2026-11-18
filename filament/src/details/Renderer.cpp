@@ -821,6 +821,7 @@ void FRenderer::renderJob(DriverApi& driver, LinearAllocatorArena& arena, FView&
     if (isRenderingMultiview) {
         hasPostProcess = false;
         msaaOptions.enabled = false;
+        ssReflectionsOptions.enabled = false;
 
         // Picking is not supported for multiview rendering. Clear any pending picking queries.
         view.clearPickingQueries();
@@ -1444,9 +1445,10 @@ void FRenderer::renderJob(DriverApi& driver, LinearAllocatorArena& arena, FView&
     RenderPass const pass{ passBuilder.build(engine, driver) };
 
     // now that we have the commands we can figure out if we have refraction commands
-    auto* const firstRefractionCommand = [&view](RenderPass const& pass) {
+    auto* const firstRefractionCommand = [&view, isRenderingMultiview](RenderPass const& pass) {
         RenderPass::Command const* p = nullptr;
-        if (UTILS_UNLIKELY(view.isScreenSpaceRefractionEnabled() && !pass.empty())) {
+        if (UTILS_UNLIKELY(!isRenderingMultiview && view.isScreenSpaceRefractionEnabled() &&
+                !pass.empty())) {
             p = RendererUtils::getFirstRefractionCommand(pass);
         }
         return p;
@@ -1461,7 +1463,7 @@ void FRenderer::renderJob(DriverApi& driver, LinearAllocatorArena& arena, FView&
     // if MSAA is enabled, we end-up rendering in an intermediate buffer. This is the only case where
     // "!hasPostProcess" doesn't guarantee rendering into the swapchain.
     const bool useIntermediateBuffer = hasPostProcess || msaaOptions.enabled ||
-            ssReflectionsOptions.enabled || hasScreenSpaceRefraction ||
+            blendModeTranslucent || ssReflectionsOptions.enabled || hasScreenSpaceRefraction ||
             (isRenderingMultiview && engine.debug.stereo.
             combine_multiview_images);
 
@@ -1754,13 +1756,8 @@ void FRenderer::renderJob(DriverApi& driver, LinearAllocatorArena& arena, FView&
                     colorGradingConfig.asSubpass ||
                     hasScreenSpaceRefraction ||
                     ssReflectionsOptions.enabled))) {
+#ifdef FILAMENT_ENABLE_MULTIVIEW
             if (isRenderingMultiview && !engine.debug.stereo.combine_multiview_images) {
-                // The refraction color buffer has a single layer, and SSR history is sampled
-                // as a 2D texture, so neither can feed a multiview target.
-                FILAMENT_CHECK_PRECONDITION(!hasScreenSpaceRefraction &&
-                        !ssReflectionsOptions.enabled)
-                        << "Multiview rendering doesn't support screen-space reflections or "
-                           "screen-space refraction.";
                 // blit() reads and writes a single layer, so multiview needs a blit that copies
                 // every eye's layer. Multiview has no post-processing, so `input` matches `vp`.
                 assert_invariant(xvp == svp);
@@ -1770,7 +1767,9 @@ void FRenderer::renderJob(DriverApi& driver, LinearAllocatorArena& arena, FView&
                                 .type = SamplerType::SAMPLER_2D_ARRAY,
                                 .format = colorGradingConfig.ldrFormat },
                         view.getColorPassDescriptorSet());
-            } else {
+            } else
+#endif
+            {
                 input = ppm.blit(fg, blendModeTranslucent, input, xvp, {
                                 .width = vp.width, .height = vp.height,
                                 .format = colorGradingConfig.ldrFormat },
