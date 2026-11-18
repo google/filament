@@ -421,7 +421,7 @@ void VulkanDriver::terminate() {
     // Must come before mResourceManager: this holds resource_ptrs to textures and descriptor sets.
     mStreamedImageManager.terminate();
 
-    // Must come before samplerCache, ycbcrConversionCache, descriptorSetCache,
+    // Must come before mResourceManager, samplerCache, ycbcrConversionCache, descriptorSetCache,
     // descriptorSetLayoutCache
     mExternalImageManager.terminate();
 
@@ -504,6 +504,7 @@ void VulkanDriver::collectGarbage() {
     mBufferCache.gc();
     mFramebufferCache.gc();
     mPipelineCache.gc();
+    mExternalImageManager.gc();
 
     mResourceManager.gc();
 
@@ -945,35 +946,92 @@ void VulkanDriver::createTextureExternalImage2R(Handle<HwTexture> th, backend::S
     // assert_invariant(format == metadata.filamentFormat);
     // assert_invariant(fvkutils::getVkFormat(format) == metadata.format);
 
-    auto imgData = mPlatform->createVkImageFromExternal(externalImage, width, height);
-
-    assert_invariant(imgData.internal.valid() || imgData.external.valid());
-
-    VkFormat vkformat = metadata.format;
-    VkImage vkimage = VK_NULL_HANDLE;
-    VkDeviceMemory memory = VK_NULL_HANDLE;
-    if (imgData.internal.valid()) {
-        metadata.externalFormat = 0;
-        vkimage = imgData.internal.image;
-        memory = imgData.internal.memory;
-    } else { // imgData.external.valid()
-        vkformat = VK_FORMAT_UNDEFINED;
-        vkimage = imgData.external.image;
-        memory = imgData.external.memory;
-    }
+    // Software-decoded YUV images are copied from the native buffer
+    // every time they are bound, so their imports are not shared.
+    void const* const bufferKey = metadata.isStagingRequired ? nullptr : externalImage.get();
 
     VkSamplerYcbcrConversion const conversion =
             mExternalImageManager.getVkSamplerYcbcrConversion(metadata);
-    auto texture = resource_ptr<VulkanTexture>::make(&mResourceManager, th, mContext,
-            mPlatform->getDevice(), mAllocator, &mResourceManager, &mCommands, vkimage, memory,
-            vkformat, conversion, imgData.internal.stagingMemory, imgData.internal.stagingBuffer,
-            externalImage, static_cast<uint8_t>(metadata.mipLevels), metadata.samples,
-            metadata.width, metadata.height, metadata.layers, usage, mStagePool);
-    auto& commands = mCommands.get();
-    // Unlike uploaded textures or swapchains, we need to explicit transition this
-    // texture into the read layout.
-    texture->transitionLayout(&commands, texture->getPrimaryViewRange(), VulkanLayout::FRAG_READ);
 
+    auto importTexture = [&](Platform::ExternalImageHandle handleForImport,
+                                 Handle<HwTexture> targetHandle) {
+		auto imgData = mPlatform->createVkImageFromExternal(externalImage, width, height);
+
+        assert_invariant(imgData.internal.valid() || imgData.external.valid());
+
+        VkFormat vkformat = metadata.format;
+        VkImage vkimage = VK_NULL_HANDLE;
+        VkDeviceMemory memory = VK_NULL_HANDLE;
+        if (imgData.internal.valid()) {
+            vkimage = imgData.internal.image;
+            memory = imgData.internal.memory;
+        } else { // imgData.external.valid()
+            vkformat = VK_FORMAT_UNDEFINED;
+            vkimage = imgData.external.image;
+            memory = imgData.external.memory;
+        }
+
+        resource_ptr<VulkanTexture> tex = targetHandle
+                ? resource_ptr<VulkanTexture>::make(&mResourceManager, targetHandle, mContext,
+                          mPlatform->getDevice(), mAllocator, &mResourceManager, &mCommands,
+                          vkimage, memory, vkformat, conversion, imgData.internal.stagingMemory,
+                          imgData.internal.stagingBuffer, std::move(handleForImport),
+                          static_cast<uint8_t>(metadata.mipLevels), metadata.samples,
+                          metadata.width, metadata.height, metadata.layers, usage, mStagePool)
+                : resource_ptr<VulkanTexture>::construct(&mResourceManager, mContext,
+                          mPlatform->getDevice(), mAllocator, &mResourceManager, &mCommands,
+                          vkimage, memory, vkformat, conversion, imgData.internal.stagingMemory,
+                          imgData.internal.stagingBuffer, std::move(handleForImport),
+                          static_cast<uint8_t>(metadata.mipLevels), metadata.samples,
+                          metadata.width, metadata.height, metadata.layers, usage, mStagePool);
+
+        // Unlike uploaded textures or swapchains, we need to explicit transition
+        // this texture into the read layout. This only happens once per imported
+        // buffer.
+        VulkanCommandBuffer& commands = mCommands.get();
+        tex->transitionLayout(&commands, tex->getPrimaryViewRange(), VulkanLayout::FRAG_READ);
+        return tex;
+    };
+
+    if (bufferKey) {
+        VulkanExternalImageManager::ImportKey const importKey = {
+            .bufferKey = bufferKey,
+            .format = metadata.format,
+            .externalFormat = metadata.externalFormat,
+            .width = metadata.width,
+            .height = metadata.height,
+            .usage = usage,
+            .conversion = conversion,
+        };
+        resource_ptr<VulkanTexture> import = mExternalImageManager.findImport(importKey);
+        if (!import) {
+            // Import owned by the cache. It does not hold the ExternalImageHandle,
+            // otherwise the handle (and the client resources it keeps alive) would
+            // only be released when the import is evicted from the cache.
+            import = importTexture(Platform::ExternalImageHandle(), {});
+            mExternalImageManager.cacheImport(importKey, import);
+        }
+
+        // Share the imported VkImage instead of importing it again. This texture,
+        // not the shared import, holds the handle it was created from, so the
+        // handle is released once the GPU is done with this texture.
+        VkComponentMapping const identity = {
+            VK_COMPONENT_SWIZZLE_IDENTITY,
+            VK_COMPONENT_SWIZZLE_IDENTITY,
+            VK_COMPONENT_SWIZZLE_IDENTITY,
+            VK_COMPONENT_SWIZZLE_IDENTITY,
+        };
+        auto texture = resource_ptr<VulkanTexture>::make(&mResourceManager, th,
+                mPlatform->getDevice(), mPlatform->getPhysicalDevice(), mContext, mAllocator,
+                &mCommands, import, identity);
+        texture->setExternalImage(Platform::ExternalImageHandle(externalImage));
+        texture.inc();
+        mResourceManager.associateHandle(th.getId(), std::move(tag));
+        return;
+    }
+
+    resource_ptr<VulkanTexture> texture =
+            importTexture(Platform::ExternalImageHandle(externalImage), th);
     texture.inc();
     mResourceManager.associateHandle(th.getId(), std::move(tag));
 }
