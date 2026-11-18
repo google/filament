@@ -17,6 +17,34 @@ if "%TARGET%" == "" (
     )
 )
 
+:: Target architecture: x64 (default) or arm64. Can be passed as the second argument or through
+:: the ARCH environment variable.
+if "%ARCH%" == "" (
+    if "%2" == "" (
+        set ARCH=x64
+    ) else (
+        set ARCH=%2
+    )
+)
+
+if /i "%ARCH%" == "x64" (
+    set VCVARS=vcvars64.bat
+    set VS_COMPONENT=Microsoft.VisualStudio.Component.VC.Tools.x86.x64
+    set CMAKE_ARCH=x64
+    set DIST_ARCH=x86_64
+    set ARCHIVE_NAME=filament-windows.tgz
+) else if /i "%ARCH%" == "arm64" (
+    set VCVARS=vcvarsarm64.bat
+    set VS_COMPONENT=Microsoft.VisualStudio.Component.VC.Tools.ARM64
+    set CMAKE_ARCH=ARM64
+    set DIST_ARCH=arm64
+    set ARCHIVE_NAME=filament-windows-arm64.tgz
+) else (
+    echo Unsupported ARCH: %ARCH%. Expected x64 or arm64.
+    exit /b 1
+)
+echo Building for architecture: %ARCH%
+
 set BUILD_DEBUG=
 set BUILD_RELEASE=
 set INSTALL=
@@ -42,18 +70,46 @@ if "%TARGET%" == "release" (
     set CCACHE_DISABLE=1
 )
 
-set VISUAL_STUDIO_VERSION="Enterprise"
 if "%RUNNING_LOCALLY%" == "1" (
-    set VISUAL_STUDIO_VERSION="Community"
     set "PATH=%PATH%;C:\Program Files\7-Zip"
 )
 
-:: Outdated windows-2019 pattern
-:: call "C:\Program Files (x86)\Microsoft Visual Studio\2019\%VISUAL_STUDIO_VERSION%\VC\Auxiliary\Build\vcvars64.bat"
+:: Locate Visual Studio with vswhere rather than hardcoding an edition and version: runner images
+:: differ (e.g. windows-11-arm does not ship VS 2022 Enterprise at the usual path), and local
+:: machines usually have the Community edition.
+set "VSWHERE=%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe"
+if not exist "%VSWHERE%" (
+    echo vswhere.exe not found at "%VSWHERE%"
+    exit /b 1
+)
+set VS_PATH=
+set VS_VERSION=
+for /f "usebackq tokens=*" %%i in (`"%VSWHERE%" -latest -products * -requires %VS_COMPONENT% -property installationPath`) do set "VS_PATH=%%i"
+for /f "usebackq tokens=*" %%i in (`"%VSWHERE%" -latest -products * -requires %VS_COMPONENT% -property installationVersion`) do set "VS_VERSION=%%i"
+if "%VS_PATH%" == "" (
+    echo No Visual Studio installation with component %VS_COMPONENT% was found.
+    exit /b 1
+)
+for /f "tokens=1 delims=." %%v in ("%VS_VERSION%") do set VS_MAJOR=%%v
+if "%VS_MAJOR%" == "16" (
+    set "CMAKE_GENERATOR_NAME=Visual Studio 16 2019"
+) else if "%VS_MAJOR%" == "17" (
+    set "CMAKE_GENERATOR_NAME=Visual Studio 17 2022"
+) else if "%VS_MAJOR%" == "18" (
+    set "CMAKE_GENERATOR_NAME=Visual Studio 18 2026"
+) else (
+    echo Unsupported Visual Studio version %VS_VERSION% at "%VS_PATH%"
+    exit /b 1
+)
+echo Using Visual Studio %VS_VERSION% at "%VS_PATH%" (CMake generator: %CMAKE_GENERATOR_NAME%)
 
-call "C:\Program Files\Microsoft Visual Studio\2022\%VISUAL_STUDIO_VERSION%\VC\Auxiliary\Build\vcvars64.bat"
-echo Passed vcvars64.bat
+if not exist "%VS_PATH%\VC\Auxiliary\Build\%VCVARS%" (
+    echo "%VS_PATH%\VC\Auxiliary\Build\%VCVARS%" does not exist.
+    exit /b 1
+)
+call "%VS_PATH%\VC\Auxiliary\Build\%VCVARS%"
 if errorlevel 1 exit /b %errorlevel%
+echo Passed %VCVARS%
 
 msbuild /version
 cmake --version
@@ -93,18 +149,18 @@ if "%BUILD_RELEASE%" == "1" (
 if "%CREATE_ARCHIVE%" == "1" (
     :: Use the /MT version as the "base" install.
     move out\mt out\install
-    mkdir out\install\lib\x86_64\mt\
-    move out\install\lib\x86_64\*.lib out\install\lib\x86_64\mt\
+    mkdir out\install\lib\%DIST_ARCH%\mt\
+    move out\install\lib\%DIST_ARCH%\*.lib out\install\lib\%DIST_ARCH%\mt\
 
-    xcopy out\md\lib\x86_64\*.lib out\install\lib\x86_64\md\
-    xcopy out\mtd\lib\x86_64\*.lib out\install\lib\x86_64\mtd\
-    xcopy out\mdd\lib\x86_64\*.lib out\install\lib\x86_64\mdd\
+    xcopy out\md\lib\%DIST_ARCH%\*.lib out\install\lib\%DIST_ARCH%\md\
+    xcopy out\mtd\lib\%DIST_ARCH%\*.lib out\install\lib\%DIST_ARCH%\mtd\
+    xcopy out\mdd\lib\%DIST_ARCH%\*.lib out\install\lib\%DIST_ARCH%\mdd\
 )
 
 :: Create an archive.
 if "%CREATE_ARCHIVE%" == "1" (
     cd out\install
-    7z a -ttar -so ..\..\filament-release.tar * | 7z a -si ..\filament-windows.tgz
+    7z a -ttar -so ..\..\filament-release.tar * | 7z a -si ..\%ARCHIVE_NAME%
 )
 
 exit /b 0
@@ -122,8 +178,9 @@ cd out\cmake-%variant%
 if errorlevel 1 exit /b %errorlevel%
 
 cmake ..\.. ^
-    -G "Visual Studio 17 2022" ^
-    -A x64 ^
+    -G "%CMAKE_GENERATOR_NAME%" ^
+    -A %CMAKE_ARCH% ^
+    -DDIST_ARCH=%DIST_ARCH% ^
     %flag% ^
     -DCMAKE_INSTALL_PREFIX=..\%variant% ^
     -DFILAMENT_WINDOWS_CI_BUILD:BOOL=ON ^
@@ -167,6 +224,12 @@ exit /b 0
 :: Helps debugging GitHub builds that run out of space
 :ShowDiskInfo
 echo =======================================================
-wmic logicaldisk get size,freespace,caption
+:: wmic is not installed by default on newer Windows 11 images (e.g. the windows-11-arm runner).
+where wmic >nul 2>nul
+if errorlevel 1 (
+    powershell -NoProfile -Command "Get-PSDrive -PSProvider FileSystem | Format-Table Name,Used,Free"
+) else (
+    wmic logicaldisk get size,freespace,caption
+)
 echo =======================================================
 exit /b 0
