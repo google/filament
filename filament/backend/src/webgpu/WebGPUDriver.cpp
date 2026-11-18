@@ -1038,7 +1038,22 @@ void WebGPUDriver::getPlatformSync(Handle<HwSync> syncHandle, CallbackHandler* h
 }
 
 bool WebGPUDriver::isTextureFormatSupported(const TextureFormat format) {
-    return toWGPUTextureFormat(format) != wgpu::TextureFormat::Undefined;
+    if (toWGPUTextureFormat(format) == wgpu::TextureFormat::Undefined) {
+        return false;
+    }
+    // A compressed format also needs its device feature, which WebGPUPlatform::requestDevice()
+    // enables when the adapter supports it. Without this check, texture loaders (for example
+    // KTX2 transcoding) choose a format that the device rejects.
+    if (isETC2Compression(format)) {
+        return mDevice.HasFeature(wgpu::FeatureName::TextureCompressionETC2);
+    }
+    if (isASTCCompression(format)) {
+        return mDevice.HasFeature(wgpu::FeatureName::TextureCompressionASTC);
+    }
+    if (isS3TCCompression(format) || isRGTCCompression(format) || isBPTCCompression(format)) {
+        return mDevice.HasFeature(wgpu::FeatureName::TextureCompressionBC);
+    }
+    return true;
 }
 
 bool WebGPUDriver::isTextureSwizzleSupported() {
@@ -1322,9 +1337,10 @@ void WebGPUDriver::update3DImage(Handle<HwTexture> textureHandle, const uint32_t
         const uint32_t xoffset, const uint32_t yoffset, const uint32_t zoffset,
         const uint32_t width, const uint32_t height, const uint32_t depth,
         PixelBufferDescriptor&& pixelBufferDescriptor) {
+    bool const isCompressed = pixelBufferDescriptor.type == PixelDataType::COMPRESSED;
     PixelBufferDescriptor* inputData{ &pixelBufferDescriptor };
     PixelBufferDescriptor reshapedData;
-    if (reshape(pixelBufferDescriptor, reshapedData)) {
+    if (!isCompressed && reshape(pixelBufferDescriptor, reshapedData)) {
         inputData = &reshapedData;
     }
     const auto texture{ handleCast<WebGPUTexture>(textureHandle) };
@@ -1347,18 +1363,26 @@ void WebGPUDriver::update3DImage(Handle<HwTexture> textureHandle, const uint32_t
         scheduleDestroy(std::move(pixelBufferDescriptor));
         return;
     }
-    const wgpu::TextureFormat inputPixelFormat{ toWebGPUFormat(inputData->format,
-            inputData->type) };
+    wgpu::TextureFormat const inputPixelFormat = isCompressed
+            ? wgpu::TextureFormat::Undefined
+            : toWebGPUFormat(inputData->format, inputData->type);
     const wgpu::TextureFormat outputLinearFormat{ toLinearFormat(
             texture->getTexture().GetFormat()) };
 
-    const bool doBlit{ conversionNecessary(inputPixelFormat, outputLinearFormat, inputData->type) };
+    bool const doBlit = !isCompressed &&
+            conversionNecessary(inputPixelFormat, outputLinearFormat, inputData->type);
 #if FWGPU_ENABLED(FWGPU_DEBUG_UPDATE_IMAGE)
     if (texture->width > 1000 && texture->height > 500) {
         FWGPU_LOGD << "Update3DImage(..., level=" << level << ", xoffset=" << xoffset
                    << ", yoffset=" << yoffset << ", zoffset=" << zoffset << ", width=" << width
                    << ", height=" << height << ", depth=" << depth << ",  ...):";
-        FWGPU_LOGD << "     PixelBufferDescriptor format (input): " << toString(inputData->format);
+        if (isCompressed) {
+            FWGPU_LOGD << "     PixelBufferDescriptor compressedFormat: "
+                       << static_cast<uint32_t>(inputData->compressedFormat);
+        } else {
+            FWGPU_LOGD << "     PixelBufferDescriptor format (input): "
+                       << toString(inputData->format);
+        }
         FWGPU_LOGD << "     PixelBufferDescriptor type (input):   " << toString(inputData->type);
         FWGPU_LOGD << "     Pixel WebGPUFormat (input):           "
                    << webGPUTextureFormatToString(inputPixelFormat);
@@ -1368,12 +1392,13 @@ void WebGPUDriver::update3DImage(Handle<HwTexture> textureHandle, const uint32_t
                    << webGPUTextureFormatToString(texture->getTexture().GetFormat());
         FWGPU_LOGD << "     Linear Texture format (output):       "
                    << webGPUTextureFormatToString(outputLinearFormat);
-        FWGPU_LOGD << "     Conversion Necessary:                 " << conversionNecessary;
         FWGPU_LOGD << "     Do Blit:                              " << doBlit;
     }
 #endif
-    FILAMENT_CHECK_PRECONDITION(inputData->type == PixelDataType::COMPRESSED ||
-                                inputPixelFormat != wgpu::TextureFormat::Undefined)
+    FILAMENT_CHECK_PRECONDITION(!isCompressed || isCompressedFormat(texture->format))
+            << "Compressed pixel data requires a compressed texture format, got format "
+            << static_cast<uint32_t>(texture->format);
+    FILAMENT_CHECK_PRECONDITION(isCompressed || inputPixelFormat != wgpu::TextureFormat::Undefined)
             << "Failed to determine uncompressed input pixel format for WebGPU. Pixel format "
             << toString(inputData->format) << " type " << toString(inputData->type);
     const size_t blockWidth{ texture->getBlockWidth() };
@@ -1383,25 +1408,41 @@ void WebGPUDriver::update3DImage(Handle<HwTexture> textureHandle, const uint32_t
     // See: https://www.w3.org/TR/webgpu/#abstract-opdef-validating-gputexelcopytextureinfo
     if (blockWidth > 1 || blockHeight > 1) {
         FILAMENT_CHECK_PRECONDITION(xoffset % blockWidth == 0)
-                << "xoffset must be aligned to blockwidth, but offset is " << blockWidth
-                << "and offset is " << xoffset;
+                << "xoffset must be aligned to blockWidth (" << blockWidth
+                << "), but xoffset is " << xoffset;
         FILAMENT_CHECK_PRECONDITION(yoffset % blockHeight == 0)
-                << "yoffset must be aligned to blockHeight, but offset is " << blockHeight
-                << "and offset is " << yoffset;
+                << "yoffset must be aligned to blockHeight (" << blockHeight
+                << "), but yoffset is " << yoffset;
     }
-    const auto extent{
-        wgpu::Extent3D{ .width = width, .height = height, .depthOrArrayLayers = depth }
-    };
-    const size_t bpp = PixelBufferDescriptor::computePixelSize(inputData->format, inputData->type);
-    const uint32_t stride = inputData->stride ? inputData->stride : width;
-    const uint32_t bytesPerRow = static_cast<uint32_t>(bpp * stride);
-    const size_t offsetBytes = (inputData->top * bytesPerRow) + (inputData->left * bpp);
+    wgpu::Extent3D extent = { .width = width, .height = height, .depthOrArrayLayers = depth };
+    uint32_t bytesPerRow = 0;
+    uint32_t rowsPerImage = height;
+    size_t offsetBytes = 0;
+    if (isCompressed) {
+        // Compressed data is tightly packed in blocks. WebGPU requires the copy extent to be
+        // a multiple of the block size (i.e. the physical size for small mip levels), and the
+        // row pitch to be expressed in bytes per row of blocks.
+        uint32_t const bw = static_cast<uint32_t>(std::max<size_t>(blockWidth, 1));
+        uint32_t const bh = static_cast<uint32_t>(std::max<size_t>(blockHeight, 1));
+        uint32_t const blocksWide = (width + bw - 1) / bw;
+        uint32_t const blocksHigh = (height + bh - 1) / bh;
+        bytesPerRow = static_cast<uint32_t>(blocksWide * getFormatSize(texture->format));
+        rowsPerImage = blocksHigh;
+        extent.width = blocksWide * bw;
+        extent.height = blocksHigh * bh;
+    } else {
+        size_t const bpp =
+                PixelBufferDescriptor::computePixelSize(inputData->format, inputData->type);
+        uint32_t const stride = inputData->stride ? inputData->stride : width;
+        bytesPerRow = static_cast<uint32_t>(bpp * stride);
+        offsetBytes = (inputData->top * bytesPerRow) + (inputData->left * bpp);
+    }
     const uint8_t* dataBuff = static_cast<const uint8_t*>(inputData->buffer) + offsetBytes;
     const size_t dataSize = inputData->size - offsetBytes;
-    const auto layout{ wgpu::TexelCopyBufferLayout{
+    wgpu::TexelCopyBufferLayout const layout = {
         .bytesPerRow = bytesPerRow,
-        .rowsPerImage = height,
-    } };
+        .rowsPerImage = rowsPerImage,
+    };
     if (doBlit) {
         const wgpu::TextureDescriptor stagingTextureDescriptor{
             .label = "blit_staging_input_texture",

@@ -324,6 +324,9 @@ MaterialInstance* updateInstances(SandboxParameters& params) {
         materialInstance->setParameter("iridescenceIor", params.iridescenceIor);
         materialInstance->setParameter("iridescenceThickness", params.iridescenceThickness);
         materialInstance->setParameter("retroreflection", params.retroreflection);
+        materialInstance->setParameter("diffuseTransmission", params.diffuseTransmission);
+        materialInstance->setParameter("diffuseTransmissionColor",
+                RgbType::sRGB, params.diffuseTransmissionColor);
         materialInstance->setParameter("clearCoat", params.clearCoat);
         materialInstance->setParameter("clearCoatRoughness", params.clearCoatRoughness);
         materialInstance->setParameter("anisotropy", params.anisotropy);
@@ -538,6 +541,11 @@ void gui(Engine* engine, View*) {
                                 &params.iridescenceThickness, 0.0f, 2000.0f);
                         ImGui::SeparatorText("Retroreflection");
                         ImGui::SliderFloat("Weight##retroreflectionWeight", &params.retroreflection, 0.0f, 1.0f);
+                        ImGui::SeparatorText("Diffuse Transmission");
+                        ImGui::SliderFloat("Weight##diffuseTransmissionWeight",
+                                &params.diffuseTransmission, 0.0f, 1.0f);
+                        ImGui::ColorEdit3("Color##diffuseTransmissionColor",
+                                &params.diffuseTransmissionColor.r);
                     }
                     ImGui::SeparatorText("Clear Coat Layer");
                     ImGui::SliderFloat("Weight##clearCoatWeight", &params.clearCoat, 0.0f, 1.0f);

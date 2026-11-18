@@ -124,6 +124,24 @@ void getRetroreflectionPixelParams(const MaterialInputs material, inout PixelPar
 #endif
 }
 
+void getDiffuseTransmissionPixelParams(const MaterialInputs material, inout PixelParams pixel) {
+#if defined(MATERIAL_HAS_DIFFUSE_TRANSMISSION) && !defined(SHADING_MODEL_CLOTH) && \
+        !defined(SHADING_MODEL_SUBSURFACE) && !defined(SHADING_MODEL_SPECULAR_GLOSSINESS)
+    pixel.diffuseTransmission = saturate(material.diffuseTransmission);
+    pixel.diffuseTransmissionColor = saturate(material.diffuseTransmissionColor);
+    pixel.diffuseTransmissionColor *= (1.0 - material.metallic);
+#if defined(MATERIAL_HAS_ABSORPTION)
+#if defined(MATERIAL_HAS_THICKNESS)
+    float thickness = max(0.0, material.thickness);
+#else
+    float thickness = 0.5;
+#endif
+    pixel.diffuseTransmissionColor *=
+            saturate(exp(-max(vec3(0.0), material.absorption) * thickness));
+#endif
+#endif
+}
+
 void getSheenPixelParams(
         const MaterialInputs material, inout PixelParams pixel, float kernelRoughness) {
 #if defined(MATERIAL_HAS_SHEEN_COLOR) && !defined(SHADING_MODEL_CLOTH) && !defined(SHADING_MODEL_SUBSURFACE)
@@ -231,6 +249,7 @@ void getPixelParams(const MaterialInputs material, out PixelParams pixel) {
     getSubsurfacePixelParams(material, pixel);
     getAnisotropyPixelParams(material, pixel);
     getRetroreflectionPixelParams(material, pixel);
+    getDiffuseTransmissionPixelParams(material, pixel);
     getEnergyCompensationPixelParams(pixel);
 }
 

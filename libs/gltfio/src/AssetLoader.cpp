@@ -46,6 +46,7 @@
 #include <utils/EntityManager.h>
 #include <utils/FixedCapacityVector.h>
 #include <utils/Log.h>
+#include <utils/Logger.h>
 #include <utils/NameComponentManager.h>
 #include <utils/Panic.h>
 
@@ -56,10 +57,11 @@
 #include <cgltf.h>
 #include <tsl/robin_map.h>
 
-#include <codecvt>
+#include <cstring>
 #include <limits>
-#include <locale>
 #include <memory>
+#include <string>
+#include <utility>
 #include <vector>
 
 using namespace filament;
@@ -92,7 +94,33 @@ constexpr cgltf_material kDefaultMat = {
     },
 };
 
-std::string getNodeName(cgltf_node const* node, char const* defaultNodeName) {
+struct NodeName {
+    const char* raw = nullptr;
+    std::string escaped;
+    const char* c_str() const noexcept { return raw ? raw : escaped.c_str(); }
+};
+
+int parseHexDigit(char c) noexcept {
+    if (c >= '0' && c <= '9') return c - '0';
+    if (c >= 'a' && c <= 'f') return 10 + (c - 'a');
+    if (c >= 'A' && c <= 'F') return 10 + (c - 'A');
+    return -1;
+}
+
+void appendUtf8Codepoint(std::string& out, uint32_t cp) {
+    if (cp <= 0x7Fu) {
+        out.push_back(static_cast<char>(cp));
+    } else if (cp <= 0x7FFu) {
+        out.push_back(static_cast<char>(0xC0u | (cp >> 6)));
+        out.push_back(static_cast<char>(0x80u | (cp & 0x3Fu)));
+    } else {
+        out.push_back(static_cast<char>(0xE0u | (cp >> 12)));
+        out.push_back(static_cast<char>(0x80u | ((cp >> 6) & 0x3Fu)));
+        out.push_back(static_cast<char>(0x80u | (cp & 0x3Fu)));
+    }
+}
+
+NodeName getNodeName(cgltf_node const* node, char const* defaultNodeName) {
     auto const getNameImpl = [node, defaultNodeName]() -> char const* {
         if (node->name) return node->name;
         if (node->mesh && node->mesh->name) return node->mesh->name;
@@ -102,48 +130,55 @@ std::string getNodeName(cgltf_node const* node, char const* defaultNodeName) {
         return "<unknown>";
     };
 
-    std::string strOrig(getNameImpl());
+    const char* const rawName = getNameImpl();
+
+    // Fast path: if there are no \uXXXX escape sequences, avoid any string allocations or copies.
+    const char* match = std::strstr(rawName, "\\u");
+    if (UTILS_LIKELY(match == nullptr)) {
+        return NodeName{ rawName, {} };
+    }
 
     // We handle the potential case of escaped characters in the JSON which should be properly
     // interpreted as unicode. See spec:
     // https://registry.khronos.org/glTF/specs/2.0/glTF-2.0.html#json-encoding
     // Also see spec for escaped strings in JSON (Section 2.5) https://www.ietf.org/rfc/rfc4627.txt
-
+    const size_t totalLen = std::strlen(rawName);
     std::string strEscaped;
-    size_t cur = 0, idx = 0;
-    std::wstring_convert<std::codecvt_utf8<char32_t>, char32_t> conv;
+    strEscaped.reserve(totalLen);
 
-    auto const addUnencodedSubstr = [&](size_t const cursor, size_t const nextPoint) {
-        assert_invariant(nextPoint >= cursor);
-        if (cursor == nextPoint) {
-            return;
-        }
-        strEscaped += strOrig.substr(cursor, nextPoint - cursor);
-    };
-
-    while ((idx = strOrig.find("\\u", cur)) != std::string::npos) {
-        if (idx + 6 > strOrig.length()) {
-            slog.w << "gltfio: Unable to interpret node name=" << strOrig
+    size_t cur = 0;
+    while (match != nullptr) {
+        const size_t idx = static_cast<size_t>(match - rawName);
+        if (idx + 6 > totalLen) {
+            slog.w << "gltfio: Unable to interpret node name=" << rawName
                           << " as proper unicode encoding." << io::endl;
-            return strOrig;
+            return NodeName{ rawName, {} };
         }
 
-        // Turns string of the form \u0062 to 0x0062
-        std::string const hexStr = strOrig.substr(idx + 2, 4);
-        if (hexStr.find_first_not_of("0123456789abcdefABCDEF") != std::string::npos) {
-            slog.w << "gltfio: Unable to interpret node name=" << strOrig
-                          << " as proper unicode encoding." << io::endl;
-            return strOrig;
+        uint32_t cp = 0;
+        for (size_t i = 0; i < 4; ++i) {
+            const int d = parseHexDigit(rawName[idx + 2 + i]);
+            if (d < 0) {
+                slog.w << "gltfio: Unable to interpret node name=" << rawName
+                              << " as proper unicode encoding." << io::endl;
+                return NodeName{ rawName, {} };
+            }
+            cp = (cp << 4) | static_cast<uint32_t>(d);
         }
 
-        addUnencodedSubstr(cur, idx);
-
-        strEscaped += conv.to_bytes((char32_t) std::stoul(hexStr, nullptr, 16));
+        if (idx > cur) {
+            strEscaped.append(rawName + cur, idx - cur);
+        }
+        appendUtf8Codepoint(strEscaped, cp);
         cur = idx + 6;
+        match = std::strstr(rawName + cur, "\\u");
     }
-    addUnencodedSubstr(cur, strOrig.length());
 
-    return strEscaped;
+    if (totalLen > cur) {
+        strEscaped.append(rawName + cur, totalLen - cur);
+    }
+
+    return NodeName{ nullptr, std::move(strEscaped) };
 }
 
 bool primitiveHasVertexColor(const cgltf_primitive& inPrim) {
@@ -330,7 +365,8 @@ private:
     // Methods used during the first traveral (creation of VertexBuffer, IndexBuffer, etc)
     FFilamentAsset* createRootAsset(const cgltf_data* srcAsset);
     void traversePrimitives(const cgltf_node* rootNode, FFilamentAsset* fAsset);
-    void createPrimitives(const cgltf_node* node, const char* name, FFilamentAsset* fAsset);
+    void createPrimitives(const cgltf_node* node, const char* name, const mat4f& worldTransform,
+            FFilamentAsset* fAsset);
     bool createPrimitive(const cgltf_primitive& inPrim, const char* name, Primitive* outPrim,
             FFilamentAsset* fAsset);
 
@@ -468,6 +504,8 @@ FilamentInstance* FAssetLoader::createInstance(FFilamentAsset* fAsset) {
         instance->mVariants.push_back({ .name = CString(srcAsset->variants[i].name) });
     }
 
+    instance->mEntities.reserve(srcAsset->nodes_count);
+
     // For each scene root, recursively create all entities.
     for (const auto& pair : fAsset->mRootNodes) {
         traverseEntities(pair.first, pair.second, instanceRoot, fAsset, instance);
@@ -487,8 +525,6 @@ FilamentInstance* FAssetLoader::createInstance(FFilamentAsset* fAsset) {
     instance->mBoundingBox = fAsset->mBoundingBox;
 
     mMaterialInstanceCache.flush(&instance->mMaterialInstances);
-
-    fAsset->mDependencyGraph.commitEdges();
 
     return instance;
 }
@@ -578,23 +614,39 @@ void FAssetLoader::traversePrimitives(const cgltf_node* rootNode, FFilamentAsset
     // Iterative pre-order traversal with an explicit stack. The node hierarchy can be
     // arbitrarily deep, so recursion here risks stack exhaustion on hostile assets.
     // Children are pushed in reverse order so they are visited in their original order.
-    std::vector<const cgltf_node*> stack;
-    stack.push_back(rootNode);
+    struct WorkItem {
+        const cgltf_node* node;
+        mat4f parentWorld;
+    };
+    mat4f rootParentWorld;
+    if (UTILS_UNLIKELY(rootNode->parent != nullptr)) {
+        cgltf_node_transform_world(rootNode->parent, &rootParentWorld[0][0]);
+    }
+    std::vector<WorkItem> stack;
+    stack.push_back({rootNode, rootParentWorld});
     while (!stack.empty()) {
-        const cgltf_node* node = stack.back();
+        WorkItem const work = stack.back();
         stack.pop_back();
+        const cgltf_node* node = work.node;
 
-        auto const nameStr = getNodeName(node, mDefaultNodeName);
-        const char* name = nameStr.c_str();
-        name = name ? name : "node";
+        if (node->mesh == nullptr && node->children_count == 0) {
+            continue;
+        }
+
+        mat4f localTransform;
+        cgltf_node_transform_local(node, &localTransform[0][0]);
+        const mat4f worldTransform = work.parentWorld * localTransform;
 
         if (node->mesh) {
-            createPrimitives(node, name, fAsset);
+            auto const nameStr = getNodeName(node, mDefaultNodeName);
+            const char* name = nameStr.c_str();
+            name = name ? name : "node";
+            createPrimitives(node, name, worldTransform, fAsset);
             fAsset->mRenderableCount++;
         }
 
         for (cgltf_size i = node->children_count; i > 0; --i) {
-            stack.push_back(node->children[i - 1]);
+            stack.push_back({node->children[i - 1], worldTransform});
         }
     }
 }
@@ -603,12 +655,18 @@ void FAssetLoader::createInstances(size_t const numInstances, FFilamentAsset* fA
     // Create a separate entity hierarchy for each instance. Note that MeshCache (vertex
     // buffers and index buffers) and MaterialInstanceCache (materials and textures) help avoid
     // needless duplication of resources.
+    const cgltf_data* srcAsset = fAsset->mSourceAsset ? fAsset->mSourceAsset->hierarchy : nullptr;
+    if (srcAsset && numInstances > 0) {
+        fAsset->mEntities.reserve(fAsset->mEntities.size() + numInstances * srcAsset->nodes_count);
+        fAsset->mInstances.reserve(fAsset->mInstances.size() + numInstances);
+    }
     for (size_t index = 0; index < numInstances; ++index) {
         if (createInstance(fAsset) == nullptr) {
             mError = true;
             break;
         }
     }
+    fAsset->mDependencyGraph.commitEdges();
 
     // Sort the entities so that the renderable ones come first. This allows us to expose
     // a "renderables only" pointer without storing a separate list.
@@ -653,8 +711,7 @@ void FAssetLoader::traverseEntities(const cgltf_node* node, SceneMask const scen
             float3 const* translation =
                     reinterpret_cast<float3 const*>(&currentNode->translation[0]);
             mTrsTransformManager.create(entity, *translation, *rotation, *scale);
-            localTransform = mTrsTransformManager.getTransform(
-                    mTrsTransformManager.getInstance(entity));
+            localTransform = composeMatrix(*translation, *rotation, *scale);
         }
 
         auto const parentTransform = mTransformManager.getInstance(currentParent);
@@ -664,7 +721,7 @@ void FAssetLoader::traverseEntities(const cgltf_node* node, SceneMask const scen
         const cgltf_size extras_size =
                 currentNode->extras.end_offset - currentNode->extras.start_offset;
         if (extras_size > 0) {
-            mNodeManager.setExtras(mNodeManager.getInstance(entity),
+            nm.setExtras(nodeInstance,
                     {srcAsset->json + currentNode->extras.start_offset, extras_size});
         }
 
@@ -710,7 +767,7 @@ void FAssetLoader::traverseEntities(const cgltf_node* node, SceneMask const scen
 }
 
 void FAssetLoader::createPrimitives(const cgltf_node* node, const char* name,
-        FFilamentAsset* fAsset) {
+        const mat4f& worldTransform, FFilamentAsset* fAsset) {
     cgltf_data* gltf = fAsset->mSourceAsset->hierarchy;
     const cgltf_mesh* mesh = node->mesh;
     assert_invariant(gltf != nullptr);
@@ -782,14 +839,11 @@ void FAssetLoader::createPrimitives(const cgltf_node* node, const char* name,
     // The spec requires that min < max for the bounding box but since we can skip bounding boxes
     // for empty primitives, the bounding box may not be valid and needs new validation here.
     if (all(lessThanEqual(aabb.min, aabb.max))) {
-        mat4f worldTransform;
-        cgltf_node_transform_world(node, &worldTransform[0][0]);
-
         const Aabb transformed = aabb.transform(worldTransform);
         fAsset->mBoundingBox.min = min(fAsset->mBoundingBox.min, transformed.min);
         fAsset->mBoundingBox.max = max(fAsset->mBoundingBox.max, transformed.max);
     }
- }
+}
 
 void FAssetLoader::createRenderable(const cgltf_node* node, Entity const entity, const char* name,
         FFilamentAsset* fAsset) {
@@ -894,7 +948,6 @@ void FAssetLoader::createRenderable(const cgltf_node* node, Entity const entity,
                 outputPrim->morphTargetBuffer = morphTargetBuffer;
             }
 
-            UTILS_UNUSED_IN_RELEASE cgltf_accessor const* previous = nullptr;
             // createPrimitives() caps the per-primitive morph-target count at MAX_MORPH_TARGETS and
             // sizes slotIndices accordingly; iterate only over the slots that exist so a mesh with
             // more morph targets than the cap does not index slotIndices out of bounds.
@@ -906,12 +959,10 @@ void FAssetLoader::createRenderable(const cgltf_node* node, Entity const entity,
                     const cgltf_accessor* accessor = attribute.data;
                     const cgltf_attribute_type atype = attribute.type;
                     if (atype == cgltf_attribute_type_position) {
-                        // All position attributes must have the same number of components.
-                        assert_invariant(!previous || previous->type == accessor->type);
-                        previous = accessor;
-
                         if (std::holds_alternative<FFilamentAsset::ResourceInfo>(
                                 fAsset->mResourceInfo)) {
+                            assert_invariant(accessor->type == cgltf_type_vec3 ||
+                                    accessor->type == cgltf_type_vec4);
                             using BufferSlot = FFilamentAsset::ResourceInfo::BufferSlot;
                             auto& slots = std::get<FFilamentAsset::ResourceInfo>(
                                     fAsset->mResourceInfo).mBufferSlots;
@@ -1032,6 +1083,11 @@ void FAssetLoader::createMaterialVariants(const cgltf_mesh* mesh, Entity const e
         }
         for (size_t i = 0, m = srcPrim.mappings_count; i < m; i++) {
             const size_t variantIndex = srcPrim.mappings[i].variant;
+            if (variantIndex >= instance->mVariants.size()) {
+                LOG(WARNING) << "Material variant index " << variantIndex
+                             << " out of bounds in entity " << entity.getId();
+                continue;
+            }
             const cgltf_material* material = srcPrim.mappings[i].material;
             const bool hasVertexColor = primitiveHasVertexColor(srcPrim);
             MaterialInstance* mi =
@@ -1225,12 +1281,12 @@ bool FAssetLoader::createPrimitive(const cgltf_primitive& inPrim, const char* na
         vertexCount = innerAccessor->count;
 
         // The positions accessor is required to have min/max properties, use them to expand
-        // the bounding box for this primitive.
+        // the bounding box for this primitive. Normalized (quantized) bounds must be decoded first.
         if (atype == cgltf_attribute_type_position) {
-            const float* minp = &innerAccessor->min[0];
-            const float* maxp = &innerAccessor->max[0];
-            outPrim->aabb.min = min(outPrim->aabb.min, float3(minp[0], minp[1], minp[2]));
-            outPrim->aabb.max = max(outPrim->aabb.max, float3(maxp[0], maxp[1], maxp[2]));
+            outPrim->aabb.min = min(outPrim->aabb.min,
+                    utility::dequantizeBounds(innerAccessor, innerAccessor->min));
+            outPrim->aabb.max = max(outPrim->aabb.max,
+                    utility::dequantizeBounds(innerAccessor, innerAccessor->max));
         }
 
         VertexBuffer::AttributeType fatype;
@@ -1239,7 +1295,14 @@ bool FAssetLoader::createPrimitive(const cgltf_primitive& inPrim, const char* na
             slog.e << "Unsupported accessor type in " << name << io::endl;
             return false;
         }
-        const int stride = (fatype == actualType) ? innerAccessor->stride : 0;
+        if (fatype == actualType &&
+                (innerAccessor->stride > std::numeric_limits<uint8_t>::max() ||
+                        (innerAccessor->stride & 0x3u) != 0)) {
+            LOG(ERROR) << "Invalid vertex attribute stride (" << innerAccessor->stride << ") in "
+                       << name;
+            return false;
+        }
+        const uint8_t stride = (fatype == actualType) ? uint8_t(innerAccessor->stride) : 0;
 
         // The cgltf library provides a stride value for all accessors, even though they do not
         // exist in the glTF file. It is computed from the type and the stride of the buffer view.
@@ -1278,26 +1341,32 @@ bool FAssetLoader::createPrimitive(const cgltf_primitive& inPrim, const char* na
             const cgltf_attribute_type atype = attribute.type;
 
             // The glTF normal and tangent data are ignored here (honored in ResourceLoader), but
-            // we still validate the accessor's element type. Without this, an unsupported type
-            // (e.g. a matrix type) slips through to ResourceLoader's tangent-space computation,
-            // where it is unpacked into a fixed 3-float-per-vertex buffer writing more floats
-            // per element than the buffer holds (heap out-of-bounds write).
+            // we still validate the accessor's element type and dimension (VEC3).
             if (atype == cgltf_attribute_type_normal || atype == cgltf_attribute_type_tangent) {
-                if (innerAccessor != nullptr) {
-                    VertexBuffer::AttributeType fatype;
-                    VertexBuffer::AttributeType actualType;
-                    if (!getElementType(innerAccessor->type, innerAccessor->component_type,
-                            &fatype, &actualType)) {
-                        slog.e << "Unsupported morph target accessor type in " << name << io::endl;
-                        return false;
-                    }
+                VertexBuffer::AttributeType fatype;
+                VertexBuffer::AttributeType actualType;
+                if (!innerAccessor || innerAccessor->type != cgltf_type_vec3 ||
+                        !getElementType(innerAccessor->type, innerAccessor->component_type,
+                                &fatype, &actualType)) {
+                    LOG(ERROR) << "Unsupported morph target accessor type in " << name;
+                    return false;
                 }
                 continue;
             }
 
             if (atype != cgltf_attribute_type_position) {
-                slog.e << "Only positions, normals, and tangents can be morphed."
-                        << io::endl;
+                LOG(ERROR) << "Only positions, normals, and tangents can be morphed.";
+                return false;
+            }
+
+            VertexBuffer::AttributeType fatype;
+            VertexBuffer::AttributeType actualType;
+            if (!innerAccessor ||
+                    (innerAccessor->type != cgltf_type_vec3 &&
+                            innerAccessor->type != cgltf_type_vec4) ||
+                    !getElementType(innerAccessor->type, innerAccessor->component_type, &fatype,
+                            &actualType)) {
+                LOG(ERROR) << "Unsupported morph target position accessor type in " << name;
                 return false;
             }
 
@@ -1306,22 +1375,13 @@ bool FAssetLoader::createPrimitive(const cgltf_primitive& inPrim, const char* na
             }
 
             Aabb targetAabb(baseAabb);
-            const float* minp = &innerAccessor->min[0];
-            const float* maxp = &innerAccessor->max[0];
 
             // We assume that the range of morph target weight is [0, 1].
-            targetAabb.min += float3(minp[0], minp[1], minp[2]);
-            targetAabb.max += float3(maxp[0], maxp[1], maxp[2]);
+            targetAabb.min += utility::dequantizeBounds(innerAccessor, innerAccessor->min);
+            targetAabb.max += utility::dequantizeBounds(innerAccessor, innerAccessor->max);
 
             outPrim->aabb.min = min(outPrim->aabb.min, targetAabb.min);
             outPrim->aabb.max = max(outPrim->aabb.max, targetAabb.max);
-
-            VertexBuffer::AttributeType fatype;
-            VertexBuffer::AttributeType actualType;
-            if (!getElementType(innerAccessor->type, innerAccessor->component_type, &fatype, &actualType)) {
-                slog.e << "Unsupported accessor type in " << name << io::endl;
-                return false;
-            }
         }
     }
 
@@ -1387,7 +1447,6 @@ bool FAssetLoader::createPrimitive(const cgltf_primitive& inPrim, const char* na
     }
 
     if (targetsCount > 0) {
-        UTILS_UNUSED_IN_RELEASE cgltf_accessor const* previous = nullptr;
         outPrim->slotIndices.resize(targetsCount);
         for (int tindex = 0; tindex < targetsCount; ++tindex) {
             const cgltf_morph_target& inTarget = inPrim.targets[tindex];
@@ -1396,9 +1455,8 @@ bool FAssetLoader::createPrimitive(const cgltf_primitive& inPrim, const char* na
                 const cgltf_accessor* innerAccessor = attribute.data;
                 const cgltf_attribute_type atype = attribute.type;
                 if (atype == cgltf_attribute_type_position) {
-                    // All position attributes must have the same number of components.
-                    assert_invariant(!previous || previous->type == innerAccessor->type);
-                    previous = innerAccessor;
+                    assert_invariant(innerAccessor->type == cgltf_type_vec3 ||
+                            innerAccessor->type == cgltf_type_vec4);
                     BufferSlot innerSlot = { .accessor = innerAccessor };
                     outPrim->slotIndices[tindex] = slots->size();
                     addBufferSlot(innerSlot);
@@ -1542,6 +1600,7 @@ MaterialKey FAssetLoader::getMaterialKey(const cgltf_material* inputMat, bool ve
     auto rrConfig = inputMat->retroreflection;
     auto irConfig = inputMat->iridescence;
     auto anConfig = inputMat->anisotropy;
+    auto dtConfig = inputMat->diffuse_transmission;
     *baseColorTexture = mrConfig.base_color_texture;
     *metallicRoughnessTexture = mrConfig.metallic_roughness_texture;
 
@@ -1552,6 +1611,9 @@ MaterialKey FAssetLoader::getMaterialKey(const cgltf_material* inputMat, bool ve
             !inputMat->unlit && !inputMat->has_pbr_specular_glossiness;
 
     bool const hasAnisotropy = inputMat->has_anisotropy &&
+            !inputMat->unlit && !inputMat->has_pbr_specular_glossiness;
+
+    bool const hasDiffuseTransmission = inputMat->has_diffuse_transmission &&
             !inputMat->unlit && !inputMat->has_pbr_specular_glossiness;
 
     bool hasTextureTransforms =
@@ -1573,7 +1635,9 @@ MaterialKey FAssetLoader::getMaterialKey(const cgltf_material* inputMat, bool ve
         (hasRetroreflection && rrConfig.retroreflection_texture.has_transform) ||
         (hasIridescence && irConfig.iridescence_texture.has_transform) ||
         (hasIridescence && irConfig.iridescence_thickness_texture.has_transform) ||
-        (hasAnisotropy && anConfig.anisotropy_texture.has_transform);
+        (hasAnisotropy && anConfig.anisotropy_texture.has_transform) ||
+        (hasDiffuseTransmission && dtConfig.diffuse_transmission_texture.has_transform) ||
+        (hasDiffuseTransmission && dtConfig.diffuse_transmission_color_texture.has_transform);
 
     auto const clampTexCoord = [](cgltf_int texcoord) -> uint8_t {
         return uint8_t(std::clamp(texcoord, 0, cgltf_int(UvMapSize - 1)));
@@ -1631,7 +1695,15 @@ MaterialKey FAssetLoader::getMaterialKey(const cgltf_material* inputMat, bool ve
         .hasIridescence = hasIridescence,
         .anisotropyUV = clampTexCoord(anConfig.anisotropy_texture.texcoord),
         .hasAnisotropyTexture = hasAnisotropy && anConfig.anisotropy_texture.texture != nullptr,
+        .diffuseTransmissionUV = clampTexCoord(dtConfig.diffuse_transmission_texture.texcoord),
         .hasAnisotropy = hasAnisotropy,
+        .diffuseTransmissionColorUV =
+                clampTexCoord(dtConfig.diffuse_transmission_color_texture.texcoord),
+        .hasDiffuseTransmissionTexture = hasDiffuseTransmission &&
+                dtConfig.diffuse_transmission_texture.texture != nullptr,
+        .hasDiffuseTransmissionColorTexture = hasDiffuseTransmission &&
+                dtConfig.diffuse_transmission_color_texture.texture != nullptr,
+        .hasDiffuseTransmission = hasDiffuseTransmission,
     };
 
     if (inputMat->has_pbr_specular_glossiness) {
@@ -1723,6 +1795,7 @@ MaterialInstance* FAssetLoader::createMaterialInstance(const cgltf_material* inp
     auto rrConfig = inputMat->retroreflection;
     auto irConfig = inputMat->iridescence;
     auto anConfig = inputMat->anisotropy;
+    auto dtConfig = inputMat->diffuse_transmission;
 
     // Check the material blending mode, not the cgltf blending mode, because the provider
     // might have selected an alternative blend mode (e.g. to support transmission).
@@ -2005,6 +2078,36 @@ MaterialInstance* FAssetLoader::createMaterialInstance(const cgltf_material* inp
         }
     }
 
+    if (matkey.hasDiffuseTransmission &&
+            mi->getMaterial()->hasParameter("diffuseTransmissionFactor")) {
+        const float* c = dtConfig.diffuse_transmission_color_factor;
+        mi->setParameter("diffuseTransmissionFactor", dtConfig.diffuse_transmission_factor);
+        mi->setParameter("diffuseTransmissionColorFactor", float3{ c[0], c[1], c[2] });
+
+        if (matkey.hasDiffuseTransmissionColorTexture) {
+            fAsset->addTextureBinding(mi, "diffuseTransmissionColorMap",
+                    dtConfig.diffuse_transmission_color_texture.texture, sRGB);
+            if (matkey.hasTextureTransforms) {
+                const cgltf_texture_transform& uvt =
+                        dtConfig.diffuse_transmission_color_texture.transform;
+                auto uvmat = matrixFromUvTransform(uvt.offset, uvt.rotation, uvt.scale);
+                mi->setParameter("diffuseTransmissionColorUvMatrix", uvmat);
+            }
+        }
+        if (matkey.hasDiffuseTransmissionTexture) {
+            bool sameTexture = dtConfig.diffuse_transmission_color_texture.texture ==
+                               dtConfig.diffuse_transmission_texture.texture;
+            fAsset->addTextureBinding(mi, "diffuseTransmissionMap",
+                    dtConfig.diffuse_transmission_texture.texture, sameTexture ? sRGB : LINEAR);
+            if (matkey.hasTextureTransforms) {
+                const cgltf_texture_transform& uvt =
+                        dtConfig.diffuse_transmission_texture.transform;
+                auto uvmat = matrixFromUvTransform(uvt.offset, uvt.rotation, uvt.scale);
+                mi->setParameter("diffuseTransmissionUvMatrix", uvmat);
+            }
+        }
+    }
+
     *cacheEntry = { .instance = mi, .uvmap = *uvmap };
     return mi;
 }
@@ -2143,6 +2246,18 @@ FFilamentAsset* FAssetLoader::preresolveTextures(FFilamentAsset* fAsset,
                 resolveTexture(anConfig.anisotropy_texture.texture, LINEAR);
             }
         }
+        if (matkey.hasDiffuseTransmission) {
+            auto dtConfig = inputMat->diffuse_transmission;
+            if (matkey.hasDiffuseTransmissionColorTexture) {
+                resolveTexture(dtConfig.diffuse_transmission_color_texture.texture, sRGB);
+            }
+            if (matkey.hasDiffuseTransmissionTexture) {
+                bool sameTexture = dtConfig.diffuse_transmission_color_texture.texture ==
+                                   dtConfig.diffuse_transmission_texture.texture;
+                resolveTexture(dtConfig.diffuse_transmission_texture.texture,
+                        sameTexture ? sRGB : LINEAR);
+            }
+        }
     }
     return fAsset;
 }
@@ -2175,7 +2290,12 @@ FilamentAsset* AssetLoader::createInstancedAsset(const uint8_t* bytes, uint32_t 
 }
 
 FilamentInstance* AssetLoader::createInstance(FilamentAsset* asset) {
-    return downcast(this)->createInstance(downcast(asset));
+    FFilamentAsset* fAsset = downcast(asset);
+    FilamentInstance* instance = downcast(this)->createInstance(fAsset);
+    if (instance) {
+        fAsset->mDependencyGraph.commitEdges();
+    }
+    return instance;
 }
 
 void AssetLoader::enableDiagnostics(bool const enable) {

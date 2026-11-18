@@ -61,6 +61,11 @@ Program& Program::shader(ShaderStage shader, void const* data, size_t const size
     return *this;
 }
 
+Program& Program::shader(ShaderStage const shader, ShaderBlob&& blob) noexcept {
+    mShadersSource[size_t(shader)] = std::move(blob);
+    return *this;
+}
+
 Program& Program::shaderLanguage(ShaderLanguage const shaderLanguage) {
     mShaderLanguage = shaderLanguage;
     return *this;
@@ -91,11 +96,6 @@ Program& Program::specializationConstants(SpecializationConstantsInfo specConsta
 Program& Program::pushConstants(ShaderStage stage,
         FixedCapacityVector<PushConstant> constants) noexcept {
     mPushConstants[static_cast<uint8_t>(stage)] = std::move(constants);
-    return *this;
-}
-
-Program& Program::cacheId(uint64_t const cacheId) noexcept {
-    mCacheId = cacheId;
     return *this;
 }
 

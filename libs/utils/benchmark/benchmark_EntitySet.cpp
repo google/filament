@@ -44,15 +44,13 @@ void BM_bitset_Insert(benchmark::State& state) {
     size_t const count = state.range(0);
     std::default_random_engine gen{123};
     std::uniform_int_distribution<uint32_t> ndBase{0, 100000};
-    std::uniform_int_distribution<uint32_t> ndGen{0, 0};
     std::vector<uint32_t> bits(count);
     size_t idx = 0;
     while (idx < count) {
         uint32_t const base = ndBase(gen);
-        uint32_t const g = ndGen(gen);
         size_t const batchSize = std::min<size_t>(count - idx, 100);
         for (size_t j = 0; j < batchSize; ++j) {
-            bits[idx++] = (g << 17) | ((base + j) & 0x1FFFF);
+            bits[idx++] = (base + j) & 0x1FFFFu;
         }
     }
 
@@ -72,7 +70,7 @@ void BM_bitset_Intersect(benchmark::State& state) {
     Policy set2;
     size_t const count = state.range(0);
     std::default_random_engine gen{123};
-    std::uniform_int_distribution<uint32_t> ndBase{0, 50000};
+    std::uniform_int_distribution<uint32_t> ndBase{0, 40000};
 
     size_t const overlapCount = std::max<size_t>(count / 100, 1);
     size_t const disjointCount = count - overlapCount;
@@ -90,7 +88,7 @@ void BM_bitset_Intersect(benchmark::State& state) {
 
     idx = 0;
     while (idx < disjointCount) {
-        uint32_t const base = ndBase(gen) + 50000;
+        uint32_t const base = ndBase(gen) + 42000;
         size_t const batchSize = std::min<size_t>(disjointCount - idx, 100);
         for (size_t j = 0; j < batchSize; ++j) {
             set1.add(base + j);
@@ -100,7 +98,7 @@ void BM_bitset_Intersect(benchmark::State& state) {
 
     idx = 0;
     while (idx < disjointCount) {
-        uint32_t const base = ndBase(gen) + 100000;
+        uint32_t const base = ndBase(gen) + 85000;
         size_t const batchSize = std::min<size_t>(disjointCount - idx, 100);
         for (size_t j = 0; j < batchSize; ++j) {
             set2.add(base + j);
@@ -120,7 +118,7 @@ void BM_bitset_Difference(benchmark::State& state) {
     Policy set2;
     size_t const count = state.range(0);
     std::default_random_engine gen{123};
-    std::uniform_int_distribution<uint32_t> ndBase{0, 50000};
+    std::uniform_int_distribution<uint32_t> ndBase{0, 40000};
 
     size_t const overlapCount = std::max<size_t>(count / 100, 1);
     size_t const disjointCount = count - overlapCount;
@@ -138,7 +136,7 @@ void BM_bitset_Difference(benchmark::State& state) {
 
     idx = 0;
     while (idx < disjointCount) {
-        uint32_t const base = ndBase(gen) + 50000;
+        uint32_t const base = ndBase(gen) + 42000;
         size_t const batchSize = std::min<size_t>(disjointCount - idx, 100);
         for (size_t j = 0; j < batchSize; ++j) {
             set1.add(base + j);
@@ -148,7 +146,7 @@ void BM_bitset_Difference(benchmark::State& state) {
 
     idx = 0;
     while (idx < disjointCount) {
-        uint32_t const base = ndBase(gen) + 100000;
+        uint32_t const base = ndBase(gen) + 85000;
         size_t const batchSize = std::min<size_t>(disjointCount - idx, 100);
         for (size_t j = 0; j < batchSize; ++j) {
             set2.add(base + j);
@@ -168,7 +166,7 @@ void BM_bitset_IntersectInPlace(benchmark::State& state) {
     Policy set2;
     size_t const count = state.range(0);
     std::default_random_engine gen{123};
-    std::uniform_int_distribution<uint32_t> ndBase{0, 50000};
+    std::uniform_int_distribution<uint32_t> ndBase{0, 40000};
 
     size_t const overlapCount = std::max<size_t>(count / 100, 1);
     size_t const disjointCount = count - overlapCount;
@@ -186,7 +184,7 @@ void BM_bitset_IntersectInPlace(benchmark::State& state) {
 
     idx = 0;
     while (idx < disjointCount) {
-        uint32_t const base = ndBase(gen) + 50000;
+        uint32_t const base = ndBase(gen) + 42000;
         size_t const batchSize = std::min<size_t>(disjointCount - idx, 100);
         for (size_t j = 0; j < batchSize; ++j) {
             set1.add(base + j);
@@ -196,7 +194,7 @@ void BM_bitset_IntersectInPlace(benchmark::State& state) {
 
     idx = 0;
     while (idx < disjointCount) {
-        uint32_t const base = ndBase(gen) + 100000;
+        uint32_t const base = ndBase(gen) + 85000;
         size_t const batchSize = std::min<size_t>(disjointCount - idx, 100);
         for (size_t j = 0; j < batchSize; ++j) {
             set2.add(base + j);
@@ -231,7 +229,7 @@ void BM_bitset_IntersectFragmented(benchmark::State& state) {
     size_t const numPages = state.range(0);
     size_t const totalBits = 4096;
     size_t const bitsPerPage = totalBits / numPages;
-    size_t const stride = 1U << 17;
+    size_t const stride = 1U << PagedArenaBitset::FILAMENT_PAGE_SHIFT;
 
     Policy set1;
     Policy set2;
@@ -272,7 +270,7 @@ void BM_bitset_DifferenceInPlace(benchmark::State& state) {
     Policy set2;
     size_t const count = state.range(0);
     std::default_random_engine gen{123};
-    std::uniform_int_distribution<uint32_t> ndBase{0, 50000};
+    std::uniform_int_distribution<uint32_t> ndBase{0, 40000};
 
     size_t const overlapCount = std::max<size_t>(count / 100, 1);
     size_t const disjointCount = count - overlapCount;
@@ -290,7 +288,7 @@ void BM_bitset_DifferenceInPlace(benchmark::State& state) {
 
     idx = 0;
     while (idx < disjointCount) {
-        uint32_t const base = ndBase(gen) + 50000;
+        uint32_t const base = ndBase(gen) + 42000;
         size_t const batchSize = std::min<size_t>(disjointCount - idx, 100);
         for (size_t j = 0; j < batchSize; ++j) {
             set1.add(base + j);
@@ -300,7 +298,7 @@ void BM_bitset_DifferenceInPlace(benchmark::State& state) {
 
     idx = 0;
     while (idx < disjointCount) {
-        uint32_t const base = ndBase(gen) + 100000;
+        uint32_t const base = ndBase(gen) + 85000;
         size_t const batchSize = std::min<size_t>(disjointCount - idx, 100);
         for (size_t j = 0; j < batchSize; ++j) {
             set2.add(base + j);
@@ -336,7 +334,7 @@ void BM_bitset_IntersectMulti2(benchmark::State& state) {
     Policy set2;
     size_t const count = state.range(0);
     std::default_random_engine gen{123};
-    std::uniform_int_distribution<uint32_t> ndBase{0, 50000};
+    std::uniform_int_distribution<uint32_t> ndBase{0, 40000};
 
     size_t const overlapCount = std::max<size_t>(count / 100, 1);
     size_t const disjointCount = count - overlapCount;
@@ -351,7 +349,7 @@ void BM_bitset_IntersectMulti2(benchmark::State& state) {
 
     size_t idx = 0;
     while (idx < disjointCount) {
-        uint32_t const base1 = ndBase(gen) + 50000;
+        uint32_t const base1 = ndBase(gen) + 42000;
         size_t const batchSize = std::min<size_t>(disjointCount - idx, 100);
         for (size_t j = 0; j < batchSize; ++j) {
             set1.add(base1 + j);
@@ -361,7 +359,7 @@ void BM_bitset_IntersectMulti2(benchmark::State& state) {
 
     idx = 0;
     while (idx < disjointCount) {
-        uint32_t const base2 = ndBase(gen) + 100000;
+        uint32_t const base2 = ndBase(gen) + 85000;
         size_t const batchSize = std::min<size_t>(disjointCount - idx, 100);
         for (size_t j = 0; j < batchSize; ++j) {
             set2.add(base2 + j);
@@ -380,7 +378,7 @@ void BM_bitset_IntersectMulti6(benchmark::State& state) {
     std::array<Policy, 6> sets;
     size_t const count = state.range(0);
     std::default_random_engine gen{123};
-    std::uniform_int_distribution<uint32_t> ndBase{0, 50000};
+    std::uniform_int_distribution<uint32_t> ndBase{0, 19800};
 
     size_t const overlapCount = std::max<size_t>(count / 100, 1);
     size_t const disjointCount = count - overlapCount;
@@ -396,7 +394,7 @@ void BM_bitset_IntersectMulti6(benchmark::State& state) {
         // Disjoint
         size_t idx = 0;
         while (idx < disjointCount) {
-            uint32_t const baseI = ndBase(gen) + 50000 + i * 50000;
+            uint32_t const baseI = ndBase(gen) + 2000 + i * 21000;
             size_t const batchSize = std::min<size_t>(disjointCount - idx, 100);
             for (size_t j = 0; j < batchSize; ++j) {
                 sets[i].add(baseI + j);
@@ -416,7 +414,7 @@ void BM_bitset_IntersectChained6(benchmark::State& state) {
     std::array<Policy, 6> sets;
     size_t const count = state.range(0);
     std::default_random_engine gen{123};
-    std::uniform_int_distribution<uint32_t> ndBase{0, 50000};
+    std::uniform_int_distribution<uint32_t> ndBase{0, 19800};
 
     size_t const overlapCount = std::max<size_t>(count / 100, 1);
     size_t const disjointCount = count - overlapCount;
@@ -432,7 +430,7 @@ void BM_bitset_IntersectChained6(benchmark::State& state) {
         // Disjoint
         size_t idx = 0;
         while (idx < disjointCount) {
-            uint32_t const baseI = ndBase(gen) + 50000 + i * 50000;
+            uint32_t const baseI = ndBase(gen) + 2000 + i * 21000;
             size_t const batchSize = std::min<size_t>(disjointCount - idx, 100);
             for (size_t j = 0; j < batchSize; ++j) {
                 sets[i].add(baseI + j);
@@ -454,19 +452,20 @@ void BM_bitset_IntersectChained6(benchmark::State& state) {
 template<typename Policy>
 void setupFilterBenchmark(std::array<Policy, 6>& sets) {
     std::default_random_engine gen{123};
+    constexpr uint32_t kDomainSize = 1U << PagedArenaBitset::DOMAIN_BITS;
 
     // 1. Sparse Filter (sets[0])
-    // 100 random bits spread across 27-bit domain
-    std::uniform_int_distribution<uint32_t> dist27{0, (1U << 27) - 1};
+    // 100 random bits spread across 17-bit domain
+    std::uniform_int_distribution<uint32_t> distDomain{0, kDomainSize - 1};
     for (int i = 0; i < 100; ++i) {
-        sets[0].add(dist27(gen));
+        sets[0].add(distDomain(gen));
     }
 
     // 2. Dense Noise (sets[1] to sets[5])
     // 70% density by filling random pages!
     std::uniform_real_distribution<double> distProb{0.0, 1.0};
     for (size_t i = 1; i < 6; ++i) {
-        for (uint32_t j = 0; j < (1U << 27); j += 4096) {
+        for (uint32_t j = 0; j < kDomainSize; j += 4096) {
             if (distProb(gen) < 0.7) {
                 for (uint32_t k = 0; k < 4096; ++k) {
                     sets[i].add(j + k);
@@ -533,14 +532,12 @@ void BM_bitset_Iteration(benchmark::State& state) {
     size_t const count = state.range(0);
     std::default_random_engine gen{123};
     std::uniform_int_distribution<uint32_t> ndBase{0, 100000};
-    std::uniform_int_distribution<uint32_t> ndGen{0, 0};
     size_t idx = 0;
     while (idx < count) {
         uint32_t const base = ndBase(gen);
-        uint32_t const g = ndGen(gen);
         size_t const batchSize = std::min<size_t>(count - idx, 100);
         for (size_t j = 0; j < batchSize; ++j) {
-            set.add((g << 17) | ((base + j) & 0x1FFFF));
+            set.add((base + j) & 0x1FFFFu);
         }
         idx += batchSize;
     }
@@ -560,14 +557,12 @@ void BM_bitset_Iteration<PagedArenaBitset>(benchmark::State& state) {
     size_t const count = state.range(0);
     std::default_random_engine gen{123};
     std::uniform_int_distribution<uint32_t> ndBase{0, 100000};
-    std::uniform_int_distribution<uint32_t> ndGen{0, 0};
     size_t idx = 0;
     while (idx < count) {
         uint32_t const base = ndBase(gen);
-        uint32_t const g = ndGen(gen);
         size_t const batchSize = std::min<size_t>(count - idx, 100);
         for (size_t j = 0; j < batchSize; ++j) {
-            set.add((g << 17) | ((base + j) & 0x1FFFF));
+            set.add((base + j) & 0x1FFFFu);
         }
         idx += batchSize;
     }
@@ -589,7 +584,7 @@ void BM_bitset_Merge(benchmark::State& state) {
     Policy set2;
     size_t const count = state.range(0);
     std::default_random_engine gen{123};
-    std::uniform_int_distribution<uint32_t> ndBase{0, 50000};
+    std::uniform_int_distribution<uint32_t> ndBase{0, 40000};
 
     size_t const overlapCount = std::max<size_t>(count / 100, 1);
     size_t const disjointCount = count - overlapCount;
@@ -607,7 +602,7 @@ void BM_bitset_Merge(benchmark::State& state) {
 
     idx = 0;
     while (idx < disjointCount) {
-        uint32_t const base = ndBase(gen) + 50000;
+        uint32_t const base = ndBase(gen) + 42000;
         size_t const batchSize = std::min<size_t>(disjointCount - idx, 100);
         for (size_t j = 0; j < batchSize; ++j) {
             set1.add(base + j);
@@ -617,7 +612,7 @@ void BM_bitset_Merge(benchmark::State& state) {
 
     idx = 0;
     while (idx < disjointCount) {
-        uint32_t const base = ndBase(gen) + 100000;
+        uint32_t const base = ndBase(gen) + 85000;
         size_t const batchSize = std::min<size_t>(disjointCount - idx, 100);
         for (size_t j = 0; j < batchSize; ++j) {
             set2.add(base + j);
@@ -637,7 +632,7 @@ void BM_bitset_MergeInPlace(benchmark::State& state) {
     Policy set2;
     size_t const count = state.range(0);
     std::default_random_engine gen{123};
-    std::uniform_int_distribution<uint32_t> ndBase{0, 50000};
+    std::uniform_int_distribution<uint32_t> ndBase{0, 40000};
 
     size_t const overlapCount = std::max<size_t>(count / 100, 1);
     size_t const disjointCount = count - overlapCount;
@@ -655,7 +650,7 @@ void BM_bitset_MergeInPlace(benchmark::State& state) {
 
     idx = 0;
     while (idx < disjointCount) {
-        uint32_t const base = ndBase(gen) + 50000;
+        uint32_t const base = ndBase(gen) + 42000;
         size_t const batchSize = std::min<size_t>(disjointCount - idx, 100);
         for (size_t j = 0; j < batchSize; ++j) {
             set1.add(base + j);
@@ -665,7 +660,7 @@ void BM_bitset_MergeInPlace(benchmark::State& state) {
 
     idx = 0;
     while (idx < disjointCount) {
-        uint32_t const base = ndBase(gen) + 100000;
+        uint32_t const base = ndBase(gen) + 85000;
         size_t const batchSize = std::min<size_t>(disjointCount - idx, 100);
         for (size_t j = 0; j < batchSize; ++j) {
             set2.add(base + j);
@@ -687,7 +682,7 @@ void BM_bitset_Merge6(benchmark::State& state) {
     std::array<Policy, 6> sets;
     size_t const count = state.range(0);
     std::default_random_engine gen{123};
-    std::uniform_int_distribution<uint32_t> ndBase{0, 50000};
+    std::uniform_int_distribution<uint32_t> ndBase{0, 19800};
 
     size_t const overlapCount = std::max<size_t>(count / 100, 1);
     size_t const disjointCount = count - overlapCount;
@@ -701,7 +696,7 @@ void BM_bitset_Merge6(benchmark::State& state) {
         // Disjoint
         size_t idx = 0;
         while (idx < disjointCount) {
-            uint32_t const baseI = ndBase(gen) + 50000 + i * 50000;
+            uint32_t const baseI = ndBase(gen) + 2000 + i * 21000;
             size_t const batchSize = std::min<size_t>(disjointCount - idx, 100);
             for (size_t j = 0; j < batchSize; ++j) {
                 sets[i].add(baseI + j);
@@ -721,7 +716,7 @@ void BM_bitset_IntersectSize6(benchmark::State& state) {
     std::array<Policy, 6> sets;
     size_t const count = state.range(0);
     std::default_random_engine gen{123};
-    std::uniform_int_distribution<uint32_t> ndBase{0, 50000};
+    std::uniform_int_distribution<uint32_t> ndBase{0, 19800};
 
     size_t const overlapCount = std::max<size_t>(count / 100, 1);
     size_t const disjointCount = count - overlapCount;
@@ -735,7 +730,7 @@ void BM_bitset_IntersectSize6(benchmark::State& state) {
         // Disjoint
         size_t idx = 0;
         while (idx < disjointCount) {
-            uint32_t const baseI = ndBase(gen) + 50000 + i * 50000;
+            uint32_t const baseI = ndBase(gen) + 2000 + i * 21000;
             size_t const batchSize = std::min<size_t>(disjointCount - idx, 100);
             for (size_t j = 0; j < batchSize; ++j) {
                 sets[i].add(baseI + j);
@@ -755,7 +750,7 @@ void BM_bitset_MergeSize6(benchmark::State& state) {
     std::array<Policy, 6> sets;
     size_t const count = state.range(0);
     std::default_random_engine gen{123};
-    std::uniform_int_distribution<uint32_t> ndBase{0, 50000};
+    std::uniform_int_distribution<uint32_t> ndBase{0, 19800};
 
     size_t const overlapCount = std::max<size_t>(count / 100, 1);
     size_t const disjointCount = count - overlapCount;
@@ -769,7 +764,7 @@ void BM_bitset_MergeSize6(benchmark::State& state) {
         // Disjoint
         size_t idx = 0;
         while (idx < disjointCount) {
-            uint32_t const baseI = ndBase(gen) + 50000 + i * 50000;
+            uint32_t const baseI = ndBase(gen) + 2000 + i * 21000;
             size_t const batchSize = std::min<size_t>(disjointCount - idx, 100);
             for (size_t j = 0; j < batchSize; ++j) {
                 sets[i].add(baseI + j);
@@ -806,16 +801,14 @@ void BM_bitset_PopSetBits(benchmark::State& state) {
     size_t const count = state.range(0);
     std::default_random_engine gen{123};
     std::uniform_int_distribution<uint32_t> ndBase{0, 100000};
-    std::uniform_int_distribution<uint32_t> ndGen{0, 0};
 
     Policy set;
     size_t idx = 0;
     while (idx < count) {
         uint32_t const base = ndBase(gen);
-        uint32_t const g = ndGen(gen);
         size_t const batchSize = std::min<size_t>(count - idx, 100);
         for (size_t j = 0; j < batchSize; ++j) {
-            set.add((g << 17) | ((base + j) & 0x1FFFF));
+            set.add((base + j) & 0x1FFFFu);
         }
         idx += batchSize;
     }
@@ -851,7 +844,6 @@ void BM_bitset_Lookup(benchmark::State& state) {
     size_t const count = state.range(0);
     std::default_random_engine gen{123};
     std::uniform_int_distribution<uint32_t> ndBase{0, 100000};
-    std::uniform_int_distribution<uint32_t> ndGen{0, 0};
 
     Policy set;
     std::vector<uint32_t> queries;
@@ -859,10 +851,9 @@ void BM_bitset_Lookup(benchmark::State& state) {
     size_t idx = 0;
     while (idx < count) {
         uint32_t const base = ndBase(gen);
-        uint32_t const g = ndGen(gen);
         size_t const batchSize = std::min<size_t>(count - idx, 100);
         for (size_t j = 0; j < batchSize; ++j) {
-            uint32_t const bit = (g << 17) | ((base + j) & 0x1FFFF);
+            uint32_t const bit = (base + j) & 0x1FFFFu;
             set.add(bit);
             queries.push_back(bit);
             queries.push_back(bit ^ 0x1000u); // Mix hits and misses
@@ -891,5 +882,8 @@ BENCHMARK_TEMPLATE(BM_bitset_IntersectChained6, PagedArenaBitset)->Range(10, 100
 BENCHMARK_TEMPLATE(BM_bitset_IntersectMulti6_Filter, PagedArenaBitset);
 BENCHMARK_TEMPLATE(BM_bitset_IntersectChained6_Filter_Best, PagedArenaBitset);
 BENCHMARK_TEMPLATE(BM_bitset_IntersectChained6_Filter_Worst, PagedArenaBitset);
-BENCHMARK_TEMPLATE(BM_bitset_IntersectFragmented, PagedArenaBitset)->RangeMultiplier(2)->Range(1, 64)->Iterations(10);
+BENCHMARK_TEMPLATE(BM_bitset_IntersectFragmented, PagedArenaBitset)
+        ->RangeMultiplier(2)
+        ->Range(1, 1 << (PagedArenaBitset::DOMAIN_BITS - PagedArenaBitset::FILAMENT_PAGE_SHIFT))
+        ->Iterations(10);
 ;

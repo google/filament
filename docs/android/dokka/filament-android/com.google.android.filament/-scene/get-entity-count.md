@@ -7,7 +7,7 @@ open fun [getEntityCount](get-entity-count.md)(): [Int](https://kotlinlang.org/a
 
 Returns the number of Entities in the Scene. 
 
-Entities destroyed with EntityManager::destroy() are removed lazily the next time a View attached to this Scene is rendered or detached; until then they may still be counted.
+Entities destroyed with EntityManager::destroy() are removed lazily after a subsequent garbage collection or the next time a View attached to this Scene is rendered or detached; until then they may still be counted.
 
 #### Return
 

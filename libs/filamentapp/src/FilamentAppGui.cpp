@@ -283,6 +283,7 @@ FilamentAppGui::FilamentAppGui(filament::Engine* engine, filament::View* view,
         : pImpl(new Impl()) {
 #if defined(FILAMENTAPP_HAS_IMGUI)
     pImpl->helper = std::make_unique<filagui::ImGuiHelper>(engine, view, fontPath);
+    pImpl->helper->applyDarkPastelStyle();
 #endif
 }
 

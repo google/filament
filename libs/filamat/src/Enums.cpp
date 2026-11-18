@@ -60,6 +60,8 @@ std::unordered_map<std::string_view, Property> Enums::mStringToProperty = {
         { "iridescenceIor",         Property::IRIDESCENCE_IOR },
         { "iridescenceThickness",   Property::IRIDESCENCE_THICKNESS },
         { "retroreflection",        Property::RETROREFLECTION },
+        { "diffuseTransmission",    Property::DIFFUSE_TRANSMISSION },
+        { "diffuseTransmissionColor", Property::DIFFUSE_TRANSMISSION_COLOR },
 };
 
 template <>

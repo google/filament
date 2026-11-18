@@ -38,6 +38,8 @@
 
 #include <tsl/robin_set.h>
 
+#include <mutex>
+
 namespace filament {
 
 class FEngine;
@@ -262,8 +264,12 @@ struct MaterialDefinition {
             pushConstants;
 
     utils::CString name;
-    uint64_t cacheId = 0;
-    utils::CString source;
+
+    utils::CString const& getSource() const noexcept;
+
+    // Keys the program cache. Ids are never reused, so a stale program entry can't match a new
+    // definition. Reloading the same content after its definition is freed gets a new id.
+    uint64_t const uniqueId;
 
 private:
     friend class MaterialCache;
@@ -271,7 +277,7 @@ private:
 
     static std::unique_ptr<MaterialParser> createParser(backend::Backend const backend,
             utils::FixedCapacityVector<backend::ShaderLanguage> languages,
-            const void* UTILS_NONNULL data, size_t size);
+            const void* UTILS_NONNULL data, size_t size, bool copyPayload = true);
 
     static std::unique_ptr<MaterialDefinition> create(FEngine& engine,
             std::unique_ptr<MaterialParser> parser);
@@ -297,6 +303,8 @@ private:
             Variant fragmentVariant) const;
 
     std::unique_ptr<MaterialParser> mMaterialParser;
+    mutable std::once_flag mSourceOnce;
+    mutable utils::CString mSource;
 };
 
 } // namespace filament

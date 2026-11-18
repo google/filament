@@ -212,7 +212,8 @@ public:
     const FMaterial* getSkyboxMaterial() noexcept;
     const FIndirectLight* getDefaultIndirectLight() const noexcept { return mDefaultIbl; }
     const FTexture* getDummyCubemap() const noexcept { return mDefaultIblTexture; }
-    const FColorGrading* getDefaultColorGrading() const noexcept { return mDefaultColorGrading; }
+    // not const: creates the default color grading on first use
+    const FColorGrading* getDefaultColorGrading() noexcept;
     FMorphTargetBuffer* getDummyMorphTargetBuffer() const { return mDummyMorphTargetBuffer; }
 
     backend::Handle<backend::HwRenderPrimitive> getFullScreenRenderPrimitive() const noexcept {
@@ -515,16 +516,6 @@ public:
     void gc();
     void submitFrame();
 
-    using ShaderContent = utils::FixedCapacityVector<uint8_t>;
-
-    ShaderContent& getVertexShaderContent() const noexcept {
-        return mVertexShaderContent;
-    }
-
-    ShaderContent& getFragmentShaderContent() const noexcept {
-        return mFragmentShaderContent;
-    }
-
     FDebugRegistry& getDebugRegistry() noexcept {
         return mDebugRegistry;
     }
@@ -780,8 +771,6 @@ private:
 
     mutable utils::CountDownLatch mDriverBarrier;
 
-    mutable ShaderContent mVertexShaderContent;
-    mutable ShaderContent mFragmentShaderContent;
     FDebugRegistry mDebugRegistry;
 
     backend::Handle<backend::HwTexture> mDummyOneTexture;
@@ -797,7 +786,7 @@ private:
 
     // Creation parameters
     Config mConfig;
-    ColorGrading::Builder mColorGradingBuilder;
+    std::optional<ColorGrading::Builder> mColorGradingBuilder;
 
     std::vector<std::function<bool()>> mDeferredAsyncObjectDestruction;
 

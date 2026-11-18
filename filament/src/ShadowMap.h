@@ -272,7 +272,7 @@ private:
     static inline Aabb computeLightFrustumBounds(const math::mat4f& lightView,
             Aabb const& wsShadowReceiversVolume, Aabb const& wsShadowCastersVolume,
             SceneInfo const& sceneInfo,
-            bool stable, bool focusShadowCasters, bool farUsesShadowCasters) noexcept;
+            bool stable, bool focusShadowCasters) noexcept;
 
     static Corners computeFrustumCorners(const math::mat4f& projectionInverse) noexcept;
 

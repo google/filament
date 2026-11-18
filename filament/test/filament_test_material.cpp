@@ -14,13 +14,17 @@
  * limitations under the License.
  */
 
+#include "CommandStreamDispatcher.h"
 #include "DynamicSpecConstKey.h"
 #include "filament_test_resources.h"
 #include "MaterialParser.h"
+#include "MockDriver.h"
 
 #include "details/Engine.h"
 #include "details/Material.h"
 #include "details/View.h"
+
+#include "generated/resources/materials.h"
 
 #include <filament/Engine.h>
 #include <filament/Material.h>
@@ -30,6 +34,7 @@
 
 #include <gtest/gtest.h>
 
+#include <cstring>
 #include <string>
 #include <tuple>
 #include <vector>
@@ -452,10 +457,8 @@ TEST(MaterialVariant, DynamicLightingSpecKeySupportsPunctualShadowReceivers) {
 
     constexpr Variant::type_t SHADOW_VARIANTS[] = {
             Variant::SRE,
-            Variant::SRE | Variant::FOG,
             Variant::SRE | Variant::SKN,
             Variant::S2D | Variant::SRE,
-            Variant::S2D | Variant::SRE | Variant::FOG,
             Variant::S2D | Variant::SRE | Variant::SKN,
             Variant::S2D | Variant::SRE | Variant::STE,
     };
@@ -614,11 +617,6 @@ TEST(Material, SsrFilteredLitMaterialContainsPunctualShadowPrograms) {
                     fengine.isStereoSupported()))
                     << "variant=" << +key << " specKey=" << specKey.key;
         }
-        // Fog is a dynamic specialization constant now, there is no FOG variant anymore.
-        EXPECT_FALSE(definition.isValidProgram(
-                Variant(key | Variant::FOG), DynamicSpecConstKey{}, fengine.getShaderModel(),
-                fengine.isStereoSupported()))
-                << "variant=" << +key;
     }
     EXPECT_FALSE(definition.isValidProgram(
             Variant(Variant::SPECIAL_SSR_VARIANT), DynamicSpecConstKey{},
@@ -1215,6 +1213,79 @@ TEST(Material, ProgramCacheLruEvictUAF) {
     Engine::destroy(engine);
 }
 
+TEST(Material, ProgramCacheSeparatesMaterialsWithSameCrc32) {
+    Engine* engine = Engine::Builder()
+                             .backend(Engine::Backend::NOOP)
+                             .feature("engine.enable_program_cache", true)
+                             .feature("material.check_crc32_after_loading", false)
+                             .build();
+    ASSERT_NE(engine, nullptr);
+    FEngine::DriverApi& driver = downcast(engine)->getDriverApi();
+
+    auto const buildPackage = [engine](const char* name, const char* shader) {
+        filamat::MaterialBuilder builder;
+        builder.init();
+        builder.name(name);
+        builder.material(shader);
+        return builder.build(engine->getJobSystem());
+    };
+    filamat::Package const pkgA = buildPackage("CrcA", R"(
+        void material(inout MaterialInputs material) {
+            prepareMaterial(material);
+            material.baseColor = vec4(1.0, 0.0, 0.0, 1.0);
+        }
+    )");
+    filamat::Package const pkgB = buildPackage("CrcB", R"(
+        void material(inout MaterialInputs material) {
+            prepareMaterial(material);
+            material.baseColor = vec4(0.0, 1.0, 0.0, 1.0);
+        }
+    )");
+    ASSERT_TRUE(pkgA.isValid());
+    ASSERT_TRUE(pkgB.isValid());
+
+    // Give B the MaterialCrc32 chunk of A. The packages still differ.
+    auto const getCrc32Chunk = [](uint8_t const* data, size_t const size) -> uint8_t const* {
+        filaflat::ChunkContainer cc(data, size);
+        if (!cc.parse() || !cc.hasChunk(filamat::MaterialCrc32)) {
+            return nullptr;
+        }
+        return cc.getChunkRange(filamat::MaterialCrc32).first;
+    };
+    std::vector<uint8_t> bytesB(pkgB.getData(), pkgB.getData() + pkgB.getSize());
+    uint8_t const* const crcA = getCrc32Chunk(pkgA.getData(), pkgA.getSize());
+    uint8_t const* const crcB = getCrc32Chunk(bytesB.data(), bytesB.size());
+    ASSERT_NE(crcA, nullptr);
+    ASSERT_NE(crcB, nullptr);
+    std::memcpy(bytesB.data() + (crcB - bytesB.data()), crcA, sizeof(uint32_t));
+
+    Material* matA = Material::Builder().package(pkgA.getData(), pkgA.getSize()).build(*engine);
+    Material* matA2 = Material::Builder().package(pkgA.getData(), pkgA.getSize()).build(*engine);
+    Material* matB = Material::Builder().package(bytesB.data(), bytesB.size()).build(*engine);
+    ASSERT_NE(matA, nullptr);
+    ASSERT_NE(matA2, nullptr);
+    ASSERT_NE(matB, nullptr);
+    uint32_t crc32A = 0;
+    uint32_t crc32B = 0;
+    ASSERT_TRUE(downcast(matA)->getMaterialParser().getMaterialCrc32(&crc32A));
+    ASSERT_TRUE(downcast(matB)->getMaterialParser().getMaterialCrc32(&crc32B));
+    ASSERT_EQ(crc32A, crc32B);
+    ASSERT_NE(&downcast(matA)->getDefinition(), &downcast(matB)->getDefinition());
+
+    auto const prepare = [&driver](Material* material) {
+        return downcast(material)->getPrograms().prepareProgram(driver, Variant{ 0 },
+                DynamicSpecConstKey{ 0 }, backend::CompilerPriorityQueue::HIGH);
+    };
+    auto const programA = prepare(matA);
+    EXPECT_EQ(prepare(matA2), programA);
+    EXPECT_NE(prepare(matB), programA);
+
+    engine->destroy(matA);
+    engine->destroy(matA2);
+    engine->destroy(matB);
+    Engine::destroy(engine);
+}
+
 TEST_P(SpecializedInstanceLifetimeTest, DestroyInstanceKeepsMaterialDefinition) {
     auto const [enableProgramCache, duplicateInstance] = GetParam();
 
@@ -1336,6 +1407,196 @@ TEST(Material, RejectMismatchedDescriptorBindingsAndLayout) {
     }
 
     Engine::destroy(engine);
+}
+
+TEST(Material, MaterialInstanceNameAndLazySource) {
+    static_assert(sizeof(FMaterialInstance) <= 288,
+            "FMaterialInstance size regressed; keep cold state outlined.");
+
+    Engine* engine = Engine::Builder().backend(Engine::Backend::NOOP).build();
+    ASSERT_NE(engine, nullptr);
+
+    constexpr std::string_view kSource = "material { name: TestMat }";
+    filamat::MaterialBuilder builder;
+    builder.init();
+    builder.name("ParentMaterialName");
+    builder.materialSource(kSource);
+    builder.shading(Shading::UNLIT);
+    filamat::Package pkg = builder.build(engine->getJobSystem());
+    ASSERT_TRUE(pkg.isValid());
+
+    Material* mat = Material::Builder().package(pkg.getData(), pkg.getSize()).build(*engine);
+    ASSERT_NE(mat, nullptr);
+
+    // Lazy MaterialSource decompression on first getSource() access.
+    EXPECT_EQ(downcast(mat)->getSource(), kSource);
+
+    // Unnamed instance before getDefaultInstance() falls back to parent material name.
+    MaterialInstance* unnamed1 = mat->createInstance();
+    EXPECT_STREQ(unnamed1->getName(), "ParentMaterialName");
+
+    // Default instance falls back to parent material name.
+    MaterialInstance* defaultMi = mat->getDefaultInstance();
+    EXPECT_STREQ(defaultMi->getName(), "ParentMaterialName");
+
+    // Unnamed instance after getDefaultInstance() still falls back to parent material name.
+    MaterialInstance* unnamed2 = mat->createInstance();
+    EXPECT_STREQ(unnamed2->getName(), "ParentMaterialName");
+
+    // Empty-string name also leaves CString unallocated and falls back to parent material name.
+    MaterialInstance* emptyNamed = mat->createInstance("");
+    EXPECT_STREQ(emptyNamed->getName(), "ParentMaterialName");
+
+    // Explicitly named instance and duplicate preserve custom name.
+    MaterialInstance* named = mat->createInstance("CustomInstance");
+    EXPECT_STREQ(named->getName(), "CustomInstance");
+
+    MaterialInstance* dupNamed = MaterialInstance::duplicate(named);
+    EXPECT_STREQ(dupNamed->getName(), "CustomInstance");
+
+    engine->destroy(dupNamed);
+    engine->destroy(named);
+    engine->destroy(emptyNamed);
+    engine->destroy(unnamed2);
+    engine->destroy(unnamed1);
+    engine->destroy(mat);
+    Engine::destroy(engine);
+}
+
+TEST(Material, BuiltInMaterialsAreAlignedAndParseZeroCopy) {
+    struct BuiltInBlob {
+        char const* name;
+        uint8_t const* data;
+        size_t size;
+    };
+    const BuiltInBlob blobs[] = {
+        { "BLITARRAY", MATERIALS_BLITARRAY_DATA, MATERIALS_BLITARRAY_SIZE },
+        { "BLITDEPTH", MATERIALS_BLITDEPTH_DATA, MATERIALS_BLITDEPTH_SIZE },
+        { "BLITLOW", MATERIALS_BLITLOW_DATA, MATERIALS_BLITLOW_SIZE },
+        { "CLEARDEPTH", MATERIALS_CLEARDEPTH_DATA, MATERIALS_CLEARDEPTH_SIZE },
+        { "DEBUGSHADOWCASCADES", MATERIALS_DEBUGSHADOWCASCADES_DATA,
+                MATERIALS_DEBUGSHADOWCASCADES_SIZE },
+        { "DEFAULTMATERIAL", MATERIALS_DEFAULTMATERIAL_DATA, MATERIALS_DEFAULTMATERIAL_SIZE },
+        { "RESOLVEDEPTH", MATERIALS_RESOLVEDEPTH_DATA, MATERIALS_RESOLVEDEPTH_SIZE },
+        { "SEPARABLEGAUSSIANBLUR", MATERIALS_SEPARABLEGAUSSIANBLUR_DATA,
+                MATERIALS_SEPARABLEGAUSSIANBLUR_SIZE },
+        { "SKYBOX", MATERIALS_SKYBOX_DATA, MATERIALS_SKYBOX_SIZE },
+        { "SHADOWMAP", MATERIALS_SHADOWMAP_DATA, MATERIALS_SHADOWMAP_SIZE },
+    };
+
+    for (auto const& blob : blobs) {
+        EXPECT_EQ(0u, reinterpret_cast<uintptr_t>(blob.data) % 8u) << blob.name;
+#if defined(FILAMENT_DRIVER_SUPPORTS_VULKAN)
+        MaterialParser spirvParser(
+                { backend::ShaderLanguage::SPIRV }, blob.data, blob.size, /*copyPayload=*/false);
+        EXPECT_EQ(MaterialParser::ParseResult::SUCCESS, spirvParser.parse()) << blob.name;
+#endif
+    }
+}
+
+TEST(Material, MisalignedStaticMaterialBufferAndDuplicatePendingSpecConstants) {
+    class SimpleMockDriver : public MockDriver {
+    public:
+        SimpleMockDriver() {
+            using ::testing::_;
+            using ::testing::Return;
+            ON_CALL(*this, getFeatureLevel())
+                    .WillByDefault(Return(backend::FeatureLevel::FEATURE_LEVEL_1));
+            ON_CALL(*this, isTextureFormatSupported(_)).WillByDefault(Return(true));
+            ON_CALL(*this, isRenderTargetFormatSupported(_)).WillByDefault(Return(true));
+            ON_CALL(*this, isTextureFormatMipmappable(_)).WillByDefault(Return(true));
+            ON_CALL(*this, isTextureFormatFilterable(_)).WillByDefault(Return(true));
+            ON_CALL(*this, getMaxTextureSize(_)).WillByDefault(Return(size_t(2048)));
+            ON_CALL(*this, getMaxUniformBufferSize()).WillByDefault(Return(size_t(65536)));
+            ON_CALL(*this, getUniformBufferOffsetAlignment()).WillByDefault(Return(size_t(256)));
+            ON_CALL(*this, getMaxDrawBuffers()).WillByDefault(Return(uint8_t(4)));
+        }
+        backend::Dispatcher getDispatcher() const noexcept override {
+            return backend::ConcreteDispatcher<SimpleMockDriver>::make();
+        }
+    };
+    class SimpleMockPlatform : public backend::Platform {
+    public:
+        int getOSVersion() const noexcept override { return 0; }
+        utils::CString getDeviceInfo(DeviceInfoType, backend::Driver*) const override { return {}; }
+        backend::Driver* createDriver(void*, const DriverConfig&) override {
+            return new ::testing::NiceMock<SimpleMockDriver>();
+        }
+    };
+    struct EngineDestroyer {
+        void operator()(Engine* e) const noexcept {
+            if (e) {
+                Engine::destroy(&e);
+            }
+        }
+    };
+
+#if defined(FILAMENT_DRIVER_SUPPORTS_VULKAN)
+    SimpleMockPlatform mockPlatform;
+    std::unique_ptr<Engine, EngineDestroyer> vulkanEngine(Engine::Builder()
+            .backend(Engine::Backend::VULKAN)
+            .platform(&mockPlatform)
+            .build());
+    ASSERT_NE(vulkanEngine, nullptr);
+
+    // Build a SPIR-V-only package so MaterialParser::parse() must unflatten DictionarySpirv.
+    filamat::MaterialBuilder spirvBuilder;
+    spirvBuilder.init();
+    spirvBuilder.name("SpirvOnlyMisalignedMat");
+    spirvBuilder.shading(Shading::UNLIT);
+    spirvBuilder.targetApi(filamat::MaterialBuilder::TargetApi::VULKAN);
+    filamat::Package spirvPkg = spirvBuilder.build(vulkanEngine->getJobSystem());
+    ASSERT_TRUE(spirvPkg.isValid());
+
+    // Place the SPIR-V package at every misalignment offset 1..7 and verify StaticMaterialBuilder
+    // (copyPayload = false) succeeds via MaterialDefinition::createParser()'s alignment fallback.
+    std::vector<uint8_t> storage(spirvPkg.getSize() + 16);
+    uint8_t* alignedBase = storage.data();
+    while (reinterpret_cast<uintptr_t>(alignedBase) % 8u != 0u) {
+        ++alignedBase;
+    }
+    for (size_t misalign = 1; misalign < 8; ++misalign) {
+        uint8_t* const misaligned = alignedBase + misalign;
+        std::memmove(misaligned, spirvPkg.getData(), spirvPkg.getSize());
+
+        MaterialParser directParser({ backend::ShaderLanguage::SPIRV }, misaligned,
+                spirvPkg.getSize(), /*copyPayload=*/false);
+        EXPECT_EQ(MaterialParser::ParseResult::SUCCESS, directParser.parse())
+                << "misalign=" << misalign;
+
+        Material* staticMat = FMaterial::DefaultMaterialBuilder()
+                .package(misaligned, spirvPkg.getSize())
+                .build(*vulkanEngine);
+        ASSERT_NE(staticMat, nullptr) << "misalign=" << misalign;
+        vulkanEngine->destroy(staticMat);
+    }
+    vulkanEngine.reset();
+#endif
+
+    // Verify MaterialInstance::duplicate() preserves unflushed pending specialization constants.
+    std::unique_ptr<Engine, EngineDestroyer> engine(
+            Engine::Builder().backend(Engine::Backend::NOOP).build());
+    ASSERT_NE(engine, nullptr);
+
+    filamat::MaterialBuilder builder;
+    builder.init();
+    builder.name("SpecConstDupMat");
+    builder.shading(Shading::UNLIT);
+    builder.constant("mySpecInt", filamat::MaterialBuilder::ConstantType::INT, 7);
+    builder.targetApi(filamat::MaterialBuilder::TargetApi::OPENGL);
+    filamat::Package pkg = builder.build(engine->getJobSystem());
+    ASSERT_TRUE(pkg.isValid());
+
+    Material* mat = Material::Builder().package(pkg.getData(), pkg.getSize()).build(*engine);
+    ASSERT_NE(mat, nullptr);
+    MaterialInstance* srcMi = mat->createInstance("TemplateMi");
+    srcMi->setConstant("mySpecInt", int32_t(42));
+    MaterialInstance* dupMi = MaterialInstance::duplicate(srcMi, "DuplicatedMi");
+    EXPECT_EQ(42, dupMi->getConstant<int32_t>("mySpecInt"));
+
+    engine->destroy(dupMi);
+    engine->destroy(srcMi);
+    engine->destroy(mat);
 }
 
 INSTANTIATE_TEST_SUITE_P(MaterialInstanceTest, SpecializedInstanceLifetimeTest,

@@ -24,6 +24,7 @@
 
 #include <backend/DriverEnums.h>
 
+#include <utils/JobSystem.h>
 #include <utils/Log.h>
 #include <utils/Panic.h>
 
@@ -32,7 +33,11 @@
 #include <meshoptimizer.h>
 
 #include <algorithm>
+#include <cstdlib>
 #include <limits>
+#include <memory>
+#include <utility>
+#include <vector>
 
 namespace filament::gltfio::utility {
 
@@ -94,13 +99,27 @@ bool decodeDracoMeshes(cgltf_data const* gltf, cgltf_primitive const* prim,
     return decoded;
 }
 
-bool decodeMeshoptCompression(cgltf_data* data, bool* decoded) {
-    bool hasDecoded = false;
+bool decodeMeshoptCompression(cgltf_data* data, bool* decoded, JobSystem* js) {
+    struct FreeDeleter {
+        void operator()(void* ptr) const noexcept { free(ptr); }
+    };
+    using ScopedMalloc = std::unique_ptr<uint8_t, FreeDeleter>;
+
+    struct MeshoptDecodeTask {
+        cgltf_buffer_view* view;
+        cgltf_meshopt_compression const* compression;
+        uint8_t const* source;
+        ScopedMalloc destination;
+        int error = 0;
+    };
+    std::vector<MeshoptDecodeTask> tasks;
+
     for (size_t i = 0; i < data->buffer_views_count; ++i) {
-        if (!data->buffer_views[i].has_meshopt_compression) {
+        cgltf_buffer_view& view = data->buffer_views[i];
+        if (!view.has_meshopt_compression || view.data != nullptr) {
             continue;
         }
-        cgltf_meshopt_compression* compression = &data->buffer_views[i].meshopt_compression;
+        cgltf_meshopt_compression* compression = &view.meshopt_compression;
         if (!compression->buffer || !compression->buffer->data) {
             slog.e << "gltfio: meshopt decompression failed, missing buffer data." << io::endl;
             return false;
@@ -200,14 +219,26 @@ bool decodeMeshoptCompression(cgltf_data* data, bool* decoded) {
 
         const size_t decodedSize = compression->count * compression->stride;
 
-        // This memory is freed by cgltf.
-        void* destination = malloc(decodedSize);
+        // Ownership is transferred to cgltf_buffer_view::data on success (freed by cgltf_free).
+        ScopedMalloc destination(static_cast<uint8_t*>(malloc(decodedSize)));
         if (UTILS_UNLIKELY(!destination)) {
             slog.e << "gltfio: meshopt decompression allocation failed ("
                    << decodedSize << " bytes)" << io::endl;
             return false;
         }
 
+        tasks.push_back({
+            .view = &view,
+            .compression = compression,
+            .source = source,
+            .destination = std::move(destination),
+        });
+    }
+
+    auto runTask = [](MeshoptDecodeTask* task) {
+        cgltf_meshopt_compression const* compression = task->compression;
+        void* destination = task->destination.get();
+        uint8_t const* source = task->source;
         int error = 0;
         switch (compression->mode) {
             case cgltf_meshopt_compression_mode_attributes:
@@ -226,11 +257,10 @@ bool decodeMeshoptCompression(cgltf_data* data, bool* decoded) {
                 assert_invariant(false);
                 break;
         }
-        
+
         if (error != 0) {
-            slog.e << "gltfio: meshopt decompression failed with error " << error << io::endl;
-            free(destination);
-            return false;
+            task->error = error;
+            return;
         }
 
         switch (compression->filter) {
@@ -249,12 +279,48 @@ bool decodeMeshoptCompression(cgltf_data* data, bool* decoded) {
                 assert_invariant(false);
                 break;
         }
+    };
 
-        data->buffer_views[i].data = destination;
-        hasDecoded = true;
+    if (tasks.size() <= 1 || js == nullptr) {
+        for (auto& task : tasks) {
+            runTask(&task);
+        }
+    } else {
+        constexpr size_t MAX_BATCH_SIZE = JobSystem::MAX_JOB_COUNT / 2;
+        for (size_t offset = 0; offset < tasks.size(); offset += MAX_BATCH_SIZE) {
+            const size_t batchSize = std::min(tasks.size() - offset, MAX_BATCH_SIZE);
+            JobSystem::Job* parent = js->createJob();
+            for (size_t j = 0; j < batchSize; ++j) {
+                MeshoptDecodeTask* tptr = &tasks[offset + j];
+                JobSystem::Job* job = parent ?
+                        jobs::createJob(*js, parent, [tptr, &runTask] { runTask(tptr); }) : nullptr;
+                if (UTILS_LIKELY(job)) {
+                    js->run(job);
+                } else {
+                    runTask(tptr);
+                }
+            }
+            if (parent) {
+                js->runAndWait(parent);
+            }
+        }
     }
+
+    for (auto const& task : tasks) {
+        if (task.error != 0) {
+            slog.e << "gltfio: meshopt decompression failed with error " << task.error
+                   << io::endl;
+            return false;
+        }
+    }
+
+    for (auto& task : tasks) {
+        assert_invariant(task.view->data == nullptr);
+        task.view->data = task.destination.release();
+    }
+
     if (decoded) {
-        *decoded = hasDecoded;
+        *decoded = !tasks.empty();
     }
     return true;
 }
@@ -333,6 +399,26 @@ bool requiresPacking(cgltf_accessor const* accessor) {
         default:
             assert_invariant(false);
             return true;
+    }
+}
+
+math::float3 dequantizeBounds(cgltf_accessor const* accessor, float const* bound) {
+    math::float3 const value{ bound[0], bound[1], bound[2] };
+    if (!accessor->normalized) {
+        return value;
+    }
+    // glTF 2.0 normalized integer decoding; signed values are clamped to -1.
+    switch (accessor->component_type) {
+        case cgltf_component_type_r_8:
+            return max(value / 127.0f, math::float3{ -1.0f });
+        case cgltf_component_type_r_8u:
+            return value / 255.0f;
+        case cgltf_component_type_r_16:
+            return max(value / 32767.0f, math::float3{ -1.0f });
+        case cgltf_component_type_r_16u:
+            return value / 65535.0f;
+        default:
+            return value;
     }
 }
 

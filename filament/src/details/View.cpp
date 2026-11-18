@@ -101,6 +101,7 @@ FView::FView(FEngine& engine)
         : mCommonRenderableDescriptorSet("mCommonRenderableDescriptorSet",
                 engine.getPerRenderableDescriptorSetLayout()),
           mFroxelizer(engine),
+          mEngine(engine),
           mFogEntity(engine.getEntityManager().create()),
           mIsStereoSupported(engine.getDriverApi().isStereoSupported()),
           mUniforms(engine.getDriverApi()),
@@ -185,24 +186,36 @@ FView::FView(FEngine& engine)
     }
 #endif
 
-    // allocate UBOs
-    mLightUbh = driver.createBufferObject(CONFIG_MAX_LIGHT_COUNT * sizeof(LightsUib),
-            BufferObjectBinding::UNIFORM, BufferUsage::DYNAMIC);
-
     mIsDynamicResolutionSupported = driver.isFrameTimeSupported();
 
-    mDefaultColorGrading = mColorGrading = engine.getDefaultColorGrading();
-
+    BufferObjectHandle const dummyUbo = engine.getDummyUniformBuffer();
     for (auto&& colorPassDescriptorSet : mColorPassDescriptorSet) {
-        colorPassDescriptorSet.init(
-                engine,
-                mLightUbh,
-                mFroxelizer.getRecordBuffer(),
-                mFroxelizer.getFroxelBuffer());
+        colorPassDescriptorSet.init(engine, dummyUbo, dummyUbo, dummyUbo);
     }
 }
 
 FView::~FView() noexcept = default;
+
+const FColorGrading* FView::getColorGrading() const noexcept {
+    return mColorGrading ? mColorGrading : mEngine.getDefaultColorGrading();
+}
+
+UTILS_NOINLINE
+void FView::ensureDynamicLightingBuffers(FEngine& engine, DriverApi& driver) noexcept {
+    if (UTILS_UNLIKELY(!mLightUbh)) {
+        mLightUbh = driver.createBufferObject(CONFIG_MAX_LIGHT_COUNT * sizeof(LightsUib),
+                BufferObjectBinding::UNIFORM, BufferUsage::DYNAMIC);
+        mFroxelizer.ensureBuffersCreated(driver);
+        BufferObjectHandle const dummyUbo = engine.getDummyUniformBuffer();
+        BufferObjectHandle const recordUbo =
+                mFroxelizer.getRecordBuffer() ? mFroxelizer.getRecordBuffer() : dummyUbo;
+        BufferObjectHandle const froxelUbo =
+                mFroxelizer.getFroxelBuffer() ? mFroxelizer.getFroxelBuffer() : dummyUbo;
+        for (auto&& colorPassDescriptorSet : mColorPassDescriptorSet) {
+            colorPassDescriptorSet.init(engine, mLightUbh, recordUbo, froxelUbo);
+        }
+    }
+}
 
 void FView::invalidateSceneCache() noexcept {
     if (!mScene) {
@@ -236,7 +249,9 @@ void FView::terminate(FEngine& engine) {
     clearPickingQueries();
 
     DriverApi& driver = engine.getDriverApi();
-    driver.destroyBufferObject(mLightUbh);
+    if (mLightUbh) {
+        driver.destroyBufferObject(mLightUbh);
+    }
     driver.destroyBufferObject(mRenderableUbh);
     clearFrameHistory(engine);
 
@@ -780,16 +795,16 @@ void FView::prepare(FEngine& engine, DriverApi& driver, LinearAllocatorArena& ar
         // note: this job updates LightData (non const)
         // allocate a scratch buffer for distances outside the job below, so we don't need
         // to use a locked allocator; the downside is that we need to account for the worst case.
-        size_t const positionalLightCount = lightCount - FScene::DIRECTIONAL_LIGHTS_COUNT;
-        size_t const positionalLightCountRoundedUp = (positionalLightCount + 3u) & ~3u;
-        float* const distances = arena.alloc<float>(positionalLightCountRoundedUp, CACHELINE_SIZE);
-        mDistancesBuffer = { distances, positionalLightCountRoundedUp };
+        // computeLightCameraDistances() covers the directional light slot and rounds up to 4
+        size_t const distanceCount = (lightCount + 3u) & ~3u;
+        float* const distances = arena.alloc<float>(distanceCount, CACHELINE_SIZE);
+        mDistancesBuffer = { distances, distanceCount };
 
         prepareVisibleLightsJob = js.runAndRetain(js.createJob(nullptr,
-                [&engine, distances, positionalLightCount, &viewMatrix = cameraInfo.view, &cullingFrustum,
+                [&engine, distances, distanceCount, &viewMatrix = cameraInfo.view, &cullingFrustum,
                  &lightData = cache.lightData](JobSystem&, JobSystem::Job*) {
                     prepareVisibleLights(engine.getLightManager(),
-                            { distances, distances + positionalLightCount },
+                            { distances, distanceCount },
                             viewMatrix, cullingFrustum, lightData);
                 }));
     }
@@ -840,6 +855,7 @@ void FView::prepare(FEngine& engine, DriverApi& driver, LinearAllocatorArena& ar
 
         // As soon as prepareVisibleLight finishes, we can kick-off the froxelization
         if (hasDynamicLighting()) {
+            ensureDynamicLightingBuffers(engine, driver);
             auto& froxelizer = mFroxelizer;
             if (froxelizer.prepare(driver, arena, viewport,
                     cameraInfo.projection, cameraInfo.zn, cameraInfo.zf,
@@ -961,8 +977,6 @@ void FView::prepare(FEngine& engine, DriverApi& driver, LinearAllocatorArena& ar
             auto const& skinning = sceneData.elementAt<FScene::SKINNING_BUFFER>(i);
             auto const& morphing = sceneData.elementAt<FScene::MORPHING_BUFFER>(i);
 
-            // FIXME: when only one is active the UBO handle of the other is null
-            //        (probably a problem on vulkan)
             if (UTILS_UNLIKELY(skinning.handle || morphing.handle)) {
                 FRenderableManager& rcm = engine.getRenderableManager();
                 auto const ci = rcm.getInstance(sceneData.elementAt<FScene::RENDERABLE_ENTITY>(i));
@@ -981,50 +995,34 @@ void FView::prepare(FEngine& engine, DriverApi& driver, LinearAllocatorArena& ar
 
                 descriptorSet.setBuffer(layout,
                         +PerRenderableBindingPoints::BONES_UNIFORMS,
-                        engine.getDummyUniformBuffer(), 0, sizeof(PerRenderableBoneUib));
-
-                descriptorSet.setBuffer(layout,
-                        +PerRenderableBindingPoints::MORPHING_UNIFORMS,
-                        engine.getDummyUniformBuffer(), 0, sizeof(PerRenderableMorphingUib));
-
-                descriptorSet.setSampler(layout,
-                        +PerRenderableBindingPoints::MORPH_TARGET_POSITIONS,
-                        engine.getDummyMorphTargetBuffer()->getPositionsHandle(), {});
-
-                descriptorSet.setSampler(layout,
-                        +PerRenderableBindingPoints::MORPH_TARGET_TANGENTS,
-                        engine.getDummyMorphTargetBuffer()->getTangentsHandle(), {});
+                        skinning.handle ? skinning.handle : engine.getDummyUniformBuffer(),
+                        0, sizeof(PerRenderableBoneUib));
 
                 descriptorSet.setSampler(layout,
                         +PerRenderableBindingPoints::BONES_INDICES_AND_WEIGHTS,
-                        engine.getZeroTexture(), {});
+                        skinning.boneIndicesAndWeightHandle
+                                ? skinning.boneIndicesAndWeightHandle
+                                : engine.getZeroTexture(), {});
 
-                if (UTILS_UNLIKELY(skinning.handle || morphing.handle)) {
-                    descriptorSet.setBuffer(layout,
-                            +PerRenderableBindingPoints::BONES_UNIFORMS,
-                            skinning.handle, 0, sizeof(PerRenderableBoneUib));
+                descriptorSet.setBuffer(layout,
+                        +PerRenderableBindingPoints::MORPHING_UNIFORMS,
+                        morphing.handle ? morphing.handle : engine.getDummyUniformBuffer(),
+                        0, sizeof(PerRenderableMorphingUib));
 
-                    descriptorSet.setSampler(layout,
-                            +PerRenderableBindingPoints::BONES_INDICES_AND_WEIGHTS,
-                            skinning.boneIndicesAndWeightHandle, {});
+                FMorphTargetBuffer const* const mtb = morphing.morphTargetBuffer;
+                FMorphTargetBuffer const* const dummyMtb = engine.getDummyMorphTargetBuffer();
 
-                    descriptorSet.setBuffer(layout,
-                            +PerRenderableBindingPoints::MORPHING_UNIFORMS,
-                            morphing.handle, 0, sizeof(PerRenderableMorphingUib));
+                descriptorSet.setSampler(layout,
+                        +PerRenderableBindingPoints::MORPH_TARGET_POSITIONS,
+                        (mtb && mtb->hasPositions())
+                                ? mtb->getPositionsHandle()
+                                : dummyMtb->getPositionsHandle(), {});
 
-                    const auto* mtb = morphing.morphTargetBuffer;
-                    if (mtb->hasPositions()) {
-                        descriptorSet.setSampler(layout,
-                                +PerRenderableBindingPoints::MORPH_TARGET_POSITIONS,
-                                mtb->getPositionsHandle(), {});
-                    }
-
-                    if (mtb->hasTangents()) {
-                        descriptorSet.setSampler(layout,
-                                +PerRenderableBindingPoints::MORPH_TARGET_TANGENTS,
-                                mtb->getTangentsHandle(), {});
-                    }
-                }
+                descriptorSet.setSampler(layout,
+                        +PerRenderableBindingPoints::MORPH_TARGET_TANGENTS,
+                        (mtb && mtb->hasTangents())
+                                ? mtb->getTangentsHandle()
+                                : dummyMtb->getTangentsHandle(), {});
 
                 descriptorSet.commit(layout, driver);
 
@@ -1493,7 +1491,8 @@ void FView::prepareVisibleLights(FLightManager const& lcm,
     // number of point/spotlights
     size_t const positionalLightCount = visibleLightCount - FScene::DIRECTIONAL_LIGHTS_COUNT;
     if (positionalLightCount) {
-        assert_invariant(positionalLightCount <= scratch.size());
+        // computeLightCameraDistances() writes the directional light slot and rounds up to 4
+        assert_invariant(((visibleLightCount + 3u) & ~3u) <= scratch.size());
         // pre-compute the lights' distance to the camera, for sorting below
         // - we don't skip the directional light, because we don't care, it's ignored during sorting
         float* const UTILS_RESTRICT distances = scratch.data();

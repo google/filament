@@ -50,6 +50,7 @@
 #include <math/half.h>
 #include <math/mat4.h>
 #include <math/vec2.h>
+#include <math/vec3.h>
 #include <math/vec4.h>
 
 #include <array>
@@ -182,6 +183,15 @@ public:
         return mCascadesShaderParameters[index];
     }
 
+    using SilhouettePlanes = std::array<math::float4, Culler::TIGHTER_CULLING_PLANE_COUNT>;
+
+    // Computes the planes of the volume containing every shadow caster that can cast a shadow
+    // into the camera frustum `pv`, for a directional light travelling along `lightDir`.
+    // Planes follow the Frustum convention (outward normals, inside is negative) and are pushed
+    // `wsOneTexel` outwards. Unused entries are padded with planes that never cull.
+    static SilhouettePlanes findSilhouette(math::mat4f const& pv, math::float3 const& lightDir,
+            float wsOneTexel) noexcept;
+
 private:
     explicit ShadowMapManager(FEngine& engine);
 
@@ -211,6 +221,10 @@ private:
     ShadowTechnique updateCascadeShadowMaps(FEngine& engine,
             FView& view, CameraInfo cameraInfo, FScene::RenderableSoa& renderableData,
             FScene::LightSoa const& lightData, ShadowMap::SceneInfo sceneInfo) noexcept;
+
+    void cullDirectionalShadowCasters(FView const& view,
+            FScene::RenderableSoa& renderableData, CameraInfo const& cameraInfo,
+            math::float3 const& direction, float wsOneTexel) noexcept;
 
     ShadowTechnique updateSpotShadowMaps(FEngine& engine,
             FScene::LightSoa const& lightData) const noexcept;
@@ -301,6 +315,7 @@ private:
     bool mInitialized = false;
     bool mFeatureShadowAllocator = false;
     bool mDisableBlitIntoTextureArray = false;
+    utils::FixedCapacityVector<Culler::result_type> mTighterCullingBuffer;
 
     ShadowMap& getShadowMap(size_t const index) noexcept {
         assert_invariant(index < mShadowMapCache.size());

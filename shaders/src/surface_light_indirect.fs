@@ -457,6 +457,16 @@ void evaluateSubsurfaceIBL(const PixelParams pixel, const vec3 diffuseIrradiance
 #endif
 }
 
+void evaluateDiffuseTransmissionIBL(const PixelParams pixel, const vec3 diffuseNormal,
+        inout vec3 Fd) {
+#if defined(MATERIAL_HAS_DIFFUSE_TRANSMISSION)
+    if (pixel.diffuseTransmission > 0.0) {
+        vec3 Ft = pixel.diffuseTransmissionColor * diffuseIrradiance(-diffuseNormal);
+        Fd = mix(Fd, Ft, pixel.diffuseTransmission);
+    }
+#endif
+}
+
 #if defined(MATERIAL_HAS_REFRACTION)
 
 struct Refraction {
@@ -827,7 +837,13 @@ void evaluateIBL(const MaterialInputs material, const PixelParams pixel, inout v
 #elif IBL_INTEGRATION == IBL_INTEGRATION_IMPORTANCE_SAMPLING
     vec3 diffuseIrradiance = isEvaluateDiffuseIBL(pixel, diffuseNormal, shading_view);
 #endif
-    vec3 Fd = pixel.diffuseColor * diffuseIrradiance * (1.0 - E) * diffuseBRDF;
+    vec3 Fd = pixel.diffuseColor * diffuseIrradiance;
+
+    // diffuse transmission layer
+    evaluateDiffuseTransmissionIBL(pixel, diffuseNormal, Fd);
+
+    // To apply to both diffuse and transmitted diffuse
+    Fd *= (1.0 - E) * diffuseBRDF;
 
     // subsurface layer
     evaluateSubsurfaceIBL(pixel, diffuseIrradiance, Fd, Fr);

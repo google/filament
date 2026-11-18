@@ -16,6 +16,8 @@
 
 #include <filaflat/DictionaryReader.h>
 
+#include "SmolvUtils.h"
+
 #include <filaflat/ChunkContainer.h>
 #include <filaflat/Unflattener.h>
 
@@ -81,20 +83,11 @@ bool DictionaryReader::unflatten(ChunkContainer const& container,
             assert_invariant((intptr_t(compressed) % 8) == 0);
 
 #if defined (FILAMENT_DRIVER_SUPPORTS_VULKAN)
-            // GetDecodedBufferSize() returns the blob's declared decoded size. It cannot
-            // validate it because it does not know the input size. smol-v's largest possible
-            // expansion is 8x, from a bunched OpMemberDecorate run where each member costs two
-            // input bytes and emits four output words. Dividing keeps the check free of overflow.
-            constexpr size_t MAX_SMOLV_EXPANSION = 8;
-            size_t spirvSize = smolv::GetDecodedBufferSize(compressed, compressedSize);
-            if (spirvSize == 0 || spirvSize / MAX_SMOLV_EXPANSION > compressedSize) {
+            if (getBoundedSmolvDecodedSize(compressed, compressedSize) == 0 ||
+                    !smolv::Validate(compressed, compressedSize)) {
                 return false;
             }
-            ShaderContent spirv(spirvSize);
-            if (!smolv::Decode(compressed, compressedSize, spirv.data(), spirvSize)) {
-                return false;
-            }
-            dictionary.emplace_back(std::move(spirv));
+            dictionary.emplace_back(reinterpret_cast<uint8_t const*>(compressed), compressedSize);
 #else
             return false;
 #endif
@@ -119,8 +112,7 @@ bool DictionaryReader::unflatten(ChunkContainer const& container,
             if (!unflattener.read(&data, &dataSize)) {
                 return false;
             }
-            dictionary.emplace_back(dataSize);
-            memcpy(dictionary.back().data(), data, dictionary.back().size());
+            dictionary.emplace_back(reinterpret_cast<uint8_t const*>(data), dataSize);
         }
         return true;
     } else if (dictionaryTag == ChunkType::DictionaryText) {
@@ -141,10 +133,11 @@ bool DictionaryReader::unflatten(ChunkContainer const& container,
             if (!unflattener.read(&str)) {
                 return false;
             }
-            // BlobDictionary hold binary chunks and does not care if the data holds text, it is
-            // therefore crucial to include the trailing null.
-            dictionary.emplace_back(strlen(str) + 1);
-            memcpy(dictionary.back().data(), str, dictionary.back().size());
+            // BlobDictionary holds views into the chunk buffer and does not care if the data holds
+            // text; Unflattener::read(const char**) advances the cursor to one past the trailing
+            // null terminator, which is included in the slice size.
+            uint8_t const* const strStart = reinterpret_cast<uint8_t const*>(str);
+            dictionary.emplace_back(strStart, size_t(unflattener.getCursor() - strStart));
         }
         return true;
     }

@@ -31,6 +31,8 @@
 #include <utils/Invocable.h>
 #include <utils/RefCountedMap.h>
 
+#include <cstdint>
+
 namespace filament {
 
 class Material;
@@ -88,7 +90,7 @@ public:
 
     // Acquire or create a new entry in the cache for the given material data.
     MaterialDefinition* UTILS_NULLABLE acquireMaterial(FEngine& engine, const void* UTILS_NONNULL data,
-            size_t size) noexcept;
+            size_t size, bool copyPayload = true) noexcept;
 
     // Release an entry in the cache, potentially freeing its GPU resources.
     void releaseMaterial(FEngine& engine, MaterialDefinition const& definition) noexcept;
@@ -101,6 +103,10 @@ public:
             bool isGet) noexcept;
 
     void releaseProgram(FEngine& engine, ProgramSpecialization const& key) noexcept;
+
+    // Never reused, so program cache keys can't alias a freed definition.
+    // Main thread only, like material creation.
+    uint64_t allocateDefinitionId() noexcept { return ++mNextDefinitionId; }
 
 private:
     // TODO: investigate using custom allocators for the below data structures?
@@ -115,6 +121,8 @@ private:
     utils::InternPool<backend::Program::SpecializationConstant> mSpecializationConstantsInternPool;
 
     ProgramCache mPrograms;
+
+    uint64_t mNextDefinitionId = 0;
 };
 
 } // namespace filament

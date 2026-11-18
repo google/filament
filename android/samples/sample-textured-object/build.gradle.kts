@@ -1,0 +1,24 @@
+plugins {
+    id("com.google.android.filament.sample")
+    id("com.google.android.filament-tools")
+}
+
+filament {
+    materialInputDir.set(project.layout.projectDirectory.dir("src/main/materials"))
+    meshInputFile.set(project.layout.projectDirectory.file("../../../third_party/models/shader_ball/shader_ball.obj"))
+    iblInputFile.set(project.layout.projectDirectory.file("../../../third_party/environments/flower_road_no_sun_2k.hdr"))
+}
+
+android {
+    namespace = "com.google.android.filament.textured"
+    defaultConfig {
+        applicationId = "com.google.android.filament.textured"
+    }
+}
+
+dependencies {
+    implementation(libs.kotlin.stdlib)
+    implementation(project(":filament-android"))
+    implementation(project(":gltfio-android"))
+    implementation(project(":filament-utils-android")) // required for KTXLoader
+}

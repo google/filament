@@ -17,6 +17,7 @@
 #include "VulkanSwapChain.h"
 
 #include "VulkanCommands.h"
+#include "VulkanHandles.h"
 #include "VulkanTexture.h"
 
 #include <utils/compiler.h>
@@ -59,6 +60,10 @@ VulkanSwapChain::~VulkanSwapChain() {
     mCommands->flush();
     mCommands->wait();
 
+    // Actual destruction is deferred to ResourceManager::gc(). Command buffers may still hold
+    // references to mFramebuffers, so the image views in mColors and mDepth may be destroyed
+    // first; Vulkan permits this once GPU work has finished and the framebuffers are unused.
+    mFramebuffers.clear();
     mColors = {};
     mDepth = {};
     for (auto& semaphore : mFinishedDrawing) {
@@ -69,12 +74,19 @@ VulkanSwapChain::~VulkanSwapChain() {
 }
 
 void VulkanSwapChain::update() {
+    // Drop the framebuffers for the old images so they are not reused; new ones are created
+    // lazily. As in the destructor, deferred destruction order relative to mColors and mDepth
+    // does not matter.
+    mFramebuffers.clear();
     mColors.clear();
 
     auto const bundle = mPlatform->getSwapChainBundle(swapChain);
     size_t const swapChainCount = bundle.colors.size();
     mColors.reserve(bundle.colors.size());
     VkDevice const device = mPlatform->getDevice();
+
+    mFramebuffers.reserve(swapChainCount);
+    mFramebuffers.resize(swapChainCount);
 
     mFinishedDrawing.clear();
     mFinishedDrawing.reserve(swapChainCount);
@@ -120,15 +132,15 @@ void VulkanSwapChain::present(DriverBase& driver) {
         return;
     }
 
+    VkImageSubresourceRange const subresources{
+            .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+            .baseMipLevel = 0,
+            .levelCount = 1,
+            .baseArrayLayer = 0,
+            .layerCount = mLayerCount,
+    };
     if (!mHeadless && mTransitionSwapChainImageLayoutForPresent) {
         VulkanCommandBuffer& commands = mCommands->get();
-        VkImageSubresourceRange const subresources{
-                .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-                .baseMipLevel = 0,
-                .levelCount = 1,
-                .baseArrayLayer = 0,
-                .layerCount = mLayerCount,
-        };
         mColors[mCurrentSwapIndex]->transitionLayout(&commands, subresources, VulkanLayout::PRESENT);
     }
 
@@ -137,6 +149,22 @@ void VulkanSwapChain::present(DriverBase& driver) {
     // We only present if it is not headless. No-op for headless.
     if (!mHeadless) {
         auto finishedDrawing = mCommands->acquireFinishedSignal();
+        if (UTILS_UNLIKELY(!finishedDrawing)) {
+            // Queue submission failed (e.g. OOM or VK_ERROR_DEVICE_LOST), so neither the layout
+            // transition nor the acquire-semaphore wait ran on the GPU. Leave mAcquired true so
+            // the next frame reuses this acquired swapchain image and its preserved acquire
+            // semaphore without presenting an un-transitioned image or dereferencing null.
+            mColors[mCurrentSwapIndex]->setLayout(subresources, VulkanLayout::UNDEFINED);
+            if (mFrameScheduled.callback) {
+                driver.scheduleCallback(mFrameScheduled.handler,
+                        [callback = mFrameScheduled.callback]() {
+                            PresentCallable noop =
+                                    PresentCallable(PresentCallable::noopPresent, nullptr);
+                            callback->operator()(noop);
+                        });
+            }
+            return;
+        }
         mFinishedDrawing[mCurrentSwapIndex] = finishedDrawing;
         VkResult const result =
                 mPlatform->present(swapChain, mCurrentSwapIndex, finishedDrawing->getVkSemaphore());
@@ -159,8 +187,8 @@ void VulkanSwapChain::present(DriverBase& driver) {
 }
 
 std::pair<bool, bool> VulkanSwapChain::acquire() {
-    // Indicates whether the backing swapchain has changed (and might invalidate the associated
-    // images that are tracked in the FBO cache).
+    // Indicates whether the backing swapchain has changed (and might invalidate state that refers
+    // to the old images).
     bool swapchainRecreated = false;
 
     // Final result of the call to acquire a swapchain image.
@@ -235,6 +263,17 @@ std::pair<bool, bool> VulkanSwapChain::acquire() {
     mAcquired = true;
 
     return { true, swapchainRecreated };
+}
+
+fvkmemory::resource_ptr<VulkanFramebuffer> VulkanSwapChain::getCurrentFramebuffer() const noexcept {
+    assert_invariant(mCurrentSwapIndex < mFramebuffers.size());
+    return mFramebuffers[mCurrentSwapIndex];
+}
+
+void VulkanSwapChain::setCurrentFramebuffer(
+        fvkmemory::resource_ptr<VulkanFramebuffer> framebuffer) noexcept {
+    assert_invariant(mCurrentSwapIndex < mFramebuffers.size());
+    mFramebuffers[mCurrentSwapIndex] = framebuffer;
 }
 
 }// namespace filament::backend

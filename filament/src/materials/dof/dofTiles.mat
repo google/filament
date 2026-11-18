@@ -44,23 +44,11 @@ float min4(const vec4 f) {
 
 void postProcess(inout PostProcessInputs postProcess) {
     highp vec2 uv = variable_vertex.xy;
-    highp vec2 size = vec2(textureSize(materialParams_cocMinMax, 0));
-
-    ivec2 i = ivec2(uv * size - 0.5);
 
     // note: the first time, the source texture is swizzled -- so .r and .g are the same channel
     // if swizzling is not supported, we use dofTilesSwizzle instead.
-#if defined(FILAMENT_HAS_FEATURE_TEXTURE_GATHER)
-    vec4 mi = textureGather(materialParams_cocMinMax, uv, 0); // 01, 11, 10, 00
-    vec4 ma = textureGather(materialParams_cocMinMax, uv, 1); // 01, 11, 10, 00
-#else
-    vec2 s01 = texelFetchOffset(materialParams_cocMinMax, i, 0, ivec2(0, 1)).rg;
-    vec2 s11 = texelFetchOffset(materialParams_cocMinMax, i, 0, ivec2(1, 1)).rg;
-    vec2 s10 = texelFetchOffset(materialParams_cocMinMax, i, 0, ivec2(1, 0)).rg;
-    vec2 s00 = texelFetchOffset(materialParams_cocMinMax, i, 0, ivec2(0, 0)).rg;
-    vec4 mi = vec4(s01.r, s11.r, s10.r, s00.r);
-    vec4 ma = vec4(s01.g, s11.g, s10.g, s00.g);
-#endif
+    vec4 mi, ma;
+    filament_textureGatherFetchRG(materialParams_cocMinMax, uv, mi, ma); // 01, 11, 10, 00
 
     // compute tile's min CoC
     postProcess.color.r = min4(mi);

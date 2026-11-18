@@ -105,15 +105,20 @@ public:
             fvkmemory::ResourceManager* resManager,
             fvkmemory::resource_ptr<VulkanRenderTarget> renderTarget) noexcept;
 
+    // Creates a VkFramebuffer handle without caching it. The caller owns the returned framebuffer
+    // and is responsible for its lifetime. Note that the render pass in config only needs to be
+    // valid for the duration of this call; afterwards the framebuffer can be used with any
+    // compatible render pass.
+    fvkmemory::resource_ptr<VulkanFramebuffer> createFramebuffer(FboKey const& config,
+            fvkmemory::ResourceManager* resManager,
+            fvkmemory::resource_ptr<VulkanRenderTarget> renderTarget) const;
+
     // Retrieves or creates a VkRenderPass handle.
     fvkmemory::resource_ptr<VulkanRenderPass> getRenderPass(
         RenderPassKey const& config, fvkmemory::ResourceManager* resManager) noexcept;
 
     // Evicts old unused Vulkan objects. Call this once per frame.
     void gc() noexcept;
-
-    // Frees all Framebuffer objects. Call this every time a the swapchain is resized
-    void resetFramebuffers() noexcept;
 
     // Frees all Vulkan objects. Call this during shutdown before the device is destroyed.
     void terminate() noexcept;

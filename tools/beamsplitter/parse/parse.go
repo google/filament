@@ -194,13 +194,20 @@ func parseEnum(lex *lexer) *EnumNode {
 		panic(lex, item)
 	}
 	firstVal := expect(lex, itemIdentifier)
-	node := &EnumNode{
-		Name:       name.val,
-		Line:       name.line,
-		Values:     []string{firstVal.val},
-		ValueLines: []int{firstVal.line},
+	firstExplicit := ""
+	item = lex.nextItem()
+	if item.typ == itemEquals {
+		firstExplicit = expect(lex, itemDefaultValue).val
+		item = lex.nextItem()
 	}
-	for item = lex.nextItem(); item.typ != itemCloseBrace; {
+	node := &EnumNode{
+		Name:           name.val,
+		Line:           name.line,
+		Values:         []string{firstVal.val},
+		ExplicitValues: []string{firstExplicit},
+		ValueLines:     []int{firstVal.line},
+	}
+	for item.typ != itemCloseBrace {
 		if item.typ != itemComma {
 			panic(lex, item)
 		}
@@ -214,6 +221,12 @@ func parseEnum(lex *lexer) *EnumNode {
 		node.Values = append(node.Values, item.val)
 		node.ValueLines = append(node.ValueLines, item.line)
 		item = lex.nextItem()
+		explicitVal := ""
+		if item.typ == itemEquals {
+			explicitVal = expect(lex, itemDefaultValue).val
+			item = lex.nextItem()
+		}
+		node.ExplicitValues = append(node.ExplicitValues, explicitVal)
 	}
 	expect(lex, itemSemicolon)
 	return node

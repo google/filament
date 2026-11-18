@@ -596,30 +596,53 @@ TEST(EntityTest, ComponentManager_MoveSemanticsRebindWatermark) {
     em.destroy(NUM, C.data());
 }
 
-TEST(EntityTest, Legacy_AliveEntitiesReturns32BitIDs) {
+TEST(EntityTest, AliveEntitiesStores17BitIndicesAndReinflatesViaGetEntity) {
     EntityManagerImpl em;
-    constexpr size_t NUM = 1024;
+    EXPECT_TRUE(em.getEntity(0).isNull());
+
+    std::atomic<uint64_t> pinWatermark{ 0 };
+    em.registerWatermark(&pinWatermark, "PinWatermark");
+
+    constexpr size_t NUM = 1024; // >= MIN_FREE_INDICES so recycled indices are reused immediately
     std::vector<Entity> A(NUM);
     em.create(NUM, A.data());
-    auto const firstId = A[0].getId();
-    EXPECT_EQ(EntityManagerImpl::getIndex(A[0]), 1);
-    EXPECT_EQ(EntityManagerImpl::getGeneration(A[0]), 0);
+    uint32_t const firstIndex = EntityManagerImpl::getIndex(A[0]);
+    EXPECT_EQ(firstIndex, 1u);
+    EXPECT_EQ(EntityManagerImpl::getGeneration(A[0]), 0u);
+    EXPECT_EQ(em.getEntity(firstIndex), A[0]);
 
+    {
+        PagedArenaBitset alive = em.getAliveEntities();
+        EXPECT_TRUE(alive[firstIndex]);
+    }
+
+    // Destroy all of A while pinWatermark holds EBR purgatory open.
     em.destroy(NUM, A.data());
     em.flushNotifications();
     em.advanceEpoch();
-    em.reclaimSafeEpochs(); // A is recycled
+    em.reclaimSafeEpochs(); // Blocked by pinWatermark!
+
+    // Logical death is immediate, yet getEntity(index) still reinflates A[0]'s generation while
+    // A[0] is protected in EBR purgatory!
+    EXPECT_FALSE(em.isAlive(A[0]));
+    EXPECT_FALSE(em.getAliveEntities()[firstIndex]);
+    EXPECT_EQ(em.getEntity(firstIndex), A[0]);
+
+    // Release EBR watermark so A's indices are reclaimed and their generations increment.
+    em.unregisterWatermark(&pinWatermark);
 
     std::vector<Entity> B(NUM);
     em.create(NUM, B.data());
-    // The first element of B inherits A[0]'s index but has generation 1
-    EXPECT_EQ(EntityManagerImpl::getIndex(B[0]), 1);
-    EXPECT_EQ(EntityManagerImpl::getGeneration(B[0]), 1);
+    // The first element of B inherits A[0]'s 17-bit index with generation 1.
+    EXPECT_EQ(EntityManagerImpl::getIndex(B[0]), firstIndex);
+    EXPECT_EQ(EntityManagerImpl::getGeneration(B[0]), 1u);
+    EXPECT_NE(B[0], A[0]);
+    EXPECT_EQ(em.getEntity(firstIndex), B[0]);
+    EXPECT_TRUE(em.isAlive(B[0]));
+    EXPECT_FALSE(em.isAlive(A[0]));
 
     PagedArenaBitset alive = em.getAliveEntities();
-
-    EXPECT_TRUE(alive[B[0].getId()]);
-    EXPECT_FALSE(alive[firstId]);
+    EXPECT_TRUE(alive[firstIndex]);
 
     em.destroy(NUM, B.data());
 }
@@ -800,9 +823,17 @@ TEST(EntityTest, ComponentManager_CatchupGarbageExtractsDeadEntities) {
 
     cm.catchupGarbage();
 
-    EXPECT_FALSE(cm.getEntities()[A.getId()]);
-    EXPECT_TRUE(cm.getEntities()[B.getId()]);
-    EXPECT_TRUE(cm.getPendingDestruction()[A.getId()]);
+    // A remains in mEntities and the EBR watermark is held at 0 until A is physically evicted.
+    EXPECT_TRUE(cm.getEntities()[EntityManager::getIndex(A)]);
+    EXPECT_TRUE(cm.getEntities()[EntityManager::getIndex(B)]);
+    EXPECT_TRUE(cm.getPendingDestruction()[EntityManager::getIndex(A)]);
+    EXPECT_EQ(cm.getWatermark(), 0u);
+
+    cm.gc(&cm, &TestManager::removeComponent);
+
+    EXPECT_FALSE(cm.getEntities()[EntityManager::getIndex(A)]);
+    EXPECT_TRUE(cm.getEntities()[EntityManager::getIndex(B)]);
+    EXPECT_TRUE(cm.getPendingDestruction().empty());
     EXPECT_EQ(cm.getWatermark(), em.getLatestEpochID() - 1);
 
     em.destroy(B);
@@ -966,6 +997,9 @@ TEST(EntityTest, ComponentManager_AmortizedGC) {
     // GC exactly 3 components this frame
     cm.gc(&cm, 3, &TestManager::removeComponent);
 
+    // Watermark must still hold the epoch containing the remaining 7 un-evicted components.
+    EXPECT_EQ(cm.getWatermark(), 1u);
+
     uint32_t aliveCount = 0;
     for (auto e: entities) {
         if (cm.hasComponent(e)) {
@@ -976,6 +1010,9 @@ TEST(EntityTest, ComponentManager_AmortizedGC) {
 
     // GC the remaining 7
     cm.gc(&cm, 10, &TestManager::removeComponent);
+
+    // Once all pending components are physically evicted, the watermark advances.
+    EXPECT_EQ(cm.getWatermark(), 2u);
 
     aliveCount = 0;
     for (auto e: entities) {
@@ -1072,16 +1109,16 @@ TEST(EntityTest, GetAliveEntitiesOutParam) {
     EXPECT_EQ(out.size(), 4u);
     EXPECT_FALSE(out[9999u]);
     for (Entity const e : entities) {
-        EXPECT_TRUE(out[e.getId()]);
+        EXPECT_TRUE(out[EntityManager::getIndex(e)]);
     }
 
     em.destroy(entities[1]);
     em.getAliveEntities(out);
     EXPECT_EQ(out.size(), 3u);
-    EXPECT_TRUE(out[entities[0].getId()]);
-    EXPECT_FALSE(out[entities[1].getId()]);
-    EXPECT_TRUE(out[entities[2].getId()]);
-    EXPECT_TRUE(out[entities[3].getId()]);
+    EXPECT_TRUE(out[EntityManager::getIndex(entities[0])]);
+    EXPECT_FALSE(out[EntityManager::getIndex(entities[1])]);
+    EXPECT_TRUE(out[EntityManager::getIndex(entities[2])]);
+    EXPECT_TRUE(out[EntityManager::getIndex(entities[3])]);
 
     em.destroy(entities[0]);
     em.destroy(entities[2]);
@@ -1145,5 +1182,235 @@ TEST(EntityTest, DestroyBatchesNotificationsAcrossSingleDestroyCalls) {
 
     em.unregisterChangeCallback(&token);
 }
+
+TEST(EntityTest, ComponentManager_PendingDestructionBlocksIndexRecycling) {
+    EntityManagerImpl em;
+    struct DummyComponent {
+        float x;
+    };
+    struct TestManager : public TestManagerBase<DummyComponent> {
+        using TestManagerBase::catchupGarbage;
+        using TestManagerBase::TestManagerBase;
+    };
+
+    TestManager cm(em);
+    constexpr size_t COUNT = 1200; // >= MIN_FREE_INDICES (1024)
+    std::vector<Entity> deadEntities(COUNT);
+    em.create(COUNT, deadEntities.data());
+    for (Entity const e : deadEntities) {
+        cm.addComponent(e);
+    }
+
+    em.destroy(COUNT, deadEntities.data());
+    em.flushNotifications();
+    em.advanceEpoch();
+
+    // Harvest into mPendingDestruction without evicting yet.
+    cm.catchupGarbage();
+    EXPECT_EQ(cm.getPendingDestruction().size(), COUNT);
+
+    // Advance and attempt reclamation; indices 1..COUNT must NOT be recycled while pending.
+    em.advanceEpoch();
+    em.reclaimSafeEpochs();
+
+    std::vector<Entity> freshEntities(COUNT);
+    em.create(COUNT, freshEntities.data());
+    for (Entity const e : freshEntities) {
+        EXPECT_GT(EntityManagerImpl::getIndex(e), COUNT);
+    }
+
+    // Now physically evict the pending components and reclaim.
+    cm.gc(&cm, &TestManager::removeComponents);
+    EXPECT_TRUE(cm.getPendingDestruction().empty());
+    em.advanceEpoch();
+    em.reclaimSafeEpochs();
+
+    std::vector<Entity> recycledEntities(COUNT);
+    em.create(COUNT, recycledEntities.data());
+    EXPECT_EQ(EntityManagerImpl::getIndex(recycledEntities[0]), 1u);
+    EXPECT_EQ(EntityManagerImpl::getGeneration(recycledEntities[0]), 1u);
+
+    em.destroy(COUNT, freshEntities.data());
+    em.destroy(COUNT, recycledEntities.data());
+}
+
+TEST(EntityTest, ComponentManager_ExplicitRemoveClearsPendingAndAdvancesWatermark) {
+    EntityManagerImpl em;
+    struct DummyComponent {
+        float x;
+    };
+    struct TestManager : public TestManagerBase<DummyComponent> {
+        using TestManagerBase::catchupGarbage;
+        using TestManagerBase::TestManagerBase;
+    };
+
+    TestManager cm(em);
+    Entity const deadEntity = em.create();
+    Entity const liveEntity = em.create();
+    cm.addComponent(deadEntity);
+    cm.addComponent(liveEntity);
+
+    em.destroy(deadEntity);
+    em.flushNotifications();
+    em.advanceEpoch(); // Seals deadEntity in Epoch 1
+
+    cm.catchupGarbage();
+    EXPECT_TRUE(cm.getPendingDestruction()[EntityManager::getIndex(deadEntity)]);
+    EXPECT_EQ(cm.getWatermark(), 0u);
+
+    // Explicitly removing the pending component clears mPendingDestruction and advances watermark.
+    cm.removeComponent(deadEntity);
+    EXPECT_TRUE(cm.getPendingDestruction().empty());
+    EXPECT_EQ(cm.getWatermark(), 1u);
+
+    // Subsequent gc() is a clean no-op with watermark still at 1.
+    cm.gc(&cm, &TestManager::removeComponent);
+    EXPECT_EQ(cm.getWatermark(), 1u);
+
+    cm.removeComponent(liveEntity);
+    em.destroy(liveEntity);
+}
+
+TEST(EntityTest, ComponentManager_CascadingDestroyDuringGcDoesNotCorruptPendingBitset) {
+    EntityManagerImpl em;
+    struct DummyComponent {
+        Entity child;
+    };
+    struct CascadingManager : public TestManagerBase<DummyComponent> {
+        using TestManagerBase::TestManagerBase;
+
+        void destroyWithCascade(Entity const e) noexcept {
+            Instance const ci = getInstance(e);
+            if (!ci) {
+                return;
+            }
+            Entity const child = elementAt<0>(ci).child;
+            removeComponent(e);
+            if (!child.isNull()) {
+                removeComponent(child);
+            }
+            // Even if cascading removals drain mPendingDestruction mid-batch while popped
+            // entities in the current batch buffer have not yet been removed, the watermark
+            // must not advance until gcImpl() finishes the batch.
+            if (getComponentCount() > 0) {
+                EXPECT_EQ(getWatermark(), 0u);
+            }
+        }
+    };
+
+    // Case 1: Multi-batch cascading removals across 200 entities (verifies mSize consistency).
+    {
+        CascadingManager cm(em);
+        constexpr size_t COUNT = 200; // Spans multiple 64-bit words and multiple 64-entity gc batches
+        std::vector<Entity> entities(COUNT);
+        em.create(COUNT, entities.data());
+
+        for (size_t i = 0; i < COUNT; ++i) {
+            auto const ci = cm.addComponent(entities[i]);
+            // Pair each even entity with a later pending entity (both within the same batch and across batches)
+            if (i % 2 == 0) {
+                size_t const childIdx = (i + 77 < COUNT) ? (i + 77) : (i + 1);
+                cm.elementAt<0>(ci).child = entities[childIdx];
+            }
+        }
+
+        em.destroy(COUNT, entities.data());
+        em.flushNotifications();
+        em.advanceEpoch();
+
+        cm.gc(&cm, &CascadingManager::destroyWithCascade);
+
+        EXPECT_EQ(cm.getComponentCount(), 0u);
+        EXPECT_EQ(cm.getPendingDestruction().size(), 0u);
+        EXPECT_TRUE(cm.getPendingDestruction().empty());
+        EXPECT_EQ(cm.getWatermark(), 1u);
+    }
+
+    // Case 2: 65 entities where entities[0].child = entities[64] (the sole entity outside the first
+    // 64-entity batch). Processing entities[0] drains mPendingDestruction mid-batch while 63 popped
+    // entities remain in the batch buffer; mInGc must prevent premature watermark advancement.
+    {
+        EntityManagerImpl em2;
+        CascadingManager cm2(em2);
+        constexpr size_t COUNT = 65;
+        std::vector<Entity> entities(COUNT);
+        em2.create(COUNT, entities.data());
+
+        for (size_t i = 0; i < COUNT; ++i) {
+            auto const ci = cm2.addComponent(entities[i]);
+            if (i == 0) {
+                cm2.elementAt<0>(ci).child = entities[64];
+            }
+        }
+
+        em2.destroy(COUNT, entities.data());
+        em2.flushNotifications();
+        em2.advanceEpoch();
+
+        cm2.gc(&cm2, &CascadingManager::destroyWithCascade);
+
+        EXPECT_EQ(cm2.getComponentCount(), 0u);
+        EXPECT_EQ(cm2.getPendingDestruction().size(), 0u);
+        EXPECT_TRUE(cm2.getPendingDestruction().empty());
+        EXPECT_EQ(cm2.getWatermark(), 1u);
+    }
+}
+
+TEST(EntityTest, ComponentManager_CatchupCurrentGarbageHarvestsUnsealedEpoch) {
+    EntityManagerImpl em;
+    struct EmptyManager : public SingleInstanceComponentManager<> {
+        explicit EmptyManager(EntityManager& em) noexcept
+                : SingleInstanceComponentManager<>(em, "EmptyManager", false) {}
+        using SingleInstanceComponentManager<>::catchupCurrentGarbage;
+        using SingleInstanceComponentManager<>::gc;
+        PagedArenaBitset const& getPendingDestruction() const noexcept {
+            return mPendingDestruction;
+        }
+    };
+
+    EmptyManager cm(em);
+
+    // Advance once so current sealed fence is 1 and active unsealed epoch is 2.
+    em.advanceEpoch();
+
+    Entity const e1 = em.create();
+    Entity const e2 = em.create();
+    Entity const unrelated = em.create();
+    cm.addComponent(e1);
+    cm.addComponent(e2);
+
+    // Destroy e1 and unrelated without calling advanceEpoch() (unsealed active epoch).
+    em.destroy(e1);
+    em.destroy(unrelated);
+
+    // Normal gc() only inspects sealed epochs, so e1 remains until catchupCurrentGarbage().
+    cm.gc(&cm, &EmptyManager::removeComponents);
+    EXPECT_TRUE(cm.hasComponent(e1));
+    EXPECT_EQ(cm.getWatermark(), 1u);
+
+    // catchupCurrentGarbage() flushes mDirtyEntities and intersects the active unsealed epoch
+    // WITHOUT advancing the EBR watermark past the last sealed fence.
+    cm.catchupCurrentGarbage();
+    EXPECT_EQ(cm.getPendingDestruction().size(), 1u);
+    EXPECT_TRUE(cm.getPendingDestruction()[EntityManager::getIndex(e1)]);
+    EXPECT_EQ(cm.getWatermark(), 1u);
+
+    // Subsequent gc() drains e1 while keeping e2 intact and watermark at sealed fence 1.
+    cm.gc(&cm, &EmptyManager::removeComponents);
+    EXPECT_FALSE(cm.hasComponent(e1));
+    EXPECT_TRUE(cm.hasComponent(e2));
+    EXPECT_TRUE(cm.getPendingDestruction().empty());
+    EXPECT_EQ(cm.getWatermark(), 1u);
+
+    // Sealing the epoch later must be idempotent (e1 was already evicted).
+    em.advanceEpoch();
+    cm.gc(&cm, &EmptyManager::removeComponents);
+    EXPECT_EQ(cm.getComponentCount(), 1u);
+    EXPECT_EQ(cm.getWatermark(), 2u);
+
+    cm.removeComponent(e2);
+    em.destroy(e2);
+}
+
 
 

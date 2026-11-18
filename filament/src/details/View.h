@@ -261,6 +261,14 @@ public:
 
     bool isShadowingEnabled() const noexcept { return mShadowingEnabled; }
 
+    void setTighterShadowCasterCullingEnabled(bool const enabled) noexcept {
+        mTighterShadowCasterCullingEnabled = enabled;
+    }
+
+    bool isTighterShadowCasterCullingEnabled() const noexcept {
+        return mTighterShadowCasterCullingEnabled;
+    }
+
     void setScreenSpaceRefractionEnabled(bool const enabled) noexcept { mScreenSpaceRefractionEnabled = enabled; }
 
     bool isScreenSpaceRefractionEnabled() const noexcept { return mScreenSpaceRefractionEnabled; }
@@ -386,12 +394,10 @@ public:
     }
 
     void setColorGrading(FColorGrading const* colorGrading) noexcept {
-        mColorGrading = colorGrading == nullptr ? mDefaultColorGrading : colorGrading;
+        mColorGrading = colorGrading;
     }
 
-    const FColorGrading* getColorGrading() const noexcept {
-        return mColorGrading;
-    }
+    const FColorGrading* getColorGrading() const noexcept;
 
     void setDithering(Dithering const dithering) noexcept {
         mDithering = dithering;
@@ -653,6 +659,8 @@ private:
             FScene::RenderableSoa& renderableData,
             utils::Range<uint32_t> visibleRenderables) noexcept;
 
+    void ensureDynamicLightingBuffers(FEngine& engine, backend::DriverApi& driver) noexcept;
+
     static void prepareVisibleLights(FLightManager const& lcm,
             utils::Slice<float> scratch,
             math::mat4f const& viewMatrix, Frustum const& frustum,
@@ -706,6 +714,7 @@ private:
     AntiAliasing mAntiAliasing = AntiAliasing::FXAA;
     Dithering mDithering = Dithering::TEMPORAL;
     bool mShadowingEnabled = true;
+    bool mTighterShadowCasterCullingEnabled = false;
     bool mScreenSpaceRefractionEnabled = true;
     bool mHasPostProcessPass = true;
     bool mStencilBufferEnabled = false;
@@ -725,7 +734,7 @@ private:
     StereoscopicOptions mStereoscopicOptions;
     BlendMode mBlendMode = BlendMode::OPAQUE;
     const FColorGrading* mColorGrading = nullptr;
-    const FColorGrading* mDefaultColorGrading = nullptr;
+    FEngine& mEngine;
     utils::Entity mFogEntity{};
     bool mIsStereoSupported : 1;
     utils::bitset32 mChannelDepthClearMask{};

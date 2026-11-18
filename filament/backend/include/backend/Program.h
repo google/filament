@@ -98,6 +98,7 @@ public:
     // string-based shaders are null terminated, consequently the size parameter must include the
     // null terminating character.
     Program& shader(ShaderStage shader, void const* data, size_t size);
+    Program& shader(ShaderStage shader, ShaderBlob&& blob) noexcept;
 
     // Sets the language of the shader sources provided with shader() (defaults to ESSL3)
     Program& shaderLanguage(ShaderLanguage shaderLanguage);
@@ -115,8 +116,6 @@ public:
 
     Program& pushConstants(ShaderStage stage,
             utils::FixedCapacityVector<PushConstant> constants) noexcept;
-
-    Program& cacheId(uint64_t cacheId) noexcept;
 
     Program& multiview(bool multiview) noexcept;
 
@@ -136,8 +135,6 @@ public:
 
     auto const& getShaderLanguage() const { return mShaderLanguage; }
 
-    uint64_t getCacheId() const noexcept { return mCacheId; }
-
     bool isMultiview() const noexcept { return mMultiview; }
 
     CompilerPriorityQueue getPriorityQueue() const noexcept { return mPriorityQueue; }
@@ -146,6 +143,7 @@ public:
         return mSpecializationConstants;
     }
 
+    // Populated by MaterialDefinition for Backend::OPENGL only.
     DescriptorSetInfo& getDescriptorBindings() noexcept {
         return mDescriptorBindings;
     }
@@ -159,6 +157,7 @@ public:
         return *this;
     }
 
+    // Populated by MaterialDefinition for Backend::VULKAN only.
     const DescriptorSetLayoutArray& getDescriptorSetLayouts() const noexcept {
         return mDescriptorLayouts;
     }
@@ -184,7 +183,6 @@ private:
     ShaderSource mShadersSource;
     ShaderLanguage mShaderLanguage = ShaderLanguage::ESSL3;
     utils::CString mName;
-    uint64_t mCacheId{};
     CompilerPriorityQueue mPriorityQueue = CompilerPriorityQueue::HIGH;
     utils::Invocable<utils::io::ostream&(utils::CString const& name, utils::io::ostream& out)>
             mLogger;

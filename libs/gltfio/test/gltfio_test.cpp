@@ -16,8 +16,10 @@
 
 #include "downcast.h"
 #include "DracoCache.h"
+#include "FFilamentAsset.h"
 #include "FFilamentInstance.h"
 #include "GlbBuilders.h"
+#include "TangentsJob.h"
 #include "Utility.h"
 
 #include "extended/TangentsJobExtended.h"
@@ -47,6 +49,7 @@
 #include <utils/Panic.h>
 #include <utils/Path.h>
 
+#include <math/mat4.h>
 #include <math/mathfwd.h>
 #include <math/vec3.h>
 
@@ -55,13 +58,18 @@
 #include <draco/mesh/mesh.h>
 #endif
 #include <gtest/gtest.h>
+#include <meshoptimizer.h>
 
+#include <algorithm>
+#include <array>
 #include <cstdint>
 #include <cstring>
 #include <filesystem>
 #include <fstream>
 #include <limits>
 #include <string>
+#include <string_view>
+#include <tuple>
 #include <unordered_map>
 #include <vector>
 
@@ -249,6 +257,22 @@ TEST_F(glTFIOTest, AnimatedMorphCubeMaterials) {
     std::string_view name{materialInst->getName()};
 
     EXPECT_EQ(name, "Material");
+}
+
+// A lit material without clear coat gets the ubershader built without the clear coat lobe, and one
+// with clear coat still gets the stock one.
+TEST_F(glTFIOTest, ClearCoatPicksUbershader) {
+    UvMap uvmap{};
+    MaterialKey plain{};
+    Material* const a = mMaterialProvider->getMaterial(&plain, &uvmap, "plain");
+    ASSERT_NE(a, nullptr);
+    EXPECT_STREQ(a->getName(), "base_lit_opaque_nocc");
+
+    MaterialKey coated{};
+    coated.hasClearCoat = true;
+    Material* const b = mMaterialProvider->getMaterial(&coated, &uvmap, "coated");
+    ASSERT_NE(b, nullptr);
+    EXPECT_STREQ(b->getName(), "base_lit_opaque");
 }
 
 TEST_F(glTFIOTest, StbProviderCancelFreesDecodedTextureWithStbAllocator) {
@@ -611,6 +635,31 @@ TEST_F(glTFIOTest, MorphTargetWeightAnimationExceedingMaxDoesNotPanic) {
     AssetLoader::destroy(&assetLoader);
 }
 
+// Issue #10796: a VEC4 morph target POSITION accessor whose bufferView has a byteStride is
+// unpacked into a tightly packed array, but ResourceLoader used to upload the raw bytes of the
+// bufferView instead, and as many vertices as the whole MorphTargetBuffer holds rather than those
+// of the primitive. With a stride below 16 the bufferView is smaller than a packed array, so the
+// upload read past its end, which is the end of the GLB here (validated under ASan). With several
+// primitives it also overflowed the MorphTargetBuffer, which fails a precondition in all builds.
+TEST_F(glTFIOTest, StridedVec4MorphTargetPositions) {
+    AssetLoader* assetLoader = AssetLoader::create({ mEngine, mMaterialProvider, mNameManager });
+    ASSERT_NE(assetLoader, nullptr);
+
+    // Strides of 4, 8 and 12 make the 16-byte elements overlap, and 20 leaves padding in between.
+    for (uint32_t const byteStride : { 4u, 8u, 12u, 20u }) {
+        std::vector<uint8_t> const glb = makeStridedVec4MorphGlb(byteStride);
+        FilamentAsset* const asset = assetLoader->createAsset(glb.data(), uint32_t(glb.size()));
+        ASSERT_NE(asset, nullptr);
+
+        ResourceLoader resourceLoader({ mEngine, ".", false });
+        EXPECT_TRUE(resourceLoader.loadResources(asset));
+
+        assetLoader->destroyAsset(asset);
+    }
+
+    AssetLoader::destroy(&assetLoader);
+}
+
 // Loads `glb` through the extended loader, uploads its resources, and checks that the single
 // renderable exposes `expectedMorphTargets` morph targets. Out-of-bounds accesses are caught under
 // ASan, and the slot bookkeeping invariants are checked by assert_invariant in debug builds.
@@ -959,13 +1008,59 @@ TEST_F(glTFIOTest, SkipsInverseBindMatricesOutsideBufferView) {
     ASSERT_NE(instance, nullptr);
     EXPECT_EQ(instance->getSkinCount(), 1u);
     EXPECT_EQ(instance->getJointCountAt(0), 2u);
-    EXPECT_THROW((void) instance->getInverseBindMatricesAt(0), utils::PreconditionPanic);
+
+    // The accessor only holds one of the two matrices, so nothing is read through it, and the
+    // skin keeps identity matrices instead of picking up bytes from outside of the bufferView.
+    math::mat4f const* const matrices = instance->getInverseBindMatricesAt(0);
+    ASSERT_NE(matrices, nullptr);
+    EXPECT_EQ(matrices[0], math::mat4f{});
+    EXPECT_EQ(matrices[1], math::mat4f{});
 
     assetLoader->destroyAsset(asset);
     delete resourceLoader;
     AssetLoader::destroy(&assetLoader);
 
     fs::remove_all(root);
+}
+
+// Issue #10795: createSkins() used to drop a skin whose inverse bind matrices could not be used.
+// The skins of the asset then no longer lined up with those of its instances, which always have
+// one entry per glTF skin, so looking up a skin through an instance returned the data of a later
+// skin, or read past the end of the asset's list.
+TEST_F(glTFIOTest, SkinWithUnusableInverseBindMatricesKeepsItsIndex) {
+    std::vector<uint8_t> const glb = makeUnusableInverseBindMatricesGlb();
+
+    AssetLoader* assetLoader = AssetLoader::create({ mEngine, mMaterialProvider, mNameManager });
+    FilamentAsset* const asset = assetLoader->createAsset(glb.data(), uint32_t(glb.size()));
+    ASSERT_NE(asset, nullptr);
+
+    FilamentInstance* const instance = asset->getInstance();
+    ASSERT_NE(instance, nullptr);
+    ASSERT_EQ(instance->getSkinCount(), 2u);
+
+    // The skin names belong to the asset's resources, which have not been loaded yet.
+    EXPECT_EQ(instance->getSkinNameAt(0), nullptr);
+    EXPECT_EQ(instance->getSkinNameAt(1), nullptr);
+
+    ResourceLoader resourceLoader({ mEngine, ".", false });
+    ASSERT_TRUE(resourceLoader.loadResources(asset));
+
+    EXPECT_STREQ(instance->getSkinNameAt(0), "skin0");
+    EXPECT_STREQ(instance->getSkinNameAt(1), "skin1");
+    EXPECT_EQ(instance->getSkinNameAt(2), nullptr);
+
+    // "skin0" falls back to identity, and "skin1" still gets its own matrix.
+    ASSERT_EQ(instance->getJointCountAt(0), 1u);
+    ASSERT_EQ(instance->getJointCountAt(1), 1u);
+    EXPECT_EQ(instance->getInverseBindMatricesAt(0)[0], math::mat4f{});
+    EXPECT_EQ(instance->getInverseBindMatricesAt(1)[0],
+            math::mat4f::translation(kSkinInverseBindTranslation));
+
+    // The animator pairs the skins of the instance with those of the asset by index.
+    instance->getAnimator()->updateBoneMatrices();
+
+    assetLoader->destroyAsset(asset);
+    AssetLoader::destroy(&assetLoader);
 }
 
 // A morph-target NORMAL/TANGENT accessor may declare an arbitrary element type. Such accessors
@@ -1092,6 +1187,177 @@ TEST_F(glTFIOTest, MeshWithPositionlessAndValidPrimitives) {
         AssetConfigurationExtended ext{ .gltfPath = "." };
         checkLoad(&ext);
     }
+}
+
+// Quantized POSITION types and the extreme values makeNormalizedPositionGlb() stores.
+struct QuantizedPositionCase {
+    int componentType;
+    float lo;
+    float hi;
+};
+constexpr QuantizedPositionCase kQuantizedPositionCases[] = {
+    { 5120, -127.0f, 127.0f },     // BYTE
+    { 5121, 0.0f, 255.0f },        // UNSIGNED_BYTE
+    { 5122, -32767.0f, 32767.0f }, // SHORT
+    { 5123, 0.0f, 65535.0f },      // UNSIGNED_SHORT
+};
+
+static constexpr float decodeQuantized(QuantizedPositionCase const& c, float value,
+        bool normalized) {
+    return normalized ? value / c.hi : value;
+}
+
+// Issue #10817: quantized POSITION bounds must be decoded like the vertices.
+TEST_F(glTFIOTest, QuantizedPositionBoundsAreDecoded) {
+    auto checkLoad = [&](AssetConfigurationExtended* ext, QuantizedPositionCase const& c,
+            bool withMorphTarget, bool normalized) {
+        SCOPED_TRACE(testing::Message() << "componentType=" << c.componentType
+                                        << " normalized=" << normalized
+                                        << " extended=" << (ext != nullptr)
+                                        << " morph=" << withMorphTarget);
+        std::vector<uint8_t> const glb =
+                makeNormalizedPositionGlb(c.componentType, withMorphTarget, normalized);
+
+        AssetLoader* assetLoader = AssetLoader::create({
+                .engine = mEngine,
+                .materials = mMaterialProvider,
+                .names = mNameManager,
+                .ext = ext,
+        });
+        ASSERT_NE(assetLoader, nullptr);
+
+        FilamentAsset* asset = assetLoader->createAsset(glb.data(), uint32_t(glb.size()));
+        ASSERT_NE(asset, nullptr);
+
+        ResourceLoader resourceLoader({ mEngine, ".", false });
+        EXPECT_TRUE(resourceLoader.loadResources(asset));
+
+        // The +X morph delta only extends max.x.
+        float const lo = decodeQuantized(c, c.lo, normalized);
+        float const hi = decodeQuantized(c, c.hi, normalized);
+        Aabb const bounds = asset->getBoundingBox();
+        EXPECT_FLOAT_EQ(bounds.min.x, lo);
+        EXPECT_FLOAT_EQ(bounds.min.y, lo);
+        EXPECT_FLOAT_EQ(bounds.min.z, lo);
+        EXPECT_FLOAT_EQ(bounds.max.x, withMorphTarget ? 2.0f * hi : hi);
+        EXPECT_FLOAT_EQ(bounds.max.y, hi);
+        EXPECT_FLOAT_EQ(bounds.max.z, hi);
+
+        assetLoader->destroyAsset(asset);
+        AssetLoader::destroy(&assetLoader);
+    };
+
+    for (QuantizedPositionCase const& c : kQuantizedPositionCases) {
+        for (bool const normalized : { true, false }) {
+            for (bool const withMorphTarget : { false, true }) {
+                checkLoad(nullptr, c, withMorphTarget, normalized);
+                if (AssetConfigurationExtended::isSupported()) {
+                    AssetConfigurationExtended ext{ .gltfPath = "." };
+                    checkLoad(&ext, c, withMorphTarget, normalized);
+                }
+            }
+        }
+    }
+}
+
+// The extended loader must decode every quantized POSITION type, including morph deltas.
+TEST(glTFIOTangentsJobExtended, QuantizedPositionsAreDecoded) {
+    using math::float3;
+    auto sorted = [](float3 const* v, size_t count) {
+        std::vector<float3> result(v, v + count);
+        std::sort(result.begin(), result.end(), [](float3 const& a, float3 const& b) {
+            return std::tie(a.x, a.y, a.z) < std::tie(b.x, b.y, b.z);
+        });
+        return result;
+    };
+
+    for (QuantizedPositionCase const& c : kQuantizedPositionCases) {
+        for (bool const normalized : { true, false }) {
+            SCOPED_TRACE(testing::Message() << "componentType=" << c.componentType
+                                            << " normalized=" << normalized);
+            std::vector<uint8_t> const glb = makeNormalizedPositionGlb(c.componentType,
+                    /* withMorphTarget = */ true, normalized);
+
+            cgltf_options options{};
+            cgltf_data* data = nullptr;
+            ASSERT_EQ(cgltf_parse(&options, glb.data(), glb.size(), &data), cgltf_result_success);
+            ASSERT_EQ(cgltf_load_buffers(&options, data, "."), cgltf_result_success);
+            cgltf_primitive const* prim = &data->meshes[0].primitives[0];
+
+            float const lo = decodeQuantized(c, c.lo, normalized);
+            float const hi = decodeQuantized(c, c.hi, normalized);
+
+            // Base positions.
+            {
+                TangentsJobExtended::Params params{ .in = { .prim = prim,
+                        .morphTargetIndex = TangentsJobExtended::kMorphTargetUnused } };
+                TangentsJobExtended::run(&params);
+                auto& out = params.out;
+                ASSERT_EQ(out.vertexCount, 3u);
+                ASSERT_NE(out.positions, nullptr);
+                std::vector<float3> const expected =
+                        sorted(std::array{ float3{ lo, lo, lo }, float3{ hi, hi, hi },
+                                       float3{ lo, hi, lo } }.data(), 3);
+                std::vector<float3> const actual = sorted(out.positions, out.vertexCount);
+                for (size_t v = 0; v < 3; ++v) {
+                    EXPECT_FLOAT_EQ(actual[v].x, expected[v].x);
+                    EXPECT_FLOAT_EQ(actual[v].y, expected[v].y);
+                    EXPECT_FLOAT_EQ(actual[v].z, expected[v].z);
+                }
+                free(out.positions);
+                free(out.tbn);
+                free(out.triangles);
+            }
+
+            // Morph target 0: the output positions are the morph deltas.
+            {
+                TangentsJobExtended::Params params{
+                        .in = { .prim = prim, .morphTargetIndex = 0 } };
+                TangentsJobExtended::run(&params);
+                auto& out = params.out;
+                ASSERT_EQ(out.vertexCount, 3u);
+                ASSERT_NE(out.positions, nullptr);
+                std::vector<float3> const expected =
+                        sorted(std::array{ float3{ 0.0f }, float3{ hi, 0.0f, 0.0f },
+                                       float3{ 0.0f } }.data(), 3);
+                std::vector<float3> const actual = sorted(out.positions, out.vertexCount);
+                for (size_t v = 0; v < 3; ++v) {
+                    EXPECT_FLOAT_EQ(actual[v].x, expected[v].x);
+                    EXPECT_FLOAT_EQ(actual[v].y, expected[v].y);
+                    EXPECT_FLOAT_EQ(actual[v].z, expected[v].z);
+                }
+                free(out.positions);
+                free(out.tbn);
+                free(out.triangles);
+            }
+
+            cgltf_free(data);
+        }
+    }
+}
+
+// glTF clamps signed normalized values to -1, including the most negative integer.
+TEST(glTFIOCgltf, SignedNormalizedValuesAreClamped) {
+    auto unpack = [](void* data, size_t size, cgltf_component_type type, size_t count) {
+        cgltf_buffer buffer{ .size = size, .data = data };
+        cgltf_buffer_view view{ .buffer = &buffer, .size = size };
+        cgltf_accessor accessor{ .component_type = type, .normalized = true,
+                .type = cgltf_type_scalar, .count = count, .stride = size / count,
+                .buffer_view = &view };
+        std::vector<float> out(count);
+        EXPECT_EQ(cgltf_accessor_unpack_floats(&accessor, out.data(), count), count);
+        return out;
+    };
+
+    int16_t shorts[] = { -32768, -32767, 32767 };
+    std::vector<float> const s =
+            unpack(shorts, sizeof(shorts), cgltf_component_type_r_16, std::size(shorts));
+    EXPECT_EQ(s, (std::vector<float>{ -1.0f, -1.0f, 1.0f }));
+
+    int8_t bytes[] = { -128, -127, 127 };
+    std::vector<float> const b =
+            unpack(bytes, sizeof(bytes), cgltf_component_type_r_8, std::size(bytes));
+    EXPECT_EQ(b, (std::vector<float>{ -1.0f, -1.0f, 1.0f }));
 }
 
 TEST_F(glTFIOTest, EmptyImageDoesNotCrash) {
@@ -1261,9 +1527,14 @@ TEST(glTFIOMaterialProvider, ConstrainMaterialRejectsOutOfBoundsUvIndices) {
             .hasIridescenceThicknessTexture = true,
             .iridescenceThicknessUV = badUv,
             .hasIridescence = true,
-            .hasAnisotropyTexture = true,
             .anisotropyUV = badUv,
+            .hasAnisotropyTexture = true,
+            .diffuseTransmissionUV = badUv,
             .hasAnisotropy = true,
+            .diffuseTransmissionColorUV = badUv,
+            .hasDiffuseTransmissionTexture = true,
+            .hasDiffuseTransmissionColorTexture = true,
+            .hasDiffuseTransmission = true,
         };
 
         UvMap uvmap {};
@@ -1287,6 +1558,8 @@ TEST(glTFIOMaterialProvider, ConstrainMaterialRejectsOutOfBoundsUvIndices) {
         EXPECT_FALSE(key.hasIridescenceTexture);
         EXPECT_FALSE(key.hasIridescenceThicknessTexture);
         EXPECT_FALSE(key.hasAnisotropyTexture);
+        EXPECT_FALSE(key.hasDiffuseTransmissionTexture);
+        EXPECT_FALSE(key.hasDiffuseTransmissionColorTexture);
         EXPECT_EQ(getNumUvSets(uvmap), 0u);
     }
 
@@ -1335,6 +1608,8 @@ TEST(glTFIOMaterialProvider, ProcessShaderStringHandlesOutOfBoundsUvIndices) {
         .iridescenceUV = 110,
         .iridescenceThicknessUV = 120,
         .anisotropyUV = 130,
+        .diffuseTransmissionUV = 115,
+        .diffuseTransmissionColorUV = 125,
     };
 
     UvMap uvmap {};
@@ -1345,13 +1620,15 @@ TEST(glTFIOMaterialProvider, ProcessShaderStringHandlesOutOfBoundsUvIndices) {
             "${normal}|${color}|${metallic}|${ao}|${emissive}|${transmission}|"
             "${clearCoat}|${clearCoatRoughness}|${clearCoatNormal}|"
             "${sheenColor}|${sheenRoughness}|${volumeThickness}|${specular}|${specularColor}|"
-            "${retroreflection}|${iridescence}|${iridescenceThickness}|${anisotropy}";
+            "${retroreflection}|${iridescence}|${iridescenceThickness}|${anisotropy}|"
+            "${diffuseTransmission}|${diffuseTransmissionColor}";
     processShaderString(&shader, uvmap, key);
 
     EXPECT_EQ(shader,
             "vec2(0)|vec2(0)|vec2(0)|vec2(0)|vec2(0)|vec2(0)|"
             "vec2(0)|vec2(0)|vec2(0)|"
-            "vec2(0)|vec2(0)|vec2(0)|vec2(0)|vec2(0)|vec2(0)|vec2(0)|vec2(0)|vec2(0)");
+            "vec2(0)|vec2(0)|vec2(0)|vec2(0)|vec2(0)|vec2(0)|vec2(0)|vec2(0)|vec2(0)|"
+            "vec2(0)|vec2(0)");
 
     // Also verify valid UV0 / UV1 replacements alongside an invalid UvSet value in uvmap.
     MaterialKey validKey {
@@ -2250,6 +2527,1157 @@ TEST_F(glTFIOTest, AnisotropyMaterial) {
     jitProvider->destroyMaterials();
     delete jitProvider;
     AssetLoader::destroy(&loader);
+}
+
+TEST_F(glTFIOTest, DiffuseTransmissionMaterial) {
+    MaterialProvider* jitProvider = createJitShaderProvider(mEngine);
+    ASSERT_NE(jitProvider, nullptr);
+
+    std::string const gltf =
+            R"({"asset":{"version":"2.0"},)"
+            R"("extensionsUsed":["KHR_materials_diffuse_transmission","KHR_materials_volume",)"
+            R"("KHR_materials_unlit","KHR_materials_pbrSpecularGlossiness","KHR_texture_transform"],)"
+            R"("scene":0,"scenes":[{"nodes":[0]}],"nodes":[{"mesh":0}],)"
+            R"("meshes":[{"primitives":[)"
+            R"({"attributes":{"POSITION":0,"TEXCOORD_0":1},"material":0},)"
+            R"({"attributes":{"POSITION":0,"TEXCOORD_0":1},"material":1},)"
+            R"({"attributes":{"POSITION":0,"TEXCOORD_0":1},"material":2},)"
+            R"({"attributes":{"POSITION":0,"TEXCOORD_0":1},"material":3},)"
+            R"({"attributes":{"POSITION":0,"TEXCOORD_0":1},"material":4}]}],)"
+            R"("accessors":[)"
+            R"({"bufferView":0,"componentType":5126,"count":3,"type":"VEC3","min":[0,0,0],"max":[1,1,0]},)"
+            R"({"bufferView":1,"componentType":5126,"count":3,"type":"VEC2"}],)"
+            R"("bufferViews":[)"
+            R"({"buffer":0,"byteOffset":0,"byteLength":36},)"
+            R"({"buffer":0,"byteOffset":36,"byteLength":24}],)"
+            R"("buffers":[{"byteLength":60,"uri":"data:application/octet-stream;base64,)"
+            R"(AAAAAAAAAAAAAAAAAACAPwAAAAAAAAAAAAAAAAAAgD8AAAAAAAAAAAAAAAAAAACAPwAAAAAAAAAAAIA/"}],)"
+            R"("images":[{"uri":"data:image/png;base64,)"
+            R"(iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGP4z8DwHwAFAAH/iZk9HQAAAABJRU5ErkJggg=="}],)"
+            R"("textures":[{"source":0}],)"
+            R"("materials":[)"
+            R"({"extensions":{"KHR_materials_diffuse_transmission":{)"
+            R"("diffuseTransmissionFactor":0.75,)"
+            R"("diffuseTransmissionColorFactor":[0.8,0.4,0.2]}}},)"
+            R"({"extensions":{"KHR_materials_diffuse_transmission":{)"
+            R"("diffuseTransmissionFactor":0.5,)"
+            R"("diffuseTransmissionColorFactor":[1.0,0.5,0.25],)"
+            R"("diffuseTransmissionTexture":{"index":0,"texCoord":0,)"
+            R"("extensions":{"KHR_texture_transform":{"scale":[2.0,2.0]}}},)"
+            R"("diffuseTransmissionColorTexture":{"index":0,"texCoord":0,)"
+            R"("extensions":{"KHR_texture_transform":{"scale":[3.0,3.0]}}}}}},)"
+            R"({"extensions":{"KHR_materials_diffuse_transmission":{"diffuseTransmissionFactor":0.9},)"
+            R"("KHR_materials_volume":{"thicknessFactor":0.5,"attenuationDistance":1.0,"attenuationColor":[0.9,0.5,0.2]}}},)"
+            R"({"extensions":{"KHR_materials_unlit":{},)"
+            R"("KHR_materials_diffuse_transmission":{"diffuseTransmissionFactor":1.0}}},)"
+            R"({"extensions":{"KHR_materials_pbrSpecularGlossiness":{},)"
+            R"("KHR_materials_diffuse_transmission":{"diffuseTransmissionFactor":1.0}}})"
+            R"(]})";
+
+    AssetLoader* loader = AssetLoader::create({
+            .engine = mEngine,
+            .materials = jitProvider,
+            .names = mNameManager,
+    });
+    ASSERT_NE(loader, nullptr);
+
+    FilamentAsset* asset = loader->createAsset(
+            reinterpret_cast<uint8_t const*>(gltf.data()), uint32_t(gltf.size()));
+    ASSERT_NE(asset, nullptr);
+
+    ResourceLoader resourceLoader({ mEngine, ".", false });
+    EXPECT_TRUE(resourceLoader.loadResources(asset));
+
+    FilamentInstance* instance = asset->getInstance();
+    ASSERT_NE(instance, nullptr);
+    ASSERT_EQ(instance->getMaterialInstanceCount(), 5u);
+
+    Material const* mat0 = instance->getMaterialInstances()[0]->getMaterial();
+    EXPECT_TRUE(mat0->hasParameter("diffuseTransmissionFactor"));
+    EXPECT_TRUE(mat0->hasParameter("diffuseTransmissionColorFactor"));
+    EXPECT_FALSE(mat0->hasParameter("diffuseTransmissionMap"));
+    EXPECT_FALSE(mat0->hasParameter("diffuseTransmissionColorMap"));
+
+    Material const* mat1 = instance->getMaterialInstances()[1]->getMaterial();
+    EXPECT_TRUE(mat1->hasParameter("diffuseTransmissionFactor"));
+    EXPECT_TRUE(mat1->hasParameter("diffuseTransmissionColorFactor"));
+    EXPECT_TRUE(mat1->hasParameter("diffuseTransmissionMap"));
+    EXPECT_TRUE(mat1->hasParameter("diffuseTransmissionUvMatrix"));
+    EXPECT_TRUE(mat1->hasParameter("diffuseTransmissionColorMap"));
+    EXPECT_TRUE(mat1->hasParameter("diffuseTransmissionColorUvMatrix"));
+
+    Material const* mat2 = instance->getMaterialInstances()[2]->getMaterial();
+    EXPECT_TRUE(mat2->hasParameter("diffuseTransmissionFactor"));
+    EXPECT_TRUE(mat2->hasParameter("diffuseTransmissionColorFactor"));
+    EXPECT_TRUE(mat2->hasParameter("volumeThicknessFactor"));
+    EXPECT_TRUE(mat2->hasParameter("volumeAbsorption"));
+    EXPECT_EQ(mat2->getRefractionMode(), RefractionMode::NONE);
+
+    // KHR_materials_diffuse_transmission must be ignored on unlit and specular-glossiness materials.
+    Material const* mat3 = instance->getMaterialInstances()[3]->getMaterial();
+    EXPECT_FALSE(mat3->hasParameter("diffuseTransmissionFactor"));
+    EXPECT_FALSE(mat3->hasParameter("diffuseTransmissionColorFactor"));
+
+    Material const* mat4 = instance->getMaterialInstances()[4]->getMaterial();
+    EXPECT_FALSE(mat4->hasParameter("diffuseTransmissionFactor"));
+    EXPECT_FALSE(mat4->hasParameter("diffuseTransmissionColorFactor"));
+
+    loader->destroyAsset(asset);
+    jitProvider->destroyMaterials();
+    delete jitProvider;
+    AssetLoader::destroy(&loader);
+}
+
+// Issue #10793: cgltf_validate() must reject dense accessors and bufferViews whose extent
+// computation wraps SIZE_MAX (and zero-count accessors whose count - 1 underflows SIZE_MAX).
+TEST(glTFIOCgltf, DenseAccessorAndBufferViewOverflowIsRejected) {
+    uint8_t dummy[64] = {};
+    cgltf_buffer buffer{ .size = sizeof(dummy), .data = dummy };
+    cgltf_buffer_view view{ .buffer = &buffer, .offset = 0, .size = sizeof(dummy), .stride = 12 };
+    cgltf_accessor accessor{
+        .component_type = cgltf_component_type_r_32f,
+        .type = cgltf_type_vec3,
+        .offset = 0,
+        .count = 5,
+        .stride = 12,
+        .buffer_view = &view,
+    };
+    cgltf_data data{
+        .accessors = &accessor,
+        .accessors_count = 1,
+        .buffer_views = &view,
+        .buffer_views_count = 1,
+        .buffers = &buffer,
+        .buffers_count = 1,
+    };
+
+    // Valid control.
+    ASSERT_EQ(cgltf_validate(&data), cgltf_result_success);
+
+    // Zero count: (count - 1) would underflow to SIZE_MAX and 12 * SIZE_MAX + 12 wraps to 0.
+    accessor.count = 0;
+    EXPECT_EQ(cgltf_validate(&data), cgltf_result_invalid_gltf);
+    accessor.count = 5;
+
+    // Accessor offset + element_size wraps SIZE_MAX.
+    accessor.offset = std::numeric_limits<cgltf_size>::max() - 8;
+    EXPECT_EQ(cgltf_validate(&data), cgltf_result_data_too_short);
+    accessor.offset = 0;
+
+    // Dense stride * (count - 1) + element_size wraps to 0 mod 2^64 (on 64-bit) or 2^32 (on 32-bit).
+    cgltf_size const wrappingStride = (std::numeric_limits<cgltf_size>::max() - 11u) / 4u;
+    accessor.stride = wrappingStride;
+    view.stride = wrappingStride;
+    EXPECT_EQ(cgltf_validate(&data), cgltf_result_data_too_short);
+    accessor.stride = 12;
+    view.stride = 12;
+
+    // bufferView offset + size wraps SIZE_MAX.
+    view.offset = std::numeric_limits<cgltf_size>::max() - 15u;
+    view.size = 16u;
+    EXPECT_EQ(cgltf_validate(&data), cgltf_result_data_too_short);
+}
+
+// Issue #10793: end-to-end load with a wrapping byteStride on POSITION + NORMAL must fail
+// validation instead of launching TangentsJob and reading from a wild address.
+TEST_F(glTFIOTest, DenseStrideOverflowInTangentsJobIsRejected) {
+    // Control with tight stride (12) succeeds.
+    {
+        std::vector<uint8_t> const glb = makeDenseStrideOverflowGlb(12u);
+        AssetLoader* assetLoader =
+                AssetLoader::create({ mEngine, mMaterialProvider, mNameManager });
+        ASSERT_NE(assetLoader, nullptr);
+        FilamentAsset* const asset = assetLoader->createAsset(glb.data(), uint32_t(glb.size()));
+        ASSERT_NE(asset, nullptr);
+        ResourceLoader resourceLoader({ mEngine, ".", false });
+        EXPECT_TRUE(resourceLoader.loadResources(asset));
+        assetLoader->destroyAsset(asset);
+        AssetLoader::destroy(&assetLoader);
+    }
+
+    // Wrapping strides from #10793 (2^62 - 3 and 2^63 - 3, both below LLONG_MAX so JSON parses).
+    if constexpr (sizeof(cgltf_size) >= 8) {
+        for (uint64_t const badStride : { 4611686018427387901ULL, 9223372036854775805ULL }) {
+            SCOPED_TRACE(badStride);
+
+            // 1. Stride on NORMAL: AssetLoader re-purposes the NORMAL slot to SHORT4 tangents, so
+            // createAsset() succeeds on the standard loader and ResourceLoader::loadResources()
+            // relies on cgltf_validate() to block TangentsJob from reading at buffer + badStride.
+            {
+                std::vector<uint8_t> const glb =
+                        makeDenseStrideOverflowGlb(badStride, /* strideOnNormal = */ true);
+
+                AssetLoader* assetLoader =
+                        AssetLoader::create({ mEngine, mMaterialProvider, mNameManager });
+                ASSERT_NE(assetLoader, nullptr);
+                FilamentAsset* const asset =
+                        assetLoader->createAsset(glb.data(), uint32_t(glb.size()));
+                ASSERT_NE(asset, nullptr);
+                ResourceLoader resourceLoader({ mEngine, ".", false });
+                EXPECT_FALSE(resourceLoader.loadResources(asset));
+                assetLoader->destroyAsset(asset);
+                AssetLoader::destroy(&assetLoader);
+
+                if (AssetConfigurationExtended::isSupported()) {
+                    AssetConfigurationExtended ext{ .gltfPath = "." };
+                    AssetLoader* extLoader = AssetLoader::create({
+                            .engine = mEngine,
+                            .materials = mMaterialProvider,
+                            .names = mNameManager,
+                            .ext = &ext,
+                    });
+                    ASSERT_NE(extLoader, nullptr);
+                    EXPECT_EQ(extLoader->createAsset(glb.data(), uint32_t(glb.size())), nullptr);
+                    AssetLoader::destroy(&extLoader);
+                }
+            }
+
+            // 2. Stride on POSITION: AssetLoader rejects oversized / unaligned VertexBuffer strides
+            // cleanly (returning nullptr) instead of truncating to uint8_t or panicking.
+            {
+                std::vector<uint8_t> const glb =
+                        makeDenseStrideOverflowGlb(badStride, /* strideOnNormal = */ false);
+                AssetLoader* assetLoader =
+                        AssetLoader::create({ mEngine, mMaterialProvider, mNameManager });
+                ASSERT_NE(assetLoader, nullptr);
+                EXPECT_EQ(assetLoader->createAsset(glb.data(), uint32_t(glb.size())), nullptr);
+                AssetLoader::destroy(&assetLoader);
+            }
+        }
+    }
+}
+
+// Issue #10192: createMaterialVariants() runs during createAsset() before cgltf_validate(), so an
+// out-of-bounds variant index in KHR_materials_variants must be skipped without indexing
+// instance->mVariants out of bounds.
+TEST_F(glTFIOTest, OutOfBoundsMaterialVariantMappingIsSkipped) {
+    for (int const badVariant : { 1, 1000 }) {
+        SCOPED_TRACE(badVariant);
+        std::vector<uint8_t> const glb = makeMaterialVariantsMappingGlb(badVariant);
+
+        AssetLoader* assetLoader =
+                AssetLoader::create({ mEngine, mMaterialProvider, mNameManager });
+        ASSERT_NE(assetLoader, nullptr);
+
+        FilamentAsset* const asset = assetLoader->createAsset(glb.data(), uint32_t(glb.size()));
+        ASSERT_NE(asset, nullptr);
+
+        FilamentInstance* const instance = asset->getInstance();
+        ASSERT_NE(instance, nullptr);
+        ASSERT_EQ(instance->getMaterialVariantCount(), 1u);
+        EXPECT_STREQ(instance->getMaterialVariantName(0), "v0");
+        instance->applyMaterialVariant(0);
+
+        // ResourceLoader::loadResources() later rejects the malformed variant index via
+        // cgltf_validate().
+        ResourceLoader resourceLoader({ mEngine, ".", false });
+        EXPECT_FALSE(resourceLoader.loadResources(asset));
+
+        assetLoader->destroyAsset(asset);
+        AssetLoader::destroy(&assetLoader);
+    }
+
+    // Negative variant index is rejected at JSON parse time.
+    {
+        std::vector<uint8_t> const glb = makeMaterialVariantsMappingGlb(-1);
+        AssetLoader* assetLoader =
+                AssetLoader::create({ mEngine, mMaterialProvider, mNameManager });
+        ASSERT_NE(assetLoader, nullptr);
+        EXPECT_EQ(assetLoader->createAsset(glb.data(), uint32_t(glb.size())), nullptr);
+        AssetLoader::destroy(&assetLoader);
+    }
+
+    // Valid control (both mappings target variant 0) loads and applies cleanly.
+    {
+        std::vector<uint8_t> const glb = makeMaterialVariantsMappingGlb(0);
+        AssetLoader* assetLoader =
+                AssetLoader::create({ mEngine, mMaterialProvider, mNameManager });
+        ASSERT_NE(assetLoader, nullptr);
+        FilamentAsset* const asset = assetLoader->createAsset(glb.data(), uint32_t(glb.size()));
+        ASSERT_NE(asset, nullptr);
+        ResourceLoader resourceLoader({ mEngine, ".", false });
+        EXPECT_TRUE(resourceLoader.loadResources(asset));
+        asset->getInstance()->applyMaterialVariant(0);
+        assetLoader->destroyAsset(asset);
+        AssetLoader::destroy(&assetLoader);
+    }
+}
+
+// Issue #10191: recomputeBoundingBoxes() must bounds-check JOINTS_0 indices against joints_count
+// before indexing instanceSkin.joints and assetSkin.inverseBindMatrices.
+TEST_F(glTFIOTest, OutOfBoundsJointIndexInRecomputeBoundingBoxes) {
+    // Valid control (jointIndex = 0, joint 0 translated by +2 on X): AABB shifts to [2..3, 0..1, 0].
+    {
+        std::vector<uint8_t> const glb = makeSkinnedJointIndexGlb(0u);
+        AssetLoader* assetLoader =
+                AssetLoader::create({ mEngine, mMaterialProvider, mNameManager });
+        ASSERT_NE(assetLoader, nullptr);
+        FilamentAsset* const asset = assetLoader->createAsset(glb.data(), uint32_t(glb.size()));
+        ASSERT_NE(asset, nullptr);
+        ResourceLoader resourceLoader({ mEngine, ".", false });
+        ASSERT_TRUE(resourceLoader.loadResources(asset));
+
+        FilamentInstance* const instance = asset->getInstance();
+        ASSERT_NE(instance, nullptr);
+        instance->recomputeBoundingBoxes();
+        Aabb const bounds = instance->getBoundingBox();
+        EXPECT_FLOAT3_EQ(bounds.min, (math::float3{ 2.0f, 0.0f, 0.0f }));
+        EXPECT_FLOAT3_EQ(bounds.max, (math::float3{ 3.0f, 1.0f, 0.0f }));
+
+        assetLoader->destroyAsset(asset);
+        AssetLoader::destroy(&assetLoader);
+    }
+
+    // Out-of-bounds joint indices (small OOB == joints_count, medium OOB, and max uint16).
+    for (uint16_t const badJoint : { uint16_t(1), uint16_t(16), uint16_t(65535) }) {
+        SCOPED_TRACE(badJoint);
+        std::vector<uint8_t> const glb = makeSkinnedJointIndexGlb(badJoint);
+        AssetLoader* assetLoader =
+                AssetLoader::create({ mEngine, mMaterialProvider, mNameManager });
+        ASSERT_NE(assetLoader, nullptr);
+        FilamentAsset* const asset = assetLoader->createAsset(glb.data(), uint32_t(glb.size()));
+        ASSERT_NE(asset, nullptr);
+        ResourceLoader resourceLoader({ mEngine, ".", false });
+        ASSERT_TRUE(resourceLoader.loadResources(asset));
+
+        FilamentInstance* const instance = asset->getInstance();
+        ASSERT_NE(instance, nullptr);
+        instance->recomputeBoundingBoxes();
+        Aabb const bounds = instance->getBoundingBox();
+        EXPECT_FLOAT3_EQ(bounds.min, (math::float3{ 0.0f, 0.0f, 0.0f }));
+        EXPECT_FLOAT3_EQ(bounds.max, (math::float3{ 0.0f, 0.0f, 0.0f }));
+
+        assetLoader->destroyAsset(asset);
+        AssetLoader::destroy(&assetLoader);
+    }
+}
+
+// Issue #10198: when an earlier skin's inverseBindMatrices accessor fails validation (wrong type or
+// count < joints_count), a skinned renderable attached to a later skin must still align across
+// updateBoneMatrices(), recomputeBoundingBoxes(), and getSkinNameAt(), and updateBoneMatrices()
+// must also remain bounds-safe if asset->mSkins or inverseBindMatrices are ever shorter.
+TEST_F(glTFIOTest, SkinnedMeshAfterInvalidSkinInverseBindMatrices) {
+    for (bool const wrongType : { true, false }) {
+        SCOPED_TRACE(wrongType);
+        std::vector<uint8_t> const glb = makeSkinnedMeshAfterInvalidSkinGlb(wrongType);
+
+        AssetLoader* assetLoader =
+                AssetLoader::create({ mEngine, mMaterialProvider, mNameManager });
+        ASSERT_NE(assetLoader, nullptr);
+        FilamentAsset* const asset = assetLoader->createAsset(glb.data(), uint32_t(glb.size()));
+        ASSERT_NE(asset, nullptr);
+
+        ResourceLoader resourceLoader({ mEngine, ".", false });
+        ASSERT_TRUE(resourceLoader.loadResources(asset));
+
+        FilamentInstance* const instance = asset->getInstance();
+        ASSERT_NE(instance, nullptr);
+        ASSERT_EQ(instance->getSkinCount(), 2u);
+        EXPECT_STREQ(instance->getSkinNameAt(0), "skin0");
+        EXPECT_STREQ(instance->getSkinNameAt(1), "skin1");
+
+        // Exercise Animator::updateBoneMatrices() with a non-empty skin.targets renderable.
+        instance->getAnimator()->updateBoneMatrices();
+
+        // Exercise recomputeBoundingBoxes() on the skinned primitive bound to skin 1.
+        instance->recomputeBoundingBoxes();
+        Aabb const bounds = instance->getBoundingBox();
+        EXPECT_FLOAT3_EQ(bounds.min, kSkinInverseBindTranslation);
+        EXPECT_FLOAT3_EQ(bounds.max, (kSkinInverseBindTranslation + math::float3{ 1.0f, 1.0f, 0.0f }));
+
+        // Defense in depth: directly shorten FFilamentAsset::mSkins and verify updateBoneMatrices()
+        // breaks cleanly without reading past asset->mSkins.
+        gltfio::FFilamentAsset* const fasset = downcast(asset);
+        fasset->mSkins = FixedCapacityVector<gltfio::FFilamentAsset::Skin>(1);
+        instance->getAnimator()->updateBoneMatrices();
+
+        assetLoader->destroyAsset(asset);
+        AssetLoader::destroy(&assetLoader);
+    }
+}
+
+// Issue #10197: uploadBuffers() must never read past the morph accessor's element count (across the
+// bufferView-less, requiresPacking, and non-packing arms) nor write past slot.morphTargetCount.
+TEST_F(glTFIOTest, MorphAccessorCountMismatchDoesNotOverRead) {
+    // 1. End-to-end load where morph accessor count (2) < mesh vertex count (3): rejected by
+    // cgltf_validate() during loadResources() without reading out of bounds.
+    for (bool const withBufferView : { false, true }) {
+        for (uint32_t const stride : { 0u, 20u }) {
+            if (!withBufferView && stride != 0u) continue;
+            std::vector<uint8_t> const glb =
+                    makeMorphCountMismatchGlb("VEC3", /* morphCount = */ 2u, withBufferView, stride);
+            AssetLoader* assetLoader =
+                    AssetLoader::create({ mEngine, mMaterialProvider, mNameManager });
+            ASSERT_NE(assetLoader, nullptr);
+            FilamentAsset* const asset = assetLoader->createAsset(glb.data(), uint32_t(glb.size()));
+            ASSERT_NE(asset, nullptr);
+            ResourceLoader resourceLoader({ mEngine, ".", false });
+            EXPECT_FALSE(resourceLoader.loadResources(asset));
+            assetLoader->destroyAsset(asset);
+            AssetLoader::destroy(&assetLoader);
+        }
+    }
+
+    // 2. Direct defense-in-depth exercise of all three uploadBuffers() morph arms when
+    // cgltf_validate() passes (morphCount == 3) while slot.morphTargetCount (6, fitting within the
+    // 6-vertex two-primitive MorphTargetBuffer) exceeds the 3-element source buffer at the GLB tail,
+    // and conversely when accessor->count exceeds slot.morphTargetCount at a non-zero offset.
+    struct ArmCase {
+        char const* morphType;
+        bool withBufferView;
+        uint32_t stride;
+    };
+    constexpr ArmCase kArms[] = {
+        { "VEC3", false, 0u },  // no-buffer_view vec3
+        { "VEC4", false, 0u },  // no-buffer_view vec4
+        { "VEC3", true, 16u },  // requiresPacking vec3
+        { "VEC4", true, 20u },  // requiresPacking vec4
+        { "VEC3", true, 0u },   // non-packing tight vec3 (36 bytes, 0 GLB tail padding)
+        { "VEC4", true, 0u },   // non-packing tight vec4 (48 bytes, 0 GLB tail padding)
+    };
+    for (ArmCase const& arm : kArms) {
+        SCOPED_TRACE(testing::Message() << arm.morphType << " bv=" << arm.withBufferView
+                                        << " stride=" << arm.stride);
+        std::vector<uint8_t> const glb =
+                makeMorphCountMismatchGlb(arm.morphType, 3u, arm.withBufferView, arm.stride);
+        AssetLoader* assetLoader =
+                AssetLoader::create({ mEngine, mMaterialProvider, mNameManager });
+        ASSERT_NE(assetLoader, nullptr);
+        FilamentAsset* const asset = assetLoader->createAsset(glb.data(), uint32_t(glb.size()));
+        ASSERT_NE(asset, nullptr);
+
+        gltfio::FFilamentAsset* const fasset = downcast(asset);
+        auto& slots =
+                std::get<gltfio::FFilamentAsset::ResourceInfo>(fasset->mResourceInfo).mBufferSlots;
+        // Inflate the first morph slot's morphTargetCount from 3 to 6 (offset 0, so 0 + 6 <= 6 in
+        // MorphTargetBuffer, while the backing morph buffer only has 3 elements) and shrink the
+        // second morph slot's morphTargetCount from 3 to 2 at offset 3 (where accessor->count = 3).
+        size_t morphSlotsSeen = 0;
+        for (auto& slot : slots) {
+            if (slot.morphTargetBuffer) {
+                if (morphSlotsSeen == 0) {
+                    slot.morphTargetOffset = 0;
+                    slot.morphTargetCount = 6;
+                } else {
+                    slot.morphTargetOffset = 3;
+                    slot.morphTargetCount = 2;
+                }
+                ++morphSlotsSeen;
+            }
+        }
+        ASSERT_EQ(morphSlotsSeen, 2u);
+
+        ResourceLoader resourceLoader({ mEngine, ".", false });
+        EXPECT_TRUE(resourceLoader.loadResources(asset));
+
+        assetLoader->destroyAsset(asset);
+        AssetLoader::destroy(&assetLoader);
+    }
+}
+
+// Issue #10794: tight non-float morph target POSITION accessors (e.g. VEC3 SHORT and VEC4
+// BYTE/UBYTE/SHORT/USHORT) do not require conversion for VertexBuffer, so utility::requiresPacking()
+// returns false; uploadBuffers() must still unpack them to floats rather than copying 12/16 bytes
+// per vertex past the end of the bufferView.
+TEST_F(glTFIOTest, NonFloatTightMorphPositionsAreUnpacked) {
+    struct MorphTypeCase {
+        char const* type;
+        int componentType;
+    };
+    constexpr MorphTypeCase kCases[] = {
+        { "VEC3", 5122 }, // SHORT3 (6 bytes/vertex; 36 bytes at GLB tail vs 72-byte float3 copy)
+        { "VEC4", 5120 }, // BYTE4 (4 bytes/vertex; 24 bytes at GLB tail vs 96-byte float4 copy)
+        { "VEC4", 5121 }, // UBYTE4 (4 bytes/vertex; 24 bytes at GLB tail vs 96-byte float4 copy)
+        { "VEC4", 5122 }, // SHORT4 (8 bytes/vertex; 48 bytes at GLB tail vs 96-byte float4 copy)
+        { "VEC4", 5123 }, // USHORT4 (8 bytes/vertex; 48 bytes at GLB tail vs 96-byte float4 copy)
+        { "VEC3", 5126 }, // FLOAT3 control
+        { "VEC4", 5126 }, // FLOAT4 control
+    };
+
+    AssetLoader* assetLoader = AssetLoader::create({ mEngine, mMaterialProvider, mNameManager });
+    ASSERT_NE(assetLoader, nullptr);
+
+    for (MorphTypeCase const& c : kCases) {
+        SCOPED_TRACE(testing::Message() << c.type << " componentType=" << c.componentType);
+        std::vector<uint8_t> const glb =
+                makeTypedMorphPositionGlb(c.type, c.componentType, /* withBufferView = */ true);
+        FilamentAsset* const asset = assetLoader->createAsset(glb.data(), uint32_t(glb.size()));
+        ASSERT_NE(asset, nullptr);
+
+        ResourceLoader resourceLoader({ mEngine, ".", false });
+        EXPECT_TRUE(resourceLoader.loadResources(asset));
+
+        assetLoader->destroyAsset(asset);
+    }
+
+    AssetLoader::destroy(&assetLoader);
+}
+
+// Issue #10797: the bufferView-less morph arm in uploadBuffers() must check for VEC3/VEC4 instead
+// of treating VEC2/SCALAR as float4 and over-reading the malloc'd unpack buffer.
+TEST_F(glTFIOTest, BufferlessMorphPositionDimensionMismatchDoesNotOverRead) {
+    AssetLoader* assetLoader = AssetLoader::create({ mEngine, mMaterialProvider, mNameManager });
+    ASSERT_NE(assetLoader, nullptr);
+
+    // Valid VEC3 and VEC4 bufferView-less controls load cleanly.
+    for (char const* const validType : { "VEC3", "VEC4" }) {
+        std::vector<uint8_t> const glb = makeTypedMorphPositionGlb(validType, 5126,
+                /* withBufferView = */ false, /* withMinMax = */ false);
+        FilamentAsset* const asset = assetLoader->createAsset(glb.data(), uint32_t(glb.size()));
+        ASSERT_NE(asset, nullptr);
+        ResourceLoader resourceLoader({ mEngine, ".", false });
+        EXPECT_TRUE(resourceLoader.loadResources(asset));
+        assetLoader->destroyAsset(asset);
+    }
+
+    // Directly exercise uploadBuffers()'s bufferView-less morph arm with VEC2 and SCALAR accessors.
+    for (cgltf_type const badType : { cgltf_type_vec2, cgltf_type_scalar }) {
+        std::vector<uint8_t> const glb = makeTypedMorphPositionGlb("VEC3", 5126,
+                /* withBufferView = */ false, /* withMinMax = */ false);
+        FilamentAsset* const asset = assetLoader->createAsset(glb.data(), uint32_t(glb.size()));
+        ASSERT_NE(asset, nullptr);
+
+        gltfio::FFilamentAsset* const fasset = downcast(asset);
+        // Set material to unlit on the morph accessor's primitive or mutate the morph accessor type
+        // directly so uploadBuffers()'s no-buffer_view arm sees VEC2 / SCALAR.
+        fasset->mSourceAsset->hierarchy->accessors[1].type = badType;
+
+        ResourceLoader resourceLoader({ mEngine, ".", false });
+        EXPECT_TRUE(resourceLoader.loadResources(asset));
+        assetLoader->destroyAsset(asset);
+    }
+
+    AssetLoader::destroy(&assetLoader);
+}
+
+// Issue #10792: morph POSITION accessors with VEC2/SCALAR/MAT4 types (both with and without
+// min/max, and with or without bufferView) must be rejected at createAsset() time, and
+// uploadBuffers()'s non-packing morph arm must also guard against non-VEC3/VEC4 types as defense
+// in depth instead of treating them as float4 and reading past the end of the bufferView.
+TEST_F(glTFIOTest, InvalidMorphTargetDimensionsAreRejectedAndGuarded) {
+    AssetLoader* assetLoader = AssetLoader::create({ mEngine, mMaterialProvider, mNameManager });
+    ASSERT_NE(assetLoader, nullptr);
+
+    // 1. End-to-end rejection in AssetLoader::createPrimitive() across with/without min/max and
+    // with/without bufferView.
+    for (char const* const badType : { "SCALAR", "VEC2", "MAT4" }) {
+        for (bool const withBufferView : { true, false }) {
+            for (bool const withMinMax : { true, false }) {
+                if (std::string_view(badType) == "MAT4" && withMinMax) continue;
+                SCOPED_TRACE(testing::Message() << badType << " bv=" << withBufferView
+                                                << " minMax=" << withMinMax);
+                std::vector<uint8_t> const glb =
+                        makeTypedMorphPositionGlb(badType, 5126, withBufferView, withMinMax);
+                EXPECT_EQ(assetLoader->createAsset(glb.data(), uint32_t(glb.size())), nullptr);
+            }
+        }
+    }
+
+    // 2. Direct defense-in-depth exercise of uploadBuffers()'s non-packing morph arm on tight VEC2
+    // (48 bytes at the exact GLB tail vs 96-byte float4 copy) and SCALAR (24 bytes at the exact GLB
+    // tail vs 96-byte float4 copy).
+    for (cgltf_type const badType : { cgltf_type_vec2, cgltf_type_scalar }) {
+        size_t const dim = (badType == cgltf_type_vec2) ? 2u : 1u;
+        size_t const stride = dim * sizeof(float);
+        size_t const morphBytes = 6u * stride;
+
+        std::vector<uint8_t> const glb =
+                makeTypedMorphPositionGlb("VEC3", 5126, /* withBufferView = */ true);
+        FilamentAsset* const asset = assetLoader->createAsset(glb.data(), uint32_t(glb.size()));
+        ASSERT_NE(asset, nullptr);
+
+        gltfio::FFilamentAsset* const fasset = downcast(asset);
+        cgltf_data* const hierarchy = fasset->mSourceAsset->hierarchy;
+        // Shrink glbData so the morph bufferView ends right at the allocation boundary.
+        size_t const trimBytes = (6u * sizeof(math::float3)) - morphBytes;
+        FixedCapacityVector<uint8_t> trimmed(fasset->mSourceAsset->glbData.size() - trimBytes);
+        std::copy_n(fasset->mSourceAsset->glbData.data(), trimmed.size(), trimmed.data());
+        // Re-parse or update the buffer/view/accessor sizes and bin pointer in place: note that
+        // cgltf's bin pointer points into the old glbData, so update hierarchy->bin and buffer 0
+        // size, view 1 size, and accessor 1 type/stride to match the shrunk tail allocation.
+        size_t const jsonOffset = static_cast<size_t>(
+                reinterpret_cast<uint8_t const*>(hierarchy->json) -
+                fasset->mSourceAsset->glbData.data());
+        size_t const binOffset = static_cast<size_t>(
+                static_cast<uint8_t const*>(hierarchy->bin) - fasset->mSourceAsset->glbData.data());
+        fasset->mSourceAsset->glbData.swap(trimmed);
+        hierarchy->json =
+                reinterpret_cast<char const*>(fasset->mSourceAsset->glbData.data() + jsonOffset);
+        hierarchy->bin = fasset->mSourceAsset->glbData.data() + binOffset;
+        hierarchy->bin_size = 72u + morphBytes;
+        hierarchy->buffers[0].size = 72u + morphBytes;
+        hierarchy->buffer_views[1].size = morphBytes;
+        hierarchy->accessors[1].type = badType;
+        hierarchy->accessors[1].stride = stride;
+
+        ResourceLoader resourceLoader({ mEngine, ".", false });
+        EXPECT_TRUE(resourceLoader.loadResources(asset));
+        FilamentInstance* const inst = asset->getInstance();
+        ASSERT_NE(inst, nullptr);
+        inst->recomputeBoundingBoxes();
+        assetLoader->destroyAsset(asset);
+    }
+
+    AssetLoader::destroy(&assetLoader);
+}
+
+// Issue #10798 (and #10674): TangentsJobExtended::data::unpack must route dimension-mismatched
+// float accessors (morph POSITION/NORMAL/TANGENT and base attributes) through unpackFloats()
+// rather than reading sizeof(float3)/sizeof(float4) per vertex past the end of the bufferView.
+TEST(glTFIOTangentsJobExtended, DimensionMismatchedMorphAndBaseAttributesDoNotOverRead) {
+    auto runOnGlb = [](std::vector<uint8_t> const& glb, int morphTargetIndex,
+                            math::float3 expectedFirstPos) {
+        cgltf_options options{};
+        cgltf_data* data = nullptr;
+        ASSERT_EQ(cgltf_parse(&options, glb.data(), glb.size(), &data), cgltf_result_success);
+        ASSERT_EQ(cgltf_load_buffers(&options, data, "."), cgltf_result_success);
+        ASSERT_EQ(cgltf_validate(data), cgltf_result_success);
+        cgltf_primitive const* prim = &data->meshes[0].primitives[0];
+
+        TangentsJobExtended::Params params{
+            .in = { .prim = prim, .morphTargetIndex = morphTargetIndex }
+        };
+        TangentsJobExtended::run(&params);
+        auto& out = params.out;
+        ASSERT_GT(out.vertexCount, 0u);
+        ASSERT_NE(out.positions, nullptr);
+        if (morphTargetIndex != TangentsJobExtended::kMorphTargetUnused) {
+            for (size_t v = 0; v < out.vertexCount; ++v) {
+                EXPECT_FLOAT_EQ(out.positions[v].x, expectedFirstPos.x);
+                EXPECT_FLOAT_EQ(out.positions[v].y, expectedFirstPos.y);
+                EXPECT_FLOAT_EQ(out.positions[v].z, expectedFirstPos.z);
+            }
+        }
+        free(out.positions);
+        free(out.tbn);
+        free(out.triangles);
+        cgltf_free(data);
+    };
+
+    // Morph POSITION with SCALAR, VEC2, VEC3 (control), and VEC4 at the exact GLB tail.
+    runOnGlb(makeExtendedDimensionMismatchGlb("POSITION", "SCALAR"), 0, { 1.0f, 0.0f, 0.0f });
+    runOnGlb(makeExtendedDimensionMismatchGlb("POSITION", "VEC2"), 0, { 1.0f, 2.0f, 0.0f });
+    runOnGlb(makeExtendedDimensionMismatchGlb("POSITION", "VEC3"), 0, { 1.0f, 2.0f, 3.0f });
+    runOnGlb(makeExtendedDimensionMismatchGlb("POSITION", "VEC4"), 0, { 1.0f, 2.0f, 3.0f });
+
+    // Morph NORMAL and TANGENT with SCALAR, VEC2, and VEC3 (control) at the exact GLB tail.
+    for (char const* const attr : { "NORMAL", "TANGENT" }) {
+        for (char const* const type : { "SCALAR", "VEC2", "VEC3" }) {
+            SCOPED_TRACE(testing::Message() << attr << " " << type);
+            runOnGlb(makeExtendedDimensionMismatchGlb(attr, type), 0, { 0.0f, 0.0f, 0.0f });
+        }
+    }
+
+    // Base POSITION with SCALAR and VEC2 at the exact GLB tail (#10674).
+    for (char const* const baseType : { "SCALAR", "VEC2" }) {
+        SCOPED_TRACE(baseType);
+        runOnGlb(makeExtendedDimensionMismatchGlb(nullptr, "VEC3", baseType),
+                TangentsJobExtended::kMorphTargetUnused, {});
+    }
+}
+
+TEST_F(glTFIOTest, ExtendedLoaderDimensionMismatchedMorphsAndBaseAttributes) {
+    if (!AssetConfigurationExtended::isSupported()) {
+        GTEST_SKIP() << "The extended asset loader is not supported on this platform.";
+    }
+
+    for (char const* const attr : { "POSITION", "NORMAL", "TANGENT" }) {
+        for (char const* const type : { "SCALAR", "VEC2", "VEC3", "VEC4" }) {
+            SCOPED_TRACE(testing::Message() << attr << " " << type);
+            loadExtendedMorphAsset(mEngine, mMaterialProvider, mNameManager,
+                    makeExtendedDimensionMismatchGlb(attr, type), 1u);
+        }
+    }
+
+    for (char const* const baseType : { "SCALAR", "VEC2" }) {
+        SCOPED_TRACE(baseType);
+        std::vector<uint8_t> const glb =
+                makeExtendedDimensionMismatchGlb(nullptr, "VEC3", baseType);
+        AssetConfigurationExtended ext{ .gltfPath = "." };
+        AssetLoader* assetLoader = AssetLoader::create({
+                .engine = mEngine,
+                .materials = mMaterialProvider,
+                .names = mNameManager,
+                .ext = &ext,
+        });
+        ASSERT_NE(assetLoader, nullptr);
+        FilamentAsset* const asset = assetLoader->createAsset(glb.data(), uint32_t(glb.size()));
+        ASSERT_NE(asset, nullptr);
+        ResourceLoader resourceLoader({ mEngine, ".", false });
+        EXPECT_TRUE(resourceLoader.loadResources(asset));
+        assetLoader->destroyAsset(asset);
+        AssetLoader::destroy(&assetLoader);
+    }
+}
+
+TEST(glTFIOTangentsJob, GeneratesExpectedQuatsAcrossAllModes) {
+    using math::float2;
+    using math::float3;
+    using math::float4;
+    using math::short4;
+
+    float3 positions[3] = {
+        { 0.0f, 0.0f, 0.0f },
+        { 1.0f, 0.0f, 0.0f },
+        { 0.0f, 1.0f, 0.0f },
+    };
+    float3 normals[3] = {
+        { 0.0f, 0.0f, 1.0f },
+        { 0.0f, 0.0f, 1.0f },
+        { 0.0f, 0.0f, 1.0f },
+    };
+    float4 tangents[3] = {
+        { 1.0f, 0.0f, 0.0f, 1.0f },
+        { 1.0f, 0.0f, 0.0f, 1.0f },
+        { 1.0f, 0.0f, 0.0f, 1.0f },
+    };
+    float2 uvs[3] = {
+        { 0.0f, 0.0f },
+        { 1.0f, 0.0f },
+        { 0.0f, 1.0f },
+    };
+    uint8_t indices8[3] = { 0, 1, 2 };
+    uint16_t indices16[3] = { 0, 1, 2 };
+    uint32_t indices32[3] = { 0, 1, 2 };
+
+    auto makeAccessor = [](void* data, size_t byteSize, cgltf_type type,
+            cgltf_component_type compType, size_t count, size_t stride,
+            cgltf_buffer* buf, cgltf_buffer_view* view) -> cgltf_accessor {
+        *buf = { .size = byteSize, .data = data };
+        *view = { .buffer = buf, .size = byteSize, .stride = stride };
+        return cgltf_accessor{
+            .component_type = compType,
+            .type = type,
+            .count = count,
+            .stride = stride,
+            .buffer_view = view,
+        };
+    };
+
+    cgltf_buffer posBuf{}, normBuf{}, tanBuf{}, uvBuf{}, idxBuf{};
+    cgltf_buffer_view posView{}, normView{}, tanView{}, uvView{}, idxView{};
+    cgltf_accessor posAcc = makeAccessor(positions, sizeof(positions), cgltf_type_vec3,
+            cgltf_component_type_r_32f, 3, sizeof(float3), &posBuf, &posView);
+    cgltf_accessor normAcc = makeAccessor(normals, sizeof(normals), cgltf_type_vec3,
+            cgltf_component_type_r_32f, 3, sizeof(float3), &normBuf, &normView);
+    cgltf_accessor tanAcc = makeAccessor(tangents, sizeof(tangents), cgltf_type_vec4,
+            cgltf_component_type_r_32f, 3, sizeof(float4), &tanBuf, &tanView);
+    cgltf_accessor uvAcc = makeAccessor(uvs, sizeof(uvs), cgltf_type_vec2,
+            cgltf_component_type_r_32f, 3, sizeof(float2), &uvBuf, &uvView);
+
+    // Mode 1: Normals + Tangents (positions/uvs/indices present on primitive, should be ignored).
+    {
+        cgltf_attribute attrs[3] = {
+            { .type = cgltf_attribute_type_position, .index = 0, .data = &posAcc },
+            { .type = cgltf_attribute_type_normal, .index = 0, .data = &normAcc },
+            { .type = cgltf_attribute_type_tangent, .index = 0, .data = &tanAcc },
+        };
+        cgltf_primitive prim{
+            .type = cgltf_primitive_type_triangles,
+            .attributes = attrs,
+            .attributes_count = 3,
+        };
+        TangentsJob::Params params{ .in = { .prim = &prim } };
+        TangentsJob::run(&params);
+        ASSERT_EQ(params.out.vertexCount, 3u);
+        ASSERT_NE(params.out.results, nullptr);
+        EXPECT_EQ(params.out.results[0], params.out.results[1]);
+        EXPECT_EQ(params.out.results[1], params.out.results[2]);
+        EXPECT_NE(params.out.results[0], (short4{ 0, 0, 0, 0 }));
+        free(params.out.results);
+    }
+
+    // Mode 2: Normals only (Frisvad's method).
+    {
+        cgltf_attribute attrs[2] = {
+            { .type = cgltf_attribute_type_position, .index = 0, .data = &posAcc },
+            { .type = cgltf_attribute_type_normal, .index = 0, .data = &normAcc },
+        };
+        cgltf_primitive prim{
+            .type = cgltf_primitive_type_triangles,
+            .attributes = attrs,
+            .attributes_count = 2,
+        };
+        TangentsJob::Params params{ .in = { .prim = &prim } };
+        TangentsJob::run(&params);
+        ASSERT_EQ(params.out.vertexCount, 3u);
+        ASSERT_NE(params.out.results, nullptr);
+        EXPECT_NE(params.out.results[0], (short4{ 0, 0, 0, 0 }));
+        free(params.out.results);
+    }
+
+    // Mode 3: Normals + UVs + Positions + Indices (Lengyel's method) across 8/16/32-bit indices.
+    short4 expectedUvQuats[3] = {};
+    for (int idxMode = 0; idxMode < 3; ++idxMode) {
+        cgltf_accessor idxAcc{};
+        if (idxMode == 0) {
+            idxAcc = makeAccessor(indices8, sizeof(indices8), cgltf_type_scalar,
+                    cgltf_component_type_r_8u, 3, sizeof(uint8_t), &idxBuf, &idxView);
+        } else if (idxMode == 1) {
+            idxAcc = makeAccessor(indices16, sizeof(indices16), cgltf_type_scalar,
+                    cgltf_component_type_r_16u, 3, sizeof(uint16_t), &idxBuf, &idxView);
+        } else {
+            idxAcc = makeAccessor(indices32, sizeof(indices32), cgltf_type_scalar,
+                    cgltf_component_type_r_32u, 3, sizeof(uint32_t), &idxBuf, &idxView);
+        }
+        cgltf_attribute attrs[3] = {
+            { .type = cgltf_attribute_type_position, .index = 0, .data = &posAcc },
+            { .type = cgltf_attribute_type_normal, .index = 0, .data = &normAcc },
+            { .type = cgltf_attribute_type_texcoord, .index = 0, .data = &uvAcc },
+        };
+        cgltf_primitive prim{
+            .type = cgltf_primitive_type_triangles,
+            .indices = &idxAcc,
+            .attributes = attrs,
+            .attributes_count = 3,
+        };
+        TangentsJob::Params params{ .in = { .prim = &prim } };
+        TangentsJob::run(&params);
+        ASSERT_EQ(params.out.vertexCount, 3u);
+        ASSERT_NE(params.out.results, nullptr);
+        if (idxMode == 0) {
+            for (size_t i = 0; i < 3; ++i) {
+                expectedUvQuats[i] = params.out.results[i];
+                EXPECT_NE(expectedUvQuats[i], (short4{ 0, 0, 0, 0 }));
+            }
+        } else {
+            for (size_t i = 0; i < 3; ++i) {
+                EXPECT_EQ(params.out.results[i], expectedUvQuats[i]);
+            }
+        }
+        free(params.out.results);
+    }
+
+    // Mode 4: Flat normals (Positions + Indices, no Normals).
+    {
+        cgltf_accessor idxAcc = makeAccessor(indices16, sizeof(indices16), cgltf_type_scalar,
+                cgltf_component_type_r_16u, 3, sizeof(uint16_t), &idxBuf, &idxView);
+        cgltf_attribute attrs[1] = {
+            { .type = cgltf_attribute_type_position, .index = 0, .data = &posAcc },
+        };
+        cgltf_primitive prim{
+            .type = cgltf_primitive_type_triangles,
+            .indices = &idxAcc,
+            .attributes = attrs,
+            .attributes_count = 1,
+        };
+        TangentsJob::Params params{ .in = { .prim = &prim } };
+        TangentsJob::run(&params);
+        ASSERT_EQ(params.out.vertexCount, 3u);
+        ASSERT_NE(params.out.results, nullptr);
+        EXPECT_NE(params.out.results[0], (short4{ 0, 0, 0, 0 }));
+        free(params.out.results);
+    }
+}
+
+TEST_F(glTFIOTest, UbershaderBitmaskLookupMatchesFeatureCombinations) {
+    MaterialKey const cases[] = {
+        { .unlit = true, .hasBaseColorTexture = true },
+        { .hasBaseColorTexture = true, .hasNormalTexture = true, .alphaMode = AlphaMode::MASK },
+        { .alphaMode = AlphaMode::BLEND, .hasClearCoatTexture = true,
+                .hasClearCoatRoughnessTexture = true, .hasClearCoatNormalTexture = true,
+                .hasClearCoat = true },
+        { .hasTransmission = true, .hasTransmissionTexture = true,
+                .hasVolumeThicknessTexture = true, .hasIOR = true, .hasVolume = true,
+                .hasDispersion = true },
+        { .hasSheenColorTexture = true, .hasSheenRoughnessTexture = true, .hasSheen = true,
+                .hasSpecular = true, .hasSpecularTexture = true },
+        { .hasBaseColorTexture = true, .useSpecularGlossiness = true,
+                .hasMetallicRoughnessTexture = true },
+    };
+
+    for (MaterialKey key : cases) {
+        UvMap uvmap{};
+        Material* mat = mMaterialProvider->getMaterial(&key, &uvmap, "test_mat");
+        ASSERT_NE(mat, nullptr);
+
+        MaterialKey instanceKey = key;
+        UvMap instanceUvmap{};
+        MaterialInstance* mi = mMaterialProvider->createMaterialInstance(
+                &instanceKey, &instanceUvmap, "test_mi");
+        ASSERT_NE(mi, nullptr);
+        EXPECT_EQ(mi->getMaterial(), mat);
+        mEngine->destroy(mi);
+    }
+}
+
+TEST_F(glTFIOTest, AnimatorInterpolatesAndRejectsDuplicateTimestamps) {
+    AssetLoader* assetLoader = AssetLoader::create({ mEngine, mMaterialProvider, mNameManager });
+    ASSERT_NE(assetLoader, nullptr);
+
+    // Valid timeline [0.0f, 1.0f]: verify boundary and interior timestamps.
+    {
+        std::vector<uint8_t> const glb = makeTranslationAnimationGlb();
+        FilamentAsset* const asset = assetLoader->createAsset(glb.data(), uint32_t(glb.size()));
+        ASSERT_NE(asset, nullptr);
+
+        ResourceLoader resourceLoader({ mEngine, ".", false });
+        ASSERT_TRUE(resourceLoader.loadResources(asset));
+
+        Animator* const animator = asset->getInstance()->getAnimator();
+        ASSERT_NE(animator, nullptr);
+        ASSERT_EQ(animator->getAnimationCount(), 1u);
+
+        animator->applyAnimation(0, 0.0f);
+        EXPECT_FLOAT3_EQ(getAnimatedNodeTranslation(mEngine, asset), (math::float3{ 0.0f }));
+
+        animator->applyAnimation(0, 0.25f);
+        EXPECT_FLOAT3_EQ(getAnimatedNodeTranslation(mEngine, asset), 0.25f * kTranslationAnimationEnd);
+
+        animator->applyAnimation(0, 1.0f);
+        EXPECT_FLOAT3_EQ(getAnimatedNodeTranslation(mEngine, asset), kTranslationAnimationEnd);
+
+        assetLoader->destroyAsset(asset);
+    }
+
+    // Duplicate timestamps [0.0f, 0.0f]: must be rejected and leave channel disabled.
+    {
+        std::vector<uint8_t> const glb = makeTranslationAnimationGlb({ .lastTimestamp = 0.0f });
+        FilamentAsset* const asset = assetLoader->createAsset(glb.data(), uint32_t(glb.size()));
+        ASSERT_NE(asset, nullptr);
+
+        ResourceLoader resourceLoader({ mEngine, ".", false });
+        ASSERT_TRUE(resourceLoader.loadResources(asset));
+
+        Animator* const animator = asset->getInstance()->getAnimator();
+        ASSERT_NE(animator, nullptr);
+        EXPECT_FLOAT_EQ(animator->getAnimationDuration(0), 0.0f);
+
+        math::float3 const before = getAnimatedNodeTranslation(mEngine, asset);
+        animator->applyAnimation(0, 0.5f);
+        EXPECT_FLOAT3_EQ(getAnimatedNodeTranslation(mEngine, asset), before);
+
+        assetLoader->destroyAsset(asset);
+    }
+
+    AssetLoader::destroy(&assetLoader);
+}
+
+TEST_F(glTFIOTest, NodeNameResolutionAndUnicodeUnescaping) {
+    AssetLoader* assetLoader = AssetLoader::create({ mEngine, mMaterialProvider, mNameManager });
+    ASSERT_NE(assetLoader, nullptr);
+
+    char const* const gltfJson =
+            R"({"asset":{"version":"2.0"},"scene":0,"scenes":[{"nodes":[0,1,2,3]}],)"
+            R"("nodes":[)"
+            R"({"name":"plain_node"},)"
+            R"({"name":"escaped_\u0062_\u00e9_\u2605"},)"
+            R"({"name":"invalid_\\u123"},)"
+            R"({"name":"invalid_\\u123g"})"
+            R"(]})";
+
+    FilamentAsset* const asset = assetLoader->createAsset(
+            reinterpret_cast<uint8_t const*>(gltfJson), uint32_t(std::strlen(gltfJson)));
+    ASSERT_NE(asset, nullptr);
+
+    EXPECT_TRUE(asset->getFirstEntityByName("plain_node"));
+    EXPECT_TRUE(asset->getFirstEntityByName("escaped_b_\xC3\xA9_\xE2\x98\x85"));
+    EXPECT_TRUE(asset->getFirstEntityByName(R"(invalid_\\u123)"));
+    EXPECT_TRUE(asset->getFirstEntityByName(R"(invalid_\\u123g)"));
+
+    assetLoader->destroyAsset(asset);
+    AssetLoader::destroy(&assetLoader);
+}
+
+TEST_F(glTFIOTest, HierarchicalBoundingBoxAndTransformPropagation) {
+    AssetLoader* assetLoader = AssetLoader::create({ mEngine, mMaterialProvider, mNameManager });
+    ASSERT_NE(assetLoader, nullptr);
+
+    // Build a 3-level hierarchy:
+    // Node 0 ("root_xform"): translation (10, 0, 0), children [1, 3]
+    // Node 1 ("mid_xform"): scale (2, 2, 2), translation (0, 5, 0), children [2]
+    // Node 2 ("leaf_mesh"): translation (1, 0, 0), mesh 0 (AABB [0, 0, 0] -> [1, 1, 1]), extras
+    // Node 3 ("empty_leaf"): translation (100, 100, 100), no mesh, no children
+    // Expected world transform on Node 2:
+    // min = (10, 5, 0) + 2 * ((1, 0, 0) + (0, 0, 0)) = (12, 5, 0)
+    // max = (10, 5, 0) + 2 * ((1, 0, 0) + (1, 1, 1)) = (14, 7, 2)
+    std::string const json =
+            R"({"asset":{"version":"2.0"},"scene":0,"scenes":[{"nodes":[0]}],)"
+            R"("nodes":[)"
+            R"({"name":"node_root","translation":[10,0,0],"children":[1,3]},)"
+            R"({"name":"node_mid","translation":[0,5,0],"scale":[2,2,2],"children":[2]},)"
+            R"({"name":"node_mesh","translation":[1,0,0],"mesh":0,"extras":{"tag":"leaf"}},)"
+            R"({"name":"node_empty","translation":[100,100,100]})"
+            R"(],"meshes":[{"primitives":[{"attributes":{"POSITION":0}}]}],)"
+            R"("accessors":[{"bufferView":0,"componentType":5126,"count":3,"type":"VEC3",)"
+            R"("min":[0,0,0],"max":[1,1,1]}],)"
+            R"("bufferViews":[{"buffer":0,"byteOffset":0,"byteLength":36}],)"
+            R"("buffers":[{"byteLength":36}]})";
+
+    FilamentAsset* const asset = assetLoader->createAsset(
+            reinterpret_cast<uint8_t const*>(json.data()), uint32_t(json.size()));
+    ASSERT_NE(asset, nullptr);
+
+    Aabb const bbox = asset->getBoundingBox();
+    EXPECT_FLOAT3_EQ(bbox.min, (math::float3{ 12.0f, 5.0f, 0.0f }));
+    EXPECT_FLOAT3_EQ(bbox.max, (math::float3{ 14.0f, 7.0f, 2.0f }));
+
+    EXPECT_EQ(asset->getEntitiesByPrefix("node_", nullptr, 0), 4u);
+    utils::Entity const meshEntity = asset->getFirstEntityByName("node_mesh");
+    ASSERT_TRUE(meshEntity);
+
+    auto& tm = mEngine->getTransformManager();
+    tm.openLocalTransformTransaction();
+    tm.commitLocalTransformTransaction();
+    math::mat4f const worldMat = tm.getWorldTransform(tm.getInstance(meshEntity));
+    EXPECT_FLOAT3_EQ(worldMat[3].xyz, (math::float3{ 12.0f, 5.0f, 0.0f }));
+
+    EXPECT_STREQ(asset->getExtras(meshEntity), R"({"tag":"leaf"})");
+
+    assetLoader->destroyAsset(asset);
+    AssetLoader::destroy(&assetLoader);
+}
+
+TEST_F(glTFIOTest, DependencyGraphMultiInstanceAndMultiMaterialReadiness) {
+    // 1. Direct DependencyGraph test: an entity with one untextured material and one textured
+    // material must not become ready across repeated commitEdges() calls until the texture is
+    // marked ready.
+    {
+        MaterialKey keyA{};
+        UvMap uvA{};
+        MaterialInstance* matUntextured = mMaterialProvider->createMaterialInstance(
+                &keyA, &uvA, "untextured");
+        MaterialKey keyB{ .hasBaseColorTexture = true };
+        UvMap uvB{};
+        MaterialInstance* matTextured = mMaterialProvider->createMaterialInstance(
+                &keyB, &uvB, "textured");
+        Texture* tex = Texture::Builder().width(1).height(1).levels(1)
+                .format(Texture::InternalFormat::RGBA8).build(*mEngine);
+
+        utils::Entity const entity = EntityManager::get().create();
+        DependencyGraph graph;
+        graph.addEdge(entity, matUntextured);
+        graph.addEdge(entity, matTextured);
+        graph.addEdge(matTextured, "baseColorMap");
+        graph.addEdge(tex, matTextured, "baseColorMap");
+
+        // Repeated commitEdges() calls must not double-count matUntextured.
+        graph.commitEdges();
+        EXPECT_EQ(graph.popRenderables(nullptr, 0), 0u);
+        graph.commitEdges();
+        EXPECT_EQ(graph.popRenderables(nullptr, 0), 0u);
+
+        // Once the texture is ready, the entity becomes ready exactly once.
+        graph.markAsReady(tex);
+        EXPECT_EQ(graph.popRenderables(nullptr, 0), 1u);
+        utils::Entity popped{};
+        EXPECT_EQ(graph.popRenderables(&popped, 1), 1u);
+        EXPECT_EQ(popped, entity);
+        EXPECT_EQ(graph.popRenderables(nullptr, 0), 0u);
+
+        EntityManager::get().destroy(entity);
+        mEngine->destroy(tex);
+        mEngine->destroy(matTextured);
+        mEngine->destroy(matUntextured);
+    }
+
+    // 2. End-to-end multi-instance creation + dynamic createInstance() readiness.
+    {
+        AssetLoader* assetLoader = AssetLoader::create({ mEngine, mMaterialProvider, mNameManager });
+        ASSERT_NE(assetLoader, nullptr);
+
+        std::string const json =
+                R"({"asset":{"version":"2.0"},"scene":0,"scenes":[{"nodes":[0]}],)"
+                R"("nodes":[{"name":"inst_mesh","mesh":0}],)"
+                R"("meshes":[{"primitives":[{"attributes":{"POSITION":0}}]}],)"
+                R"("accessors":[{"bufferView":0,"componentType":5126,"count":3,"type":"VEC3",)"
+                R"("min":[0,0,0],"max":[1,1,1]}],)"
+                R"("bufferViews":[{"buffer":0,"byteOffset":0,"byteLength":36}],)"
+                R"("buffers":[{"byteLength":36}]})";
+
+        constexpr size_t kInitialInstances = 4;
+        FilamentInstance* instances[kInitialInstances] = {};
+        FilamentAsset* const asset = assetLoader->createInstancedAsset(
+                reinterpret_cast<uint8_t const*>(json.data()), uint32_t(json.size()),
+                instances, kInitialInstances);
+        ASSERT_NE(asset, nullptr);
+        EXPECT_EQ(asset->getAssetInstanceCount(), kInitialInstances);
+        EXPECT_EQ(asset->popRenderables(nullptr, 0), kInitialInstances);
+
+        FilamentInstance* const extraInstance = assetLoader->createInstance(asset);
+        ASSERT_NE(extraInstance, nullptr);
+        EXPECT_EQ(asset->getAssetInstanceCount(), kInitialInstances + 1);
+        EXPECT_EQ(asset->popRenderables(nullptr, 0), kInitialInstances + 1);
+
+        std::vector<utils::Entity> ready(kInitialInstances + 1);
+        EXPECT_EQ(asset->popRenderables(ready.data(), ready.size()), kInitialInstances + 1);
+        EXPECT_EQ(asset->popRenderables(nullptr, 0), 0u);
+
+        assetLoader->destroyAsset(asset);
+        AssetLoader::destroy(&assetLoader);
+    }
+}
+
+TEST_F(glTFIOTest, ParallelMeshoptDecoding) {
+    constexpr size_t kViewCount = 8;
+    constexpr size_t kVertexCount = 16;
+    constexpr size_t kStride = 12;
+
+    std::vector<std::vector<float>> expectedViews(kViewCount);
+    std::vector<std::vector<uint8_t>> encodedPayloads(kViewCount);
+    std::vector<cgltf_buffer> buffers(kViewCount);
+    std::vector<cgltf_buffer_view> views(kViewCount);
+
+    for (size_t i = 0; i < kViewCount; ++i) {
+        expectedViews[i].resize(kVertexCount * 3);
+        for (size_t v = 0; v < kVertexCount * 3; ++v) {
+            expectedViews[i][v] = float(i * 100 + v);
+        }
+        encodedPayloads[i].resize(meshopt_encodeVertexBufferBound(kVertexCount, kStride));
+        size_t const encodedSize = meshopt_encodeVertexBuffer(
+                encodedPayloads[i].data(), encodedPayloads[i].size(),
+                expectedViews[i].data(), kVertexCount, kStride);
+        ASSERT_GT(encodedSize, 0u);
+        encodedPayloads[i].resize(encodedSize);
+
+        buffers[i] = {};
+        buffers[i].data = encodedPayloads[i].data();
+        buffers[i].size = encodedPayloads[i].size();
+
+        views[i] = {};
+        views[i].has_meshopt_compression = true;
+        views[i].meshopt_compression.buffer = &buffers[i];
+        views[i].meshopt_compression.offset = 0;
+        views[i].meshopt_compression.size = encodedPayloads[i].size();
+        views[i].meshopt_compression.stride = kStride;
+        views[i].meshopt_compression.count = kVertexCount;
+        views[i].meshopt_compression.mode = cgltf_meshopt_compression_mode_attributes;
+        views[i].meshopt_compression.filter = cgltf_meshopt_compression_filter_none;
+    }
+
+    cgltf_data data{};
+    data.buffer_views = views.data();
+    data.buffer_views_count = views.size();
+
+    bool decoded = false;
+    ASSERT_TRUE(utility::decodeMeshoptCompression(&data, &decoded, &mEngine->getJobSystem()));
+    EXPECT_TRUE(decoded);
+
+    // Calling decodeMeshoptCompression again on already-decoded views must be a no-op.
+    std::vector<void*> firstPassPointers(kViewCount);
+    for (size_t i = 0; i < kViewCount; ++i) {
+        firstPassPointers[i] = views[i].data;
+    }
+    bool decodedAgain = true;
+    ASSERT_TRUE(utility::decodeMeshoptCompression(&data, &decodedAgain, &mEngine->getJobSystem()));
+    EXPECT_FALSE(decodedAgain);
+
+    for (size_t i = 0; i < kViewCount; ++i) {
+        ASSERT_EQ(views[i].data, firstPassPointers[i]);
+        EXPECT_EQ(std::memcmp(views[i].data, expectedViews[i].data(), kVertexCount * kStride), 0);
+        free(views[i].data);
+        views[i].data = nullptr;
+    }
+
+    // Corrupt a later bufferView's compressed payload and verify failure is atomic: earlier views
+    // that decoded cleanly must also have their temporary buffers freed and view.data left null.
+    std::fill(encodedPayloads[kViewCount / 2].begin(), encodedPayloads[kViewCount / 2].end(), 0xff);
+    decoded = false;
+    EXPECT_FALSE(utility::decodeMeshoptCompression(&data, &decoded, &mEngine->getJobSystem()));
+    EXPECT_FALSE(decoded);
+    for (size_t i = 0; i < kViewCount; ++i) {
+        EXPECT_EQ(views[i].data, nullptr);
+    }
 }
 
 #undef EXPECT_FLOAT3_EQ

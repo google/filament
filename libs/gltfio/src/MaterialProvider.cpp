@@ -135,6 +135,16 @@ void constrainMaterial(MaterialKey* key, UvMap* uvmap) {
             key->anisotropyUV, key->hasAnisotropyTexture, "anisotropyTexture");
     key->anisotropyUV = clampUv(key->anisotropyUV);
 
+    key->hasDiffuseTransmissionTexture = constrainTexture(
+            key->diffuseTransmissionUV, key->hasDiffuseTransmissionTexture,
+            "diffuseTransmissionTexture");
+    key->diffuseTransmissionUV = clampUv(key->diffuseTransmissionUV);
+
+    key->hasDiffuseTransmissionColorTexture = constrainTexture(
+            key->diffuseTransmissionColorUV, key->hasDiffuseTransmissionColorTexture,
+            "diffuseTransmissionColorTexture");
+    key->diffuseTransmissionColorUV = clampUv(key->diffuseTransmissionColorUV);
+
     // NOTE: KHR_materials_clearcoat does not provide separate UVs, we'll assume UV0
     *uvmap = retval;
 }
@@ -172,6 +182,8 @@ void processShaderString(std::string* shader, const UvMap& uvmap, const Material
     const auto& iridescenceUV = getUvString(config.iridescenceUV);
     const auto& iridescenceThicknessUV = getUvString(config.iridescenceThicknessUV);
     const auto& anisotropyUV = getUvString(config.anisotropyUV);
+    const auto& diffuseTransmissionUV = getUvString(config.diffuseTransmissionUV);
+    const auto& diffuseTransmissionColorUV = getUvString(config.diffuseTransmissionColorUV);
 
     replaceAll("${normal}", normalUV);
     replaceAll("${color}", baseColorUV);
@@ -191,6 +203,8 @@ void processShaderString(std::string* shader, const UvMap& uvmap, const Material
     replaceAll("${iridescence}", iridescenceUV);
     replaceAll("${iridescenceThickness}", iridescenceThicknessUV);
     replaceAll("${anisotropy}", anisotropyUV);
+    replaceAll("${diffuseTransmission}", diffuseTransmissionUV);
+    replaceAll("${diffuseTransmissionColor}", diffuseTransmissionColorUV);
 }
 
 } // namespace filament::gltfio

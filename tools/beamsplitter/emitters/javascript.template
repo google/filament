@@ -101,7 +101,7 @@ Filament.loadGeneratedExtensions = function() {
 {{define "TsEnum"}}
 {{.Description}}export enum {{ jsprefix }}{{ qualifiedtype .QualifiedName }} {
 {{- range .Values}}
-    {{ .Name }},{{if .Description}} // {{.Description}}{{end}}
+    {{ .Name }}{{if .ExplicitValue}} = {{.ExplicitValue}}{{end}},{{if .Description}} // {{.Description}}{{end}}
 {{- end }}
 }
 {{end}}

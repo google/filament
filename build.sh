@@ -643,10 +643,20 @@ function build_android {
     pushd android > /dev/null
 
     if [[ "${ISSUE_DEBUG_BUILD}" == "true" ]]; then
+        local sample_targets=()
+        local skip_samples_option="-Pcom.google.android.filament.skip-samples"
+        if [[ "${BUILD_ANDROID_SAMPLES}" == "true" ]]; then
+            skip_samples_option=""
+            for sample in ${ANDROID_SAMPLES}; do
+                sample_targets+=(":samples:${sample}:assembleDebug")
+            done
+        fi
+
         ./gradlew \
             -Pcom.google.android.filament.dist-dir=../out/android-debug/filament \
             -Pcom.google.android.filament.tools-dir=${root_dir}/out/debug/filament \
             -Pcom.google.android.filament.abis=${ABI_GRADLE_OPTION} \
+            ${skip_samples_option} \
             ${VULKAN_ANDROID_GRADLE_OPTION} \
             ${WEBGPU_ANDROID_GRADLE_OPTION} \
             ${MATDBG_GRADLE_OPTION} \
@@ -655,25 +665,9 @@ function build_android {
             ${MUTEX_DEBUG_GRADLE_OPTION} \
             :filament-android:assembleDebug \
             :gltfio-android:assembleDebug \
-            :filament-utils-android:assembleDebug
-
-        ./gradlew \
-            -Pcom.google.android.filament.dist-dir=../out/android-debug/filament \
-            -Pcom.google.android.filament.tools-dir=${root_dir}/out/debug/filament \
-            -Pcom.google.android.filament.abis=${ABI_GRADLE_OPTION} \
-            ${WEBGPU_ANDROID_GRADLE_OPTION} \
-            :filamat-android:assembleDebug
-
-        if [[ "${BUILD_ANDROID_SAMPLES}" == "true" ]]; then
-            for sample in ${ANDROID_SAMPLES}; do
-                ./gradlew \
-                    -Pcom.google.android.filament.dist-dir=../out/android-debug/filament \
-                   -Pcom.google.android.filament.tools-dir=${root_dir}/out/debug/filament \
-                    -Pcom.google.android.filament.abis=${ABI_GRADLE_OPTION} \
-                    ${MATOPT_GRADLE_OPTION} \
-                    :samples:${sample}:assembleDebug
-            done
-        fi
+            :filament-utils-android:assembleDebug \
+            :filamat-android:assembleDebug \
+            "${sample_targets[@]}"
 
         if [[ "${INSTALL_COMMAND}" ]]; then
             echo "Installing out/filamat-android-debug.aar..."
@@ -699,10 +693,20 @@ function build_android {
     fi
 
     if [[ "${ISSUE_RELEASE_BUILD}" == "true" ]]; then
+        local sample_targets=()
+        local skip_samples_option="-Pcom.google.android.filament.skip-samples"
+        if [[ "${BUILD_ANDROID_SAMPLES}" == "true" ]]; then
+            skip_samples_option=""
+            for sample in ${ANDROID_SAMPLES}; do
+                sample_targets+=(":samples:${sample}:assembleRelease")
+            done
+        fi
+
         ./gradlew \
             -Pcom.google.android.filament.dist-dir=../out/android-release/filament \
             -Pcom.google.android.filament.tools-dir=${root_dir}/out/release/filament \
             -Pcom.google.android.filament.abis=${ABI_GRADLE_OPTION} \
+            ${skip_samples_option} \
             ${VULKAN_ANDROID_GRADLE_OPTION} \
             ${WEBGPU_ANDROID_GRADLE_OPTION} \
             ${MATDBG_GRADLE_OPTION} \
@@ -711,25 +715,9 @@ function build_android {
             ${MUTEX_DEBUG_GRADLE_OPTION} \
             :filament-android:assembleRelease \
             :gltfio-android:assembleRelease \
-            :filament-utils-android:assembleRelease
-
-        ./gradlew \
-            -Pcom.google.android.filament.dist-dir=../out/android-release/filament \
-            -Pcom.google.android.filament.tools-dir=${root_dir}/out/release/filament \
-            -Pcom.google.android.filament.abis=${ABI_GRADLE_OPTION} \
-            ${WEBGPU_ANDROID_GRADLE_OPTION} \
-            :filamat-android:assembleRelease
-
-        if [[ "${BUILD_ANDROID_SAMPLES}" == "true" ]]; then
-            for sample in ${ANDROID_SAMPLES}; do
-                ./gradlew \
-                    -Pcom.google.android.filament.dist-dir=../out/android-release/filament \
-                    -Pcom.google.android.filament.tools-dir=${root_dir}/out/release/filament \
-                    -Pcom.google.android.filament.abis=${ABI_GRADLE_OPTION} \
-                    ${MATOPT_GRADLE_OPTION} \
-                    :samples:${sample}:assembleRelease
-            done
-        fi
+            :filament-utils-android:assembleRelease \
+            :filamat-android:assembleRelease \
+            "${sample_targets[@]}"
 
         if [[ "${INSTALL_COMMAND}" ]]; then
             echo "Installing out/filamat-android-release.aar..."

@@ -92,15 +92,7 @@ void postProcess(inout PostProcessInputs postProcess) {
     hdr[2] = 1.0 / (1.0 + max3(s10.rgb));
     hdr[3] = 1.0 / (1.0 + max3(s00.rgb));
 
-    vec4 d;
-#if defined(FILAMENT_HAS_FEATURE_TEXTURE_GATHER)
-    d = textureGather(materialParams_depth, uv, 0); // 01, 11, 10, 00
-#else
-    d[0] = textureLodOffset(materialParams_depth, uv, 0.0, ivec2(0, 1)).r;
-    d[1] = textureLodOffset(materialParams_depth, uv, 0.0, ivec2(1, 1)).r;
-    d[2] = textureLodOffset(materialParams_depth, uv, 0.0, ivec2(1, 0)).r;
-    d[3] = textureLodOffset(materialParams_depth, uv, 0.0, ivec2(0, 0)).r;
-#endif
+    vec4 d = filament_textureGatherLodOffset(materialParams_depth, uv, 0); // 01, 11, 10, 00
 
     // Get the CoC radius of each four samples to downsample.
     // We multiply by 0.5 to convert from diameter to radius.

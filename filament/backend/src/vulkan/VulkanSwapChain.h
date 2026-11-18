@@ -37,6 +37,7 @@ using namespace bluevk;
 namespace filament::backend {
 
 class VulkanCommands;
+struct VulkanFramebuffer;
 
 // A wrapper around the platform implementation of swapchain.
 struct VulkanSwapChain : public HwSwapChain, fvkmemory::Resource {
@@ -92,8 +93,16 @@ struct VulkanSwapChain : public HwSwapChain, fvkmemory::Resource {
         mFrameScheduled.callback = std::make_shared<FrameScheduledCallback>(std::move(callback));
     }
 
+    // Returns the framebuffer for the current swapchain image, or a null pointer if none has been
+    // set yet.
+    fvkmemory::resource_ptr<VulkanFramebuffer> getCurrentFramebuffer() const noexcept;
+
+    // Sets the framebuffer for the current swapchain image. The swapchain keeps the framebuffer
+    // until the backing images change or the swapchain is destroyed.
+    void setCurrentFramebuffer(fvkmemory::resource_ptr<VulkanFramebuffer> framebuffer) noexcept;
+
 private:
-	static constexpr int IMAGE_READY_SEMAPHORE_COUNT = FVK_MAX_COMMAND_BUFFERS;
+    static constexpr int IMAGE_READY_SEMAPHORE_COUNT = FVK_MAX_COMMAND_BUFFERS;
 
     void update();
 
@@ -117,6 +126,12 @@ private:
     // transitions, which are useful here.
     utils::FixedCapacityVector<fvkmemory::resource_ptr<VulkanTexture>> mColors;
     utils::FixedCapacityVector<fvkmemory::resource_ptr<VulkanSemaphore>> mFinishedDrawing;
+
+    // One framebuffer per swapchain image, created lazily. These are owned by the swapchain rather
+    // than VulkanFboCache so that they are never evicted. A single framebuffer is reused for every
+    // render pass on its image, which is valid because those render passes are all compatible:
+    // the swapchain fixes the attachments, and swapchain render passes have no subpasses.
+    utils::FixedCapacityVector<fvkmemory::resource_ptr<VulkanFramebuffer>> mFramebuffers;
     fvkmemory::resource_ptr<VulkanTexture> mDepth;
     VkExtent2D mExtent;
     uint32_t mLayerCount;

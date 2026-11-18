@@ -812,7 +812,6 @@ void FRenderer::renderJob(DriverApi& driver, LinearAllocatorArena& arena, FView&
     auto aoOptions = view.getAmbientOcclusionOptions();
     auto taaOptions = view.getTemporalAntiAliasingOptions();
     auto vignetteOptions = view.getVignetteOptions();
-    auto colorGrading = view.getColorGrading();
     auto ssReflectionsOptions = view.getScreenSpaceReflectionsOptions();
     auto guardBandOptions = view.getGuardBandOptions();
     const bool isRenderingMultiview = view.hasStereo() &&
@@ -906,6 +905,8 @@ void FRenderer::renderJob(DriverApi& driver, LinearAllocatorArena& arena, FView&
     if (svp.empty()) {
         return;
     }
+
+    FColorGrading const* const colorGrading = hasColorGrading ? view.getColorGrading() : nullptr;
 
     // xvp is the viewport relative to svp containing the "interesting" rendering
     filament::Viewport xvp = svp;
@@ -1104,6 +1105,9 @@ void FRenderer::renderJob(DriverApi& driver, LinearAllocatorArena& arena, FView&
     RenderPass::RenderFlags renderFlags = 0;
     if (view.hasShadowing())                renderFlags |= RenderPass::HAS_SHADOWING;
     if (view.isFrontFaceWindingInverted())  renderFlags |= RenderPass::HAS_INVERSE_FRONT_FACES;
+    if (UTILS_UNLIKELY(view.hasFog() && engine.features.material.enable_fog_as_postprocess)) {
+        renderFlags |= RenderPass::HAS_FOG_AS_POSTPROCESS;
+    }
 
     RenderPassBuilder passBuilder(commandArena);
     passBuilder.renderFlags(renderFlags);
@@ -1116,8 +1120,6 @@ void FRenderer::renderJob(DriverApi& driver, LinearAllocatorArena& arena, FView&
     passBuilder.dynamicSpecConstKey(specKey);
 
     Variant variant;
-    // TODO: Remove this after FOG is fully transferred to spec constant
-    variant.setFog(false);
     variant.setShadowSampler2D(view.hasShadowing() && view.getShadowType() != ShadowType::PCF);
     variant.setStereo(view.hasStereo());
 
@@ -1280,7 +1282,7 @@ void FRenderer::renderJob(DriverApi& driver, LinearAllocatorArena& arena, FView&
 
     if (ssReflectionsOptions.enabled) {
         auto reflections = ppm.ssr(fg, passBuilder,
-                view.getFrameHistory(), structure,
+                view.getFrameHistory(), view.getFrameUniforms(), structure,
                 { .width = svp.width, .height = svp.height });
 
         if (UTILS_LIKELY(reflections)) {

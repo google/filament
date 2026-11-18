@@ -211,6 +211,49 @@ TEST(MaterialParser, AcceptValidCustomBlendFunction) {
     EXPECT_EQ(functions[3], backend::BlendFunction::ONE);
 }
 
+TEST(MaterialParser, EmptyMaterialSourceFrame) {
+    auto const makeMaterialSourcePackage = [](std::vector<uint8_t> const& zstdPayload) {
+        std::vector<uint8_t> package;
+        auto const append = [&package](uint64_t const v, size_t const size) {
+            for (size_t i = 0; i < size; i++) {
+                package.push_back(uint8_t(v >> (8 * i)));
+            }
+        };
+        append(filamat::MaterialSource, sizeof(uint64_t));
+        append(sizeof(uint64_t) + zstdPayload.size(), sizeof(uint32_t));
+        append(zstdPayload.size(), sizeof(uint64_t));
+        package.insert(package.end(), zstdPayload.begin(), zstdPayload.end());
+        return package;
+    };
+
+    // Valid 9-byte Zstd frame encoding 0 decompressed bytes (`zstd --no-check` of "").
+    std::vector<uint8_t> const validEmptyZstdFrame = {
+        0x28, 0xB5, 0x2F, 0xFD, 0x20, 0x00, 0x01, 0x00, 0x00
+    };
+    {
+        std::vector<uint8_t> const package = makeMaterialSourcePackage(validEmptyZstdFrame);
+        MaterialParser parser({ backend::ShaderLanguage::ESSL3 }, package.data(), package.size());
+        EXPECT_EQ(parser.parse(), MaterialParser::ParseResult::ERROR_MISSING_BACKEND);
+
+        utils::CString source("non-empty");
+        ASSERT_TRUE(parser.getSourceShader(&source));
+        EXPECT_TRUE(source.empty());
+    }
+
+    // Corrupt 0-byte Zstd frame (declares 0 content bytes in header, invalid block header).
+    std::vector<uint8_t> const corruptEmptyZstdFrame = {
+        0x28, 0xB5, 0x2F, 0xFD, 0x20, 0x00, 0xFF, 0xFF, 0xFF
+    };
+    {
+        std::vector<uint8_t> const package = makeMaterialSourcePackage(corruptEmptyZstdFrame);
+        MaterialParser parser({ backend::ShaderLanguage::ESSL3 }, package.data(), package.size());
+        EXPECT_EQ(parser.parse(), MaterialParser::ParseResult::ERROR_MISSING_BACKEND);
+
+        utils::CString source;
+        EXPECT_FALSE(parser.getSourceShader(&source));
+    }
+}
+
 int main(int argc, char** argv) {
     ::testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();
