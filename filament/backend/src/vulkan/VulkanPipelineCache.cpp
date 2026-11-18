@@ -168,6 +168,74 @@ void printPipelineFeedbackInfo(VkPipelineCreationFeedbackCreateInfo const& feedb
 }
 #endif
 
+/**
+ * Queries the total binary size (in bytes) of a compiled VkPipeline
+ * using the VK_KHR_pipeline_binary extension. Returns 0 if unsupported or on error.
+ */
+size_t queryPipelineBinarySize(VkDevice device, VkPipeline pipeline) noexcept {
+    if (pipeline == VK_NULL_HANDLE ||
+        !vkCreatePipelineBinariesKHR ||
+        !vkGetPipelineBinaryDataKHR ||
+        !vkDestroyPipelineBinaryKHR) {
+        return 0;
+    }
+
+    VkPipelineBinaryCreateInfoKHR binaryCreateInfo = {
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_BINARY_CREATE_INFO_KHR,
+        .pNext = nullptr,
+        .pKeysAndDataInfo = nullptr,
+        .pipeline = pipeline,
+        .pPipelineCreateInfo = nullptr,
+    };
+
+    VkPipelineBinaryHandlesInfoKHR handlesInfo = {
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_BINARY_HANDLES_INFO_KHR,
+        .pNext = nullptr,
+        .pipelineBinaryCount = 0,
+        .pPipelineBinaries = nullptr,
+    };
+
+    // Query the number of binaries associated with this pipeline
+    VkResult result = vkCreatePipelineBinariesKHR(device, &binaryCreateInfo, nullptr, &handlesInfo);
+    if (result != VK_SUCCESS || handlesInfo.pipelineBinaryCount == 0) {
+        return 0;
+    }
+
+    // Allocate storage and retrieve the binary handles
+    std::vector<VkPipelineBinaryKHR> binaries(handlesInfo.pipelineBinaryCount);
+    handlesInfo.pPipelineBinaries = binaries.data();
+
+    result = vkCreatePipelineBinariesKHR(device, &binaryCreateInfo, nullptr, &handlesInfo);
+    if (result != VK_SUCCESS) {
+        return 0;
+    }
+
+    // Query the byte size of each binary and destroy its handle
+    size_t totalSize = 0;
+    for (uint32_t i = 0; i < handlesInfo.pipelineBinaryCount; ++i) {
+        VkPipelineBinaryKHR binary = binaries[i];
+        if (binary == VK_NULL_HANDLE) {
+            continue;
+        }
+
+        VkPipelineBinaryDataInfoKHR dataInfo = {
+            .sType = VK_STRUCTURE_TYPE_PIPELINE_BINARY_DATA_INFO_KHR,
+            .pNext = nullptr,
+            .pipelineBinary = binary,
+        };
+
+        size_t binarySize = 0;
+        if (vkGetPipelineBinaryDataKHR(device, &dataInfo, nullptr, &binarySize, nullptr) == VK_SUCCESS) {
+            totalSize += binarySize;
+        }
+
+        vkDestroyPipelineBinaryKHR(device, binary, nullptr);
+    }
+
+    return totalSize;
+}
+
+
 } // namespace
 
 VulkanPipelineCache::VulkanPipelineCache(DriverBase& driver, VulkanPlatform& platform,
@@ -251,14 +319,22 @@ VulkanPipelineCache::PipelineCacheEntry* VulkanPipelineCache::getOrCreatePipelin
         pipeline.lastUsed = mCurrentTime;
         FILAMENT_TRACING_EVENT(FILAMENT_TRACING_CATEGORY_FILAMENT,
                 "Pipeline(Hit)", "program", mBoundProgram.c_str_safe());
+        
+        // if on, store the binary size. Note outBinarySize is allowed to be null
+        // for the prewarm use case where we don't cache the info about the pipeline
+        if (mContext.isPipelineBinarySupported()) {
+            pipeline.binarySize = queryPipelineBinarySize(mDevice, pipeline.handle);
+        }
         return &pipeline;
     }
     FILAMENT_TRACING_EVENT(FILAMENT_TRACING_CATEGORY_FILAMENT,
             "Pipeline(Miss)", "program", mBoundProgram.c_str_safe());
     PipelineCacheEntry cacheEntry {
-        .handle = createPipeline(mStaticPipelineKey),
+        .handle = VK_NULL_HANDLE,
         .lastUsed = mCurrentTime,
     };
+    cacheEntry.handle = createPipeline(mStaticPipelineKey, &cacheEntry.binarySize);
+
     assert_invariant(cacheEntry.handle != VK_NULL_HANDLE && "Pipeline handle is VK_NULL_HANDLE");
     return &mPipelines.emplace(mStaticPipelineKey, cacheEntry).first.value();
 }
@@ -379,7 +455,7 @@ void VulkanPipelineCache::asyncPrewarmCache(
                 return;
             }
 
-            VkPipeline pipeline = createPipeline(key, dynamicOptions);
+            VkPipeline pipeline = createPipeline(key, dynamicOptions, nullptr);
             mCallbackManager.put(cmh);
             // We don't actually need this pipeline, we just wanted to force the
             // driver to cache the pipeline's information.
@@ -393,7 +469,8 @@ void VulkanPipelineCache::asyncPrewarmCache(
 }
 
 VkPipeline VulkanPipelineCache::createPipeline(
-        const PipelineKey& key, const PipelineDynamicOptions& dynamicOptions) noexcept {
+        const PipelineKey& key, const PipelineDynamicOptions& dynamicOptions,
+        size_t* outBinarySize) noexcept {
     assert_invariant(key.shaders[0] && "Vertex shader is not bound.");
     assert_invariant(key.layout && "No pipeline layout specified");
 
@@ -659,6 +736,13 @@ VkPipeline VulkanPipelineCache::createPipeline(
         FVK_LOGE << "vkCreateGraphicsPipelines error " << error;
         return VK_NULL_HANDLE;
     }
+
+    // if on, store the binary size. Note outBinarySize is allowed to be null
+    // for the prewarm use case where we don't cache the info about the pipeline
+    if (mContext.isPipelineBinarySupported() && outBinarySize != nullptr) {
+        *outBinarySize = queryPipelineBinarySize(mDevice, pipeline);
+    }
+
     mPipelinesCreated.fetch_add(1, std::memory_order_relaxed);
     return pipeline;
 }

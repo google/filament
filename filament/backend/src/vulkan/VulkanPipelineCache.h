@@ -244,6 +244,7 @@ private:
     struct PipelineCacheEntry {
         VkPipeline handle;
         Timestamp lastUsed;
+        size_t binarySize;
     };
 
     using PipelineMap = tsl::robin_map<PipelineKey, PipelineCacheEntry,
@@ -256,12 +257,13 @@ private:
     // Creates a pipeline, with all optional dynamic pipeline states diabled.
     // Note - because PipelineDynamicOptions is defined within VulkanPipelineCache,
     // we cannot define the function with a default arg for it explicitly.
-    inline VkPipeline createPipeline(const PipelineKey& key) noexcept {
-        return createPipeline(key, {});
+    inline VkPipeline createPipeline(const PipelineKey& key, size_t* outBinarySize) noexcept {
+        return createPipeline(key, {}, outBinarySize);
     }
 
     // These helpers all return unstable pointers that should not be stored.
-    VkPipeline createPipeline(const PipelineKey& key, const PipelineDynamicOptions& dynamicOptions) noexcept;
+    VkPipeline createPipeline(const PipelineKey& key, const PipelineDynamicOptions& dynamicOptions,
+                              size_t* outBinarySize) noexcept;
 
     uint16_t computeDirtyDynamicState() noexcept;
 
