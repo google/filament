@@ -3702,7 +3702,6 @@ TEST_F(glTFIOTest, DestroyAssetReleasesInstanceTransform) {
         EXPECT_TRUE(transforms.hasComponent(instanceRoot));
 
         loader->destroyAsset(asset);
-        loader->gc();
         EXPECT_EQ(before, transforms.getComponentCount());
         EXPECT_FALSE(transforms.hasComponent(assetRoot));
         EXPECT_FALSE(transforms.hasComponent(instanceRoot));
@@ -3734,7 +3733,6 @@ TEST_F(glTFIOTest, DestroyAssetReleasesInstanceTransform) {
         }
 
         loader->destroyAsset(asset);
-        loader->gc();
         EXPECT_EQ(before, transforms.getComponentCount());
         EXPECT_FALSE(em.isAlive(assetRoot));
         for (Entity const root : instanceRoots) {
@@ -3768,7 +3766,6 @@ TEST_F(glTFIOTest, DestroyAssetPreservesDetachedInstanceTransform) {
     EXPECT_TRUE(asset->areFilamentComponentsDetached());
 
     loader->destroyAsset(asset);
-    loader->gc();
 
     // All entities and their transform hierarchy (assetRoot -> instanceRoot -> nodeEntity) must
     // remain alive and intact when Filament components were detached before destroyAsset().
