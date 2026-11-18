@@ -544,7 +544,7 @@ endif()
 # Debug compiler flags
 # ==================================================================================================
 if (FILAMENT_ENABLE_ASAN_UBSAN)
-   set(EXTRA_SANITIZE_OPTIONS "-fsanitize=address -fsanitize=undefined -O1 -fno-omit-frame-pointer")
+   set(EXTRA_SANITIZE_OPTIONS "-fsanitize=address -fsanitize=undefined -O1 -fno-omit-frame-pointer -Wno-pass-failed")
 endif()
 if (FILAMENT_ENABLE_TSAN)
    set(EXTRA_SANITIZE_OPTIONS "-fsanitize=thread")

@@ -383,6 +383,7 @@ class WebRenderer(BaseRenderer):
             f'out/cmake-wasm-debug/samples')
 
     self._server = None
+    self._browser = None
     self._tls = threading.local()
     self._rasterizer_lock = threading.Lock()
     self.rasterizer = None
@@ -406,9 +407,9 @@ class WebRenderer(BaseRenderer):
 
   # ---------------------------------------------------------------- browser lifecycle
 
-  @staticmethod
-  def _check_browser_version(browser):
-    version = browser.version
+  def _check_browser_version(self, browser=None):
+    target = browser if browser is not None else self._browser
+    version = target.version
     if version == EXPECTED_BROWSER_VERSION:
       return
     if os.environ.get('RDIFF_ALLOW_ANY_BROWSER') == '1':
