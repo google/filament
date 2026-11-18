@@ -116,6 +116,23 @@ jobs:
       - uses: ./.github/actions/ccache-stats
         if: ${{ !cancelled() }}
 
+  build-windows-arm64:
+    name: build-windows-arm64
+    runs-on: 'windows-11-arm'
+    needs: [check-verification]
+    if: always() && !cancelled() && !needs.check-verification.outputs.skip
+    # No ccache here: the ccache action installs the x64 Chocolatey package, which would run under
+    # emulation on this runner.
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Run build script
+        run: |
+          build\windows\build-github.bat presubmit arm64
+        shell: cmd
+
   build-android:
     name: build-android
     runs-on: 'ubuntu-24.04-8core'

@@ -23,9 +23,11 @@ jobs:
               repo: context.repo.repo,
               run_id: context.payload.workflow_run.id
             });
-            const job = jobs.find(j => j.name === 'build-windows');
-            if (job && job.conclusion !== 'success') {
-              core.setFailed(`Windows build failed: ${job.conclusion}`);
-            } else if (!job) {
-              core.warning(`Job build-windows not found in the workflow run.`);
+            for (const name of ['build-windows', 'build-windows-arm64']) {
+              const job = jobs.find(j => j.name === name);
+              if (job && job.conclusion !== 'success') {
+                core.setFailed(`Windows build (${name}) failed: ${job.conclusion}`);
+              } else if (!job) {
+                core.warning(`Job ${name} not found in the workflow run.`);
+              }
             }

@@ -382,3 +382,21 @@ jobs:
         with:
           name: filament-windows
           path: out/filament-windows.tgz
+
+  build-windows-arm64:
+    name: build-windows-arm64
+    runs-on: 'windows-11-arm'
+    # No ccache here: the ccache action installs the x64 Chocolatey package, which would run under
+    # emulation on this runner.
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - name: Run build script
+        run: |
+          build\windows\build-github.bat continuous arm64
+        shell: cmd
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: filament-windows-arm64
+          path: out/filament-windows-arm64.tgz
