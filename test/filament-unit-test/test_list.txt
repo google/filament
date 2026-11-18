@@ -17,7 +17,7 @@
 # --gtest_filter argument, it is preserved under test.sh -f.
 #
 # The slowest entries come first so that they start first when there are fewer CPUs than jobs.
-shards=6 tools/cmgen/test_cmgen compare
+shards=3 tools/cmgen/test_cmgen compare
 shards=16 libs/filamat/test_filamat
 # Some of these tests render, such as RenderingTest. See README.md for what they need.
 shards=6 filament/test/test_filament
