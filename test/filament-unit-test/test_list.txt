@@ -12,12 +12,17 @@
 # for the CPU with the other test processes. The prefixes can be combined, in which case the
 # shards of an exclusive binary also run one at a time.
 #
+# A leading partition=<pattern> splits a binary by gtest filter so that only the CPU-sensitive
+# subset needs exclusive execution while the rest runs concurrently; unlike a trailing
+# --gtest_filter argument, it is preserved under test.sh -f.
+#
 # The slowest entries come first so that they start first when there are fewer CPUs than jobs.
-shards=3 tools/cmgen/test_cmgen compare
-shards=8 libs/filamat/test_filamat
+shards=6 tools/cmgen/test_cmgen compare
+shards=16 libs/filamat/test_filamat
 # Some of these tests render, such as RenderingTest. See README.md for what they need.
-shards=4 filament/test/test_filament
-exclusive libs/utils/test_utils
+shards=6 filament/test/test_filament
+partition=-JobSystem* libs/utils/test_utils
+exclusive partition=JobSystem* libs/utils/test_utils
 libs/filament-matp/test_matp
 libs/viewer/test_settings
 libs/math/test_math

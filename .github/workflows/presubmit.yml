@@ -41,6 +41,8 @@ jobs:
       renderdiff-config: ${{ steps.check.outputs.renderdiff-config }}
       renderdiff-run: ${{ steps.check.outputs.renderdiff-run }}
       renderdiff-platforms: ${{ steps.check.outputs.renderdiff-platforms }}
+      renderdiff-accept: ${{ steps.check.outputs.renderdiff-accept }}
+      renderdiff-golden-branch: ${{ steps.check.outputs.renderdiff-golden-branch }}
       code-correctness: ${{ steps.check.outputs.code-correctness }}
       check-headers: ${{ steps.check.outputs.check-headers }}
       test-backend: ${{ steps.check.outputs.test-backend }}
@@ -54,6 +56,7 @@ jobs:
             const RUN_ALL_LABEL = 'run all presubmits';
             const { owner, repo } = context.repo;
             let changedFiles = null;
+            let pushCommitMessage = '';
 
             if (context.eventName === 'push') {
               const { data } = await github.rest.repos.getCommit({
@@ -64,8 +67,11 @@ jobs:
               if (data.commit.verification.verified) {
                 core.setOutput('skip', 'true');
                 core.setOutput('renderdiff-platforms', JSON.stringify(['desktop', 'web']));
+                core.setOutput('renderdiff-accept', 'false');
+                core.setOutput('renderdiff-golden-branch', 'main');
                 return;
               }
+              pushCommitMessage = data.commit.message || '';
               // GitHub's getCommit API caps the files list at 300 entries. If the commit
               // touches fewer than 300 files and is not a file-less merge, we can classify
               // its exact path list; otherwise fall back to running all jobs.
@@ -366,6 +372,10 @@ jobs:
                 jobs['check-headers'] = true;
                 return;
               }
+              if (file === 'test/code-correctness/headers-inclusion.sh') {
+                jobs['build-linux'] = true;
+                return;
+              }
               if (matchesGlob(file, ['test/{code-correctness,filament-unit-test}/**'])) {
                 jobs['code-correctness'] = true;
                 return;
@@ -382,27 +392,29 @@ jobs:
                 return;
               }
 
-              // Desktop/Android samples and sample assets (excluded from default iOS, WASM, and backend test builds)
+              // Desktop/Android samples and sample assets (excluded from default iOS, WASM,
+              // code-correctness unit tests, and backend test builds)
               if (matchesGlob(file, ['{samples,assets}/**'])) {
                 jobs['build-mac'] = true;
                 jobs['build-linux'] = true;
                 jobs['build-windows'] = true;
                 jobs['build-android'] = true;
-                jobs['code-correctness'] = true;
                 jobs['renderdiff-config'] = true;
                 jobs['renderdiff-desktop'] = true;
                 jobs['renderdiff-web'] = true;
                 return;
               }
 
-              // Host-only tools not built as prebuilts by Android, iOS, WASM, renderdiff, or backend tests
+              // Host tools: only tools built or exercised by unit tests need code-correctness.
               if (matchesGlob(file, [
                 'tools/**',
               ])) {
                 jobs['build-mac'] = true;
                 jobs['build-linux'] = true;
                 jobs['build-windows'] = true;
-                jobs['code-correctness'] = true;
+                if (matchesGlob(file, ['tools/{cmgen,glslminifier,matc,resgen,uberz}/**'])) {
+                  jobs['code-correctness'] = true;
+                }
                 return;
               }
 
@@ -423,11 +435,48 @@ jobs:
             if (jobs['renderdiff-web']) renderdiffPlatforms.push('web');
             const renderdiffRun = renderdiffPlatforms.length > 0;
 
+            // Parse RDIFF_ACCEPT_NEW_GOLDENS and RDIFF_BRANCH here (matching
+            // test/renderdiff/src/commit_msg.py) so test-renderdiff-platform can start immediately
+            // without waiting on a separate VM + checkout in renderdiff-config.
+            let renderdiffAccept = false;
+            let renderdiffGoldenBranch = 'main';
+            if (renderdiffRun || jobs['renderdiff-config']) {
+              let commitBodyText = pushCommitMessage;
+              if (context.eventName === 'pull_request') {
+                const pull_number = context.payload.pull_request.number;
+                const prCommits = await github.paginate(github.rest.pulls.listCommits, {
+                  owner,
+                  repo,
+                  pull_number,
+                  per_page: 100,
+                });
+                commitBodyText = prCommits
+                  .filter(c => (c.parents || []).length <= 1)
+                  .reverse()
+                  .map(c => c.commit.message || '')
+                  .join('\n\n');
+              }
+              const descLines = commitBodyText.split(/\r?\n/).slice(2).map(l => l.trim());
+              while (descLines.length > 0 && descLines[0].length === 0) {
+                descLines.shift();
+              }
+              renderdiffAccept = descLines.some(l => /^RDIFF_ACCEPT_NEW_GOLDENS$/.test(l));
+              for (const l of descLines) {
+                const m = l.match(/^RDIFF_BRANCH\s?=\s?([a-zA-Z0-9\s\-\/]+)/);
+                if (m) {
+                  renderdiffGoldenBranch = m[1].replace(/\s+/g, '') || 'main';
+                  break;
+                }
+              }
+            }
+
             for (const [key, val] of Object.entries(jobs)) {
               if (key === 'renderdiff-desktop' || key === 'renderdiff-web') continue;
               core.setOutput(key, val ? 'true' : 'false');
             }
             core.setOutput('renderdiff-run', renderdiffRun ? 'true' : 'false');
+            core.setOutput('renderdiff-accept', renderdiffAccept ? 'true' : 'false');
+            core.setOutput('renderdiff-golden-branch', renderdiffGoldenBranch);
             // Always emit a non-empty JSON array so GitHub Actions matrix evaluation
             // never fails on an empty vector when test-renderdiff-platform is skipped.
             core.setOutput(
@@ -469,7 +518,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
-          fetch-depth: 0
+          fetch-depth: 1
           persist-credentials: false
       - uses: ./.github/actions/linux-prereq
       - uses: ./.github/actions/ccache
@@ -485,6 +534,12 @@ jobs:
       # already has the WebGPU backend and the WGSL code path in filamat.
       - name: Test - WGSL material compiler
         run: out/cmake-release/libs/filamat/test_filamat --gtest_filter=MaterialCompiler.Wgsl*
+      # Verify public header self-containment from the already-built release tree rather than
+      # compiling a duplicate release tree inside test-code-correctness.
+      - name: Check - public header inclusion
+        run: |
+          ninja -C out/cmake-release install
+          bash test/code-correctness/headers-inclusion.sh out/release/filament/include
       - uses: ./.github/actions/ccache-stats
         if: ${{ !cancelled() }}
 
@@ -626,14 +681,9 @@ jobs:
       - uses: ./.github/actions/ccache-stats
         if: ${{ !cancelled() }}
 
-  # Cheap gate for test-renderdiff below. It exists so that the expensive job can be skipped whole
-  # rather than step by step: a RDIFF_ACCEPT_NEW_GOLDENS commit used to allocate the renderdiff
-  # runner and check the repository out only to do nothing, which is worth avoiding now that the
-  # runner is a paid one.
-  #
-  # The schema validation lives here for the same reason. It needs no build, only the glTF assets
-  # and under a second of Python, so a typo in a test JSON should fail within a minute rather than
-  # at the end of the longest job in the workflow.
+  # Fast schema validation for renderdiff JSON suites. Commit-message tags (RDIFF_BRANCH and
+  # RDIFF_ACCEPT_NEW_GOLDENS) are parsed directly in check-verification so test-renderdiff-platform
+  # can start immediately in parallel with this job instead of waiting on its checkout.
   renderdiff-config:
     name: renderdiff-config
     runs-on: 'ubuntu-24.04'
@@ -641,33 +691,11 @@ jobs:
     if: >
       always() && !cancelled() && !needs.check-verification.outputs.skip
       && needs.check-verification.outputs.renderdiff-config == 'true'
-    outputs:
-      accept: ${{ steps.check_accept.outputs.accept }}
-      golden-branch: ${{ steps.check_accept.outputs.branch }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
-          fetch-depth: 0
+          fetch-depth: 1
           persist-credentials: false
-      - id: get_commit_msg
-        uses: ./.github/actions/get-commit-msg
-      - name: Read the renderdiff commit message tags
-        id: check_accept
-        env:
-          COMMIT_MESSAGE: ${{ steps.get_commit_msg.outputs.msg }}
-        run: |
-          if echo "${COMMIT_MESSAGE}" | python3 test/renderdiff/src/commit_msg.py --mode=accept_new_goldens; then
-            echo "accept=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "accept=false" >> "$GITHUB_OUTPUT"
-          fi
-          # RDIFF_BRANCH, or "main" when the commit message does not name a branch. Whitespace is
-          # stripped because the tag is parsed out of free-form prose and a git ref cannot contain
-          # any: a line like "RDIFF_BRANCH=foo (see #123)" otherwise yields a trailing space, which
-          # the consumers of this output quote and pass through.
-          GOLDEN_BRANCH=$(echo "${COMMIT_MESSAGE}" | python3 test/renderdiff/src/commit_msg.py | tr -d '[:space:]')
-          echo "branch=${GOLDEN_BRANCH}" >> "$GITHUB_OUTPUT"
-        shell: bash
       # Needed by the validation below, not by this job's own logic: a gltf_test names its models
       # by bare name and the parser resolves each one against model_search_paths on disk, so a
       # tree without the downloaded assets reports every model in gltf/ as missing. This is a
@@ -707,24 +735,20 @@ jobs:
     # The web leg additionally builds wasm and renders through a software rasterizer in a browser,
     # which is substantially slower than rendering natively.
     timeout-minutes: ${{ matrix.platform == 'web' && 90 || 45 }}
-    needs: [check-verification, renderdiff-config]
-    # The first clause is the workflow-wide verified-commit convention documented at the top of
-    # this file. The second is this job's own: a gate that failed to parse the commit message has
-    # no branch name to offer, and rendering against the wrong goldens is worse than not rendering.
+    needs: [check-verification]
     if: >
       always() && !cancelled() && !needs.check-verification.outputs.skip
       && needs.check-verification.outputs.renderdiff-run == 'true'
-      && needs.renderdiff-config.result == 'success'
-      && needs.renderdiff-config.outputs.accept != 'true'
+      && needs.check-verification.outputs.renderdiff-accept != 'true'
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
-          fetch-depth: 0
+          fetch-depth: 1
           persist-credentials: false
       - uses: ./.github/actions/renderdiff
         with:
           compare: 'true'
-          golden-branch: ${{ needs.renderdiff-config.outputs.golden-branch }}
+          golden-branch: ${{ needs.check-verification.outputs.renderdiff-golden-branch }}
           # The web build restores the cache the postsubmit build-web job writes, which also runs
           # this leg's build through generate.sh --build-only; the renderdiff action appends the
           # emsdk version.
@@ -750,8 +774,8 @@ jobs:
   #
   # It also merges the legs' outputs into the single presubmit-renderdiff-result artifact, because
   # tools outside this repository (filament-rdiff-server) expect a run to have exactly one
-  # renderdiff artifact. The legs write disjoint files apart from the golden checkout and the test
-  # config, which are identical in both.
+  # renderdiff artifact. Each leg downloads only its own platform's goldens, so the trees merge
+  # cleanly without uploading duplicate golden sets.
   test-renderdiff:
     name: test-renderdiff
     runs-on: 'ubuntu-24.04'
@@ -772,7 +796,7 @@ jobs:
         if: ${{ !cancelled() }}
         env:
           CONFIG: ${{ needs.renderdiff-config.result }}
-          ACCEPT: ${{ needs.renderdiff-config.outputs.accept }}
+          ACCEPT: ${{ needs.check-verification.outputs.renderdiff-accept }}
           RENDER_RUN: ${{ needs.check-verification.outputs.renderdiff-run }}
           LEGS: ${{ needs.test-renderdiff-platform.result }}
         run: |
@@ -830,14 +854,6 @@ jobs:
           fi
       - uses: ./.github/actions/linux-prereq
         if: needs.check-verification.outputs.code-correctness == 'true'
-      # This job compiles two configurations, so it restores both caches into the same ccache
-      # directory. The two archives hold disjoint objects, because ccache keys on the full
-      # compiler command line and an asan object never shares a hash with a release one; the only
-      # files they have in common are the statistics counters, which the action zeroes anyway.
-      - uses: ./.github/actions/ccache
-        if: needs.check-verification.outputs.code-correctness == 'true'
-        with:
-          config: desktop-release
       - uses: ./.github/actions/ccache
         if: needs.check-verification.outputs.code-correctness == 'true'
         with:
@@ -850,26 +866,26 @@ jobs:
           # -d and -t compile matdbg and fgviewer, which build.sh otherwise always disables, so this
           # is the only presubmit build that covers them. Their servers only start when
           # FILAMENT_MATDBG_PORT or FILAMENT_FGVIEWER_PORT is set, so the unit tests below, which
-          # run against this tree, behave the same. The postsubmit desktop-asan-debug warmer must
-          # run this exact command for the cache to hit.
-          ./build.sh -b -d -t -p desktop debug
-          # This will build and install the release build. -W and -y none reproduce what
-          # build/linux/build.sh passes for a release-only build; they have to, because this build
-          # and build-linux share the desktop-release cache.
-          ./build.sh -W -y none -p desktop release && ninja -C out/cmake-release install
+          # run against this tree, behave the same. Build only matdbg, fgviewer, and the unit test
+          # binaries listed in test_list.txt (skipping ~35 sample binaries); the postsubmit
+          # desktop-asan-debug warmer runs this exact command.
+          ./build.sh -b -d -t -p desktop debug matdbg fgviewer $(bash test/filament-unit-test/test.sh --list-targets)
       - uses: ./.github/actions/ccache-stats
         if: ${{ !cancelled() && needs.check-verification.outputs.code-correctness == 'true' }}
       - name: Check - clang-tidy (exception escape)
         if: needs.check-verification.outputs.code-correctness == 'true'
-        run: bash test/code-correctness/clang-tidy-proxy.sh
-      - name: Check - public header inclusion
-        if: needs.check-verification.outputs.code-correctness == 'true'
-        run: bash test/code-correctness/headers-inclusion.sh out/release/filament/include
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            CHANGED_LIST=$(mktemp)
+            git diff -z --name-only --diff-filter=d ${{ github.event.pull_request.base.sha }} ${{ github.event.pull_request.head.sha }} > "${CHANGED_LIST}"
+            bash test/code-correctness/clang-tidy-proxy.sh --changed_files_file "${CHANGED_LIST}"
+            rm -f "${CHANGED_LIST}"
+          else
+            bash test/code-correctness/clang-tidy-proxy.sh
+          fi
       - name: Check - Filament unit tests
         if: needs.check-verification.outputs.code-correctness == 'true'
         run: |
-          # The tests that render, such as RenderingTest, use Mesa's software Vulkan driver.
-          sudo apt-get install -y libvulkan1 mesa-vulkan-drivers
           bash test/filament-unit-test/test.sh
 
   test-backend:
@@ -883,11 +899,10 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
-          fetch-depth: 0
+          fetch-depth: 1
           persist-credentials: false
       - uses: ./.github/actions/linux-prereq
       - uses: ./.github/actions/get-mesa
-      - uses: ./.github/actions/get-vulkan-sdk
       # Deliberately after get-mesa: meson picks ccache up automatically when it is on PATH, so
       # configuring CCACHE_DIR any earlier would let a Mesa rebuild (which only happens when the
       # Mesa cache misses) spend this job's cache budget on Mesa objects that no other job wants.

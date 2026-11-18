@@ -53,34 +53,50 @@ for f in $(find . -name '*.h'); do
 done
 popd >/dev/null
 
+if [[ "${#includes[@]}" -eq 0 ]]; then
+    echo "Error: no public headers found under ${FILAMENT_HEADERS}" >&2
+    exit 1
+fi
+
+if [[ -n "${GITHUB_CLANG_VERSION:-}" ]] && command -v "clang-${GITHUB_CLANG_VERSION}" >/dev/null 2>&1; then
+    CLANG_BIN="clang-${GITHUB_CLANG_VERSION}"
+else
+    CLANG_BIN="clang"
+fi
+
 # Check if the system has getopt
 HAS_SYSTEM_GETOPT=0
-if echo "#include <getopt.h>" | clang -x c++ -std=c++17 -E - > /dev/null 2>&1; then
+if echo "#include <getopt.h>" | "${CLANG_BIN}" -x c++ -std=c++17 -E - > /dev/null 2>&1; then
     HAS_SYSTEM_GETOPT=1
 fi
 
-rm -rf out/check-headers
-mkdir -p out/check-headers
+JOBS=$(getconf _NPROCESSORS_ONLN 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null || echo 4)
+export FILAMENT_HEADERS HAS_SYSTEM_GETOPT CLANG_BIN
 
-TMP_FILE=out/check-headers/temp.cpp
-echo "Checking that public headers compile independently..."
-for include in "${includes[@]}"; do
-    rm -f ${TMP_FILE}
-    echo "Checking ${include}"
-    case "${include}" in
-        "utils/Systrace.h")
-            # A necessary define before we can include utils/Systrace.h
-            echo "#define SYSTRACE_TAG SYSTRACE_TAG_DISABLED" >> ${TMP_FILE}
-            ;;
-        "utils/getopt.h")
-            if [[ $HAS_SYSTEM_GETOPT -eq 1 ]]; then
-                echo "#define HAS_SYSTEM_GETOPT 1" >> ${TMP_FILE}
-            fi
-            ;;
-    esac
-    echo "#include <${include}>" >> ${TMP_FILE}
-    # Filament is built internally with C++20, but we maintain C++17 compatibility (for the time
-    # being) in our public headers to support projects on older toolchains.
-    clang -std=c++17 -I "${FILAMENT_HEADERS}" ${TMP_FILE} -c -o /dev/null
-done
+echo "Checking that ${#includes[@]} public headers compile independently using up to ${JOBS} workers..."
+printf '%s\0' "${includes[@]}" | xargs -0 -n 8 -P "${JOBS}" bash -c '
+    rc=0
+    for include in "$@"; do
+        src=""
+        case "${include}" in
+            "utils/Systrace.h")
+                # A necessary define before we can include utils/Systrace.h
+                src+="#define SYSTRACE_TAG SYSTRACE_TAG_DISABLED"$'\''\n'\''
+                ;;
+            "utils/getopt.h")
+                if [[ "${HAS_SYSTEM_GETOPT}" -eq 1 ]]; then
+                    src+="#define HAS_SYSTEM_GETOPT 1"$'\''\n'\''
+                fi
+                ;;
+        esac
+        src+="#include <${include}>"$'\''\n'\''
+        # Filament is built internally with C++20, but we maintain C++17 compatibility (for the
+        # time being) in our public headers to support projects on older toolchains.
+        if ! err=$(printf "%s" "${src}" | "${CLANG_BIN}" -x c++ -std=c++17 -fsyntax-only -I "${FILAMENT_HEADERS}" - 2>&1); then
+            printf "FAILED: %s\n%s\n" "${include}" "${err}" >&2
+            rc=1
+        fi
+    done
+    exit "${rc}"
+' _
 echo "Done!"

@@ -300,6 +300,11 @@ class DesktopRenderer(BaseRenderer):
 
     def get_env(self) -> dict:
         env = os.environ.copy()
+        # Bound Mesa's llvmpipe / lavapipe worker pool per subprocess so concurrent renders match
+        # the host CPU count rather than spawning concurrent_renders * cpu_count rasterizer threads.
+        if 'LP_NUM_THREADS' not in env and self.concurrent_renders > 1:
+            cpu_count = os.cpu_count() or 4
+            env['LP_NUM_THREADS'] = str(max(2, cpu_count // self.concurrent_renders))
         # Under Linux, Dawn has no Metal or D3D backend to fall back on, so a webgpu render goes
         # through Vulkan and needs the same software ICD the vulkan renderer uses; without it Dawn
         # enumerates no adapters and every webgpu test aborts. macOS is deliberately left alone,
