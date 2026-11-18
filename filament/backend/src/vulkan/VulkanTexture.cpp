@@ -38,6 +38,12 @@ namespace filament::backend {
 
 namespace {
 
+// Images at least this large get their own VkDeviceMemory. VMA can only release a block once all
+// of its allocations are freed, so a large image freed inside a shared block strands that memory.
+// Drivers may not request dedicated memory for such images (Mali does not). On a Pixel 6 Pro,
+// 1-2 MiB gave the lowest steady-state GPU memory in a sweep from 256 KiB to 32 MiB.
+constexpr VkDeviceSize DEDICATED_ALLOCATION_THRESHOLD = 2u * 1024u * 1024u;
+
 inline uint8_t getLayerCount(SamplerType const target, uint32_t const depth) {
     switch (target) {
         case SamplerType::SAMPLER_2D:
@@ -306,15 +312,17 @@ uint8_t getAlignmentForBufferToImageCopy(VkFormat format) {
 
 VulkanTextureState::VulkanTextureState(VulkanStagePool& stagePool, VulkanCommands* commands,
         VmaAllocator allocator, VkDevice device, VkImage image, VkDeviceMemory deviceMemory,
-        VkDeviceMemory stagingMemory, VkBuffer stagingBuffer, Platform::ExternalImageHandle ahBuffer,
-        VkFormat format, VkImageViewType viewType, uint8_t levels, uint8_t layerCount,
-        VkSamplerYcbcrConversion ycbcrConversion, VkImageUsageFlags usage, bool isProtected)
+        VmaAllocation allocation, VkDeviceMemory stagingMemory, VkBuffer stagingBuffer,
+        Platform::ExternalImageHandle ahBuffer, VkFormat format, VkImageViewType viewType,
+        uint8_t levels, uint8_t layerCount, VkSamplerYcbcrConversion ycbcrConversion,
+        VkImageUsageFlags usage, bool isProtected)
     : mStagePool(stagePool),
       mCommands(commands),
       mAllocator(allocator),
       mDevice(device),
       mTextureImage(image),
       mTextureImageMemory(deviceMemory),
+      mTextureImageAllocation(allocation),
       mVkFormat(format),
       mViewType(viewType),
       mFullViewRange{ fvkutils::getImageAspect(format), 0, levels, 0, layerCount },
@@ -322,11 +330,17 @@ VulkanTextureState::VulkanTextureState(VulkanStagePool& stagePool, VulkanCommand
       mSoftwareYUVStaging {stagingMemory, stagingBuffer, ahBuffer},
       mDefaultLayout(getDefaultLayoutImpl(usage)),
       mUsage(usage),
-      mIsProtected(isProtected) {}
+      mIsProtected(isProtected) {
+    assert_invariant(mTextureImageMemory == VK_NULL_HANDLE ||
+                     mTextureImageAllocation == VK_NULL_HANDLE);
+}
 
 VulkanTextureState::~VulkanTextureState() {
     clearCachedImageViews();
-    if (mTextureImageMemory != VK_NULL_HANDLE) {
+    if (mTextureImageAllocation != VK_NULL_HANDLE) {
+        vkDestroyImage(mDevice, mTextureImage, VKALLOC);
+        vmaFreeMemory(mAllocator, mTextureImageAllocation);
+    } else if (mTextureImageMemory != VK_NULL_HANDLE) {
         vkDestroyImage(mDevice, mTextureImage, VKALLOC);
         vkFreeMemory(mDevice, mTextureImageMemory, VKALLOC);
         if(mSoftwareYUVStaging.buffer != VK_NULL_HANDLE) {
@@ -382,7 +396,7 @@ VulkanTexture::VulkanTexture(VulkanContext const& context, VkDevice device, VmaA
     : HwTexture(getSamplerTypeFromDepth(depth), levels, samples, width, height, depth,
               TextureFormat::UNUSED, tusage, false),
       mState(fvkmemory::resource_ptr<VulkanTextureState>::construct(resourceManager, stagePool,
-              commands, allocator, device, image, memory,
+              commands, allocator, device, image, memory, VK_NULL_HANDLE /* allocation */,
               stagingMemory, stagingBuffer, ahBuffer,
               format, fvkutils::getViewType(SamplerType::SAMPLER_2D),
               /*mipLevels=*/levels, getLayerCountFromDepth(depth), conversion,
@@ -484,39 +498,40 @@ VulkanTexture::VulkanTexture(VkDevice device, VkPhysicalDevice physicalDevice,
     FILAMENT_CHECK_POSTCONDITION(result == VK_SUCCESS) << "Unable to create image."
                                                        << " error=" << static_cast<int32_t>(result);
 
-    // Allocate memory for the VkImage and bind it.
-    VkMemoryRequirements memReqs;
-    vkGetImageMemoryRequirements(device, textureImage, &memReqs);
-
+    // Allocate through VMA. Small images share VkDeviceMemory blocks, which avoids a driver
+    // allocation per texture.
     bool const useTransientAttachment = imageInfo.usage & VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT;
 
-    VkFlags const requiredMemoryFlags =
+    VkMemoryPropertyFlags const requiredMemoryFlags =
         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT |
         (useTransientAttachment ? VK_MEMORY_PROPERTY_LAZILY_ALLOCATED_BIT : 0U) |
         (isProtected ? VK_MEMORY_PROPERTY_PROTECTED_BIT : 0U);
-    uint32_t memoryTypeIndex
-            = context.selectMemoryType(memReqs.memoryTypeBits, requiredMemoryFlags);
+    assert_invariant(!isProtected || context.isProtectedMemorySupported());
 
-    FILAMENT_CHECK_POSTCONDITION(memoryTypeIndex < VK_MAX_MEMORY_TYPES)
-            << "VulkanTexture: unable to find a memory type that meets requirements.";
+    VkMemoryRequirements memReqs;
+    vkGetImageMemoryRequirements(device, textureImage, &memReqs);
+    bool const useDedicatedMemory = memReqs.size >= DEDICATED_ALLOCATION_THRESHOLD;
 
-    VkMemoryAllocateInfo allocInfo = {
-        .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
-        .allocationSize = memReqs.size,
-        .memoryTypeIndex = memoryTypeIndex,
+    VmaAllocationCreateInfo const allocCreateInfo = {
+        .flags = useDedicatedMemory ? VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT
+                                    : VmaAllocationCreateFlags(0),
+        // VMA always gives lazily allocated memory its own VkDeviceMemory.
+        .usage = useTransientAttachment ? VMA_MEMORY_USAGE_GPU_LAZILY_ALLOCATED
+                                        : VMA_MEMORY_USAGE_UNKNOWN,
+        .requiredFlags = requiredMemoryFlags,
     };
-    VkDeviceMemory textureImageMemory;
-    result = vkAllocateMemory(device, &allocInfo, nullptr, &textureImageMemory);
+    VmaAllocation textureImageAllocation = VK_NULL_HANDLE;
+    result = vmaAllocateMemoryForImage(allocator, textureImage, &allocCreateInfo,
+            &textureImageAllocation, nullptr);
     FILAMENT_CHECK_POSTCONDITION(result == VK_SUCCESS) << "Unable to allocate image memory."
                                                        << " error=" << static_cast<int32_t>(result);
-    result = vkBindImageMemory(device, textureImage, textureImageMemory, 0);
+    result = vmaBindImageMemory(allocator, textureImageAllocation, textureImage);
     FILAMENT_CHECK_POSTCONDITION(result == VK_SUCCESS) << "Unable to bind image."
                                                        << " error=" << static_cast<int32_t>(result);
 
-
     mState = fvkmemory::resource_ptr<VulkanTextureState>::construct(resourceManager, stagePool,
-            commands, allocator, device, textureImage, textureImageMemory,
-            VK_NULL_HANDLE, VK_NULL_HANDLE, Platform::ExternalImageHandle(),
+            commands, allocator, device, textureImage, VK_NULL_HANDLE /* deviceMemory */,
+            textureImageAllocation, VK_NULL_HANDLE, VK_NULL_HANDLE, Platform::ExternalImageHandle(),
             vkFormat, fvkutils::getViewType(target), levels, getLayerCount(target, depth),
             VK_NULL_HANDLE /* ycbcrConversion */, imageInfo.usage, isProtected);
 
