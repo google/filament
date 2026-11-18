@@ -135,7 +135,7 @@ public:
     }
 
     void writeRaw(const char* raw, size_t nbytes) {
-        if (!isDryRunner()) {
+        if (!isDryRunner() && raw != nullptr && nbytes > 0) {
             memcpy(reinterpret_cast<char*>(mCursor), raw, nbytes);
         }
         mCursor += nbytes;
