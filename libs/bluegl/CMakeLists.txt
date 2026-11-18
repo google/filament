@@ -10,7 +10,17 @@ else()
     set(IS_64_BIT FALSE)
 endif()
 
-if (WIN32 AND IS_64_BIT)
+# The MASM trampolines are x64-only. Other Windows architectures (e.g.
+# ARM64) use the portable C++ trampolines instead.
+if (WIN32 AND IS_64_BIT AND CMAKE_CXX_COMPILER_ARCHITECTURE_ID MATCHES "ARM64")
+    set(BLUEGL_USE_CPP_TRAMPOLINES TRUE)
+elseif (WIN32 AND NOT IS_64_BIT)
+    set(BLUEGL_USE_CPP_TRAMPOLINES TRUE)
+else()
+    set(BLUEGL_USE_CPP_TRAMPOLINES FALSE)
+endif()
+
+if (WIN32 AND NOT BLUEGL_USE_CPP_TRAMPOLINES)
     enable_language(ASM_MASM)
     set_property(SOURCE src/BlueGLCoreWindowsImpl.S PROPERTY LANGUAGE ASM_MASM)
 endif()
@@ -25,7 +35,7 @@ set(SRCS
 
 if (WIN32)
     set(SRCS ${SRCS} src/BlueGLWindows.cpp)
-    if(NOT IS_64_BIT)
+    if(BLUEGL_USE_CPP_TRAMPOLINES)
         set(SRCS ${SRCS} src/BlueGLCoreWindows32Impl.cpp)
     else()
         set(SRCS ${SRCS} src/BlueGLCoreWindowsImpl.S)
