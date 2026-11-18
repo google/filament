@@ -68,7 +68,11 @@
 #include <unordered_map>
 #include <vector>
 
+#if defined(WIN32)
+#include <process.h>
+#else
 #include <unistd.h>
+#endif
 
 using namespace filament;
 using namespace backend;
