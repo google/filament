@@ -35,10 +35,11 @@
 #include <stddef.h>
 #include <stdint.h>
 
-// for gtest
-class FilamentTest_Bones_Test;
-
 namespace filament {
+
+// for gtest: must live in the same namespace as the TEST() in filament_test.cpp, otherwise MSVC
+// resolves the friend declaration below to the wrong (global) class.
+class FilamentTest_Bones_Test;
 
 class FEngine;
 class FRenderableManager;
