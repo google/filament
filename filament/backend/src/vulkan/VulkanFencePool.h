@@ -20,6 +20,9 @@
 #include "VulkanAsyncHandles.h"
 #include "VulkanContext.h"
 
+#include <utils/compiler.h>
+#include <utils/Mutex.h>
+
 #include <deque>
 #include <utility>
 #include <vector>
@@ -27,8 +30,9 @@
 namespace filament::backend {
 
 /**
- * Manages the lifecycle for VkFence objects. This is not thread-safe, and all fences
- * acquired from this pool must be acquired and freed on the backend thread.
+ * Manages the lifecycle for VkFence objects. Thread-safe so fences whose last shared_ptr
+ * reference is dropped from a caller/worker thread (e.g. VulkanDriver::fenceWait on the main or
+ * FrameInfoGpuComplete thread) can be safely returned to the pool.
  */
 class VulkanFencePool {
 public:
@@ -38,9 +42,6 @@ public:
     // a fence acquired from the pool. The fence status will
     // be cleared, and the fence reclaimed, once the shared_ptr
     // goes out of scope.
-    // TODO: this is not thread-safe, and should only be allowed to
-    // go out of scope on the backend thread. We should move away
-    // from shared_ptr.
     std::shared_ptr<VulkanCmdFence> acquireFenceStatus() noexcept;
 
     // Clears idle fences, as well as cmdFences that are no longer alive.
@@ -54,7 +55,7 @@ private:
     // Acquires a fence from the pool. This is private because we need mechanisms
     // to ensure that all fences are returned *during* terminate. Instead, users
     // can use acquireFenceStatus(), which tracks fences.
-    VkFence acquireFence() noexcept;
+    VkFence acquireFence() noexcept UTILS_REQUIRES(mMutex);
 
     // Releases a fence back into the pool. Typically done in the recycle function
     // of a VulkanCmdFence created by this pool.
@@ -71,10 +72,11 @@ private:
     VulkanContext const& mContext;
     const VkDevice mDevice;
     const uint32_t mMinPoolSize;
-    std::deque<std::pair<uint64_t, VkFence>> mFences;
-    std::vector<std::weak_ptr<VulkanCmdFence>> mFenceStatuses;
-    uint32_t mNumFences = 0;
-    uint64_t mCurrFrame = 0;
+    utils::Mutex mMutex;
+    std::deque<std::pair<uint64_t, VkFence>> mFences UTILS_GUARDED_BY(mMutex);
+    std::vector<std::weak_ptr<VulkanCmdFence>> mFenceStatuses UTILS_GUARDED_BY(mMutex);
+    uint32_t mNumFences UTILS_GUARDED_BY(mMutex) = 0;
+    uint64_t mCurrFrame UTILS_GUARDED_BY(mMutex) = 0;
 };
 
 } // namespace filament::backend

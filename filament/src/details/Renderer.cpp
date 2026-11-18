@@ -812,7 +812,6 @@ void FRenderer::renderJob(DriverApi& driver, LinearAllocatorArena& arena, FView&
     auto aoOptions = view.getAmbientOcclusionOptions();
     auto taaOptions = view.getTemporalAntiAliasingOptions();
     auto vignetteOptions = view.getVignetteOptions();
-    auto colorGrading = view.getColorGrading();
     auto ssReflectionsOptions = view.getScreenSpaceReflectionsOptions();
     auto guardBandOptions = view.getGuardBandOptions();
     const bool isRenderingMultiview = view.hasStereo() &&
@@ -906,6 +905,8 @@ void FRenderer::renderJob(DriverApi& driver, LinearAllocatorArena& arena, FView&
     if (svp.empty()) {
         return;
     }
+
+    FColorGrading const* const colorGrading = hasColorGrading ? view.getColorGrading() : nullptr;
 
     // xvp is the viewport relative to svp containing the "interesting" rendering
     filament::Viewport xvp = svp;
@@ -1281,7 +1282,7 @@ void FRenderer::renderJob(DriverApi& driver, LinearAllocatorArena& arena, FView&
 
     if (ssReflectionsOptions.enabled) {
         auto reflections = ppm.ssr(fg, passBuilder,
-                view.getFrameHistory(), structure,
+                view.getFrameHistory(), view.getFrameUniforms(), structure,
                 { .width = svp.width, .height = svp.height });
 
         if (UTILS_LIKELY(reflections)) {

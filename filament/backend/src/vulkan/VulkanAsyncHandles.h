@@ -210,6 +210,13 @@ struct VulkanCmdFence {
         mCond.notify_all();
     }
 
+    void fail(VkResult const error) {
+        std::lock_guard const l(mLock);
+        mStatus = error;
+        mCanceled = true;
+        mCond.notify_all();
+    }
+
 private:
     // The lifecycle of this object will often be managed by a
     // VulkanFencePool. This allows it to update the recycle function

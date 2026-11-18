@@ -51,6 +51,7 @@
 #include <tsl/robin_map.h>
 
 #include <array>
+#include <memory>
 #include <optional>
 #include <random>
 #include <string_view>
@@ -144,6 +145,7 @@ public:
     FrameGraphId<FrameGraphTexture> ssr(FrameGraph& fg,
             RenderPassBuilder const& passBuilder,
             FrameHistory const& frameHistory,
+            TypedUniformBuffer<PerViewUib>& frameUniforms,
             FrameGraphId<FrameGraphTexture> structure,
             FrameGraphTexture::Descriptor const& desc) noexcept;
 
@@ -468,9 +470,7 @@ public:
 
     StructureDescriptorSet& getStructureDescriptorSet() const noexcept { return mStructureDescriptorSet; }
 
-    MotionVectorsDescriptorSet& getMotionVectorsDescriptorSet() const noexcept {
-        return mMotionVectorsDescriptorSet;
-    }
+    MotionVectorsDescriptorSet& getMotionVectorsDescriptorSet() const noexcept;
 
     void resetForRender() noexcept;
 
@@ -511,6 +511,8 @@ public:
 
 private:
     UboManager* getUboManager() const noexcept;
+    SsrPassDescriptorSet& getSsrPassDescriptorSet() const noexcept;
+    backend::Handle<backend::HwTexture> getStarburstTexture() noexcept;
 
     backend::RenderPrimitiveHandle mFullScreenQuadRph;
     backend::VertexBufferInfoHandle mFullScreenQuadVbih;
@@ -526,10 +528,10 @@ private:
     backend::FeatureLevel mFeatureLevel;
     bool mDepthStencilResolveSupported;
     bool mDepthStencilBlitSupported;
-    mutable SsrPassDescriptorSet mSsrPassDescriptorSet;
+    mutable std::unique_ptr<SsrPassDescriptorSet> mSsrPassDescriptorSet;
     mutable PostProcessDescriptorSet mPostProcessDescriptorSet;
     mutable StructureDescriptorSet mStructureDescriptorSet;
-    mutable MotionVectorsDescriptorSet mMotionVectorsDescriptorSet;
+    mutable std::unique_ptr<MotionVectorsDescriptorSet> mMotionVectorsDescriptorSet;
 
     struct BilateralPassConfig {
         uint8_t kernelSize = 11;
