@@ -30,8 +30,8 @@
 #include <stdint.h>
 #include <string.h>
 
-#if defined(__ARM_NEON)
-#   if defined(__ARM_ACLE) && defined(__aarch64__)
+#if defined(__ARM_NEON) || defined(_M_ARM64)
+#   if (defined(__ARM_ACLE) && defined(__aarch64__)) || defined(_M_ARM64)
 #       include <arm_neon.h>
 #       define TNT_UTILS_BITSET_USE_NEON 1
 #   endif
@@ -163,7 +163,7 @@ public:
             uint8x16_t const* const p = reinterpret_cast<uint8x16_t const*>(storage);
             uint8x16_t counts = vcntq_u8(p[0]);
             for (size_t i = 1; i < BIT_COUNT / 128; ++i) {
-                counts += vcntq_u8(p[i]);
+                counts = vaddq_u8(counts, vcntq_u8(p[i]));
             }
             return vaddlvq_u8(counts);
         } else
@@ -183,9 +183,9 @@ public:
             uint64x2_t const* const p = reinterpret_cast<uint64x2_t const*>(storage);
             uint64x2_t r = p[0];
             for (size_t i = 1; i < BIT_COUNT / 128; ++i) {
-                r |= p[i];
+                r = vorrq_u64(r, p[i]);
             }
-            return bool(r[0] | r[1]);
+            return bool(vgetq_lane_u64(r, 0) | vgetq_lane_u64(r, 1));
         } else
 #endif
         {
@@ -207,9 +207,9 @@ public:
             uint64x2_t const* const p = reinterpret_cast<uint64x2_t const*>(storage);
             uint64x2_t r = p[0];
             for (size_t i = 1; i < BIT_COUNT / 128; ++i) {
-                r &= p[i];
+                r = vandq_u64(r, p[i]);
             }
-            return ~(r[0] & r[1]) == 0ULL;
+            return ~(vgetq_lane_u64(r, 0) & vgetq_lane_u64(r, 1)) == 0ULL;
         } else
 #endif
         {
@@ -228,9 +228,9 @@ public:
             uint64x2_t const* const p = reinterpret_cast<uint64x2_t const*>(temp.storage);
             uint64x2_t r = p[0];
             for (size_t i = 1; i < BIT_COUNT / 128; ++i) {
-                r |= p[i];
+                r = vorrq_u64(r, p[i]);
             }
-            return bool(r[0] | r[1]);
+            return bool(vgetq_lane_u64(r, 0) | vgetq_lane_u64(r, 1));
         } else
 #endif
         {
@@ -252,7 +252,7 @@ public:
             uint8x16_t* const p = reinterpret_cast<uint8x16_t*>(storage);
             uint8x16_t const* const q = reinterpret_cast<uint8x16_t const*>(b.storage);
             for (size_t i = 0; i < BIT_COUNT / 128; ++i) {
-                p[i] &= q[i];
+                p[i] = vandq_u8(p[i], q[i]);
             }
         } else
 #endif
@@ -270,7 +270,7 @@ public:
             uint8x16_t* const p = reinterpret_cast<uint8x16_t*>(storage);
             uint8x16_t const* const q = reinterpret_cast<uint8x16_t const*>(b.storage);
             for (size_t i = 0; i < BIT_COUNT / 128; ++i) {
-                p[i] |= q[i];
+                p[i] = vorrq_u8(p[i], q[i]);
             }
         } else
 #endif
@@ -288,7 +288,7 @@ public:
             uint8x16_t* const p = reinterpret_cast<uint8x16_t*>(storage);
             uint8x16_t const* const q = reinterpret_cast<uint8x16_t const*>(b.storage);
             for (size_t i = 0; i < BIT_COUNT / 128; ++i) {
-                p[i] ^= q[i];
+                p[i] = veorq_u8(p[i], q[i]);
             }
         } else
 #endif
@@ -307,7 +307,7 @@ public:
             uint8x16_t* const p = (uint8x16_t*) r.storage;
             uint8x16_t const* const q = (uint8x16_t const*) storage;
             for (size_t i = 0; i < BIT_COUNT / 128; ++i) {
-                p[i] = ~q[i];
+                p[i] = vmvnq_u8(q[i]);
             }
         } else
 #endif

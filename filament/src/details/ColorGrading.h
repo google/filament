@@ -25,7 +25,7 @@
 
 #include <math/mathfwd.h>
 
-#if defined(__ARM_NEON)
+#if defined(__ARM_NEON) || defined(_M_ARM64)
 #include <arm_neon.h>
 #endif
 
@@ -62,7 +62,7 @@ private:
     bool mIsOneDimensional;
     bool mIsLDR;
 
-#if defined(__ARM_NEON)
+#if defined(__ARM_NEON) || defined(_M_ARM64)
     static void generateDefaultLUTNeon(FEngine const& engine, void* data, Config const& config, Builder const& builder) noexcept;
     static void generateMediumLUTNeon(FEngine const& engine, void* data, Config const& config, Builder const& builder) noexcept;
     static void colorGradingAdjustmentsNeon(

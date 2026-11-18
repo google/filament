@@ -20,7 +20,7 @@
 
 #include <math/fast.h>
 
-#if defined(__ARM_NEON)
+#if defined(__ARM_NEON) || defined(_M_ARM64)
 #include <arm_neon.h>
 #endif
 
@@ -53,7 +53,7 @@ void Culler::intersects(
     float4 const * UTILS_RESTRICT const planes = frustum.mPlanes;
     count = round(count);
 
-#if defined(__ARM_NEON) && defined(__aarch64__)
+#if (defined(__ARM_NEON) && defined(__aarch64__)) || defined(_M_ARM64)
     float32x4_t const p0 = vld1q_f32((const float*)&planes[0]);
     float32x4_t const p1 = vld1q_f32((const float*)&planes[1]);
     float32x4_t const p2 = vld1q_f32((const float*)&planes[2]);
@@ -198,7 +198,7 @@ void Culler::intersects(
     float4 const * const UTILS_RESTRICT planes = frustum.mPlanes;
     count = round(count);
 
-#if defined(__ARM_NEON) && defined(__aarch64__)
+#if (defined(__ARM_NEON) && defined(__aarch64__)) || defined(_M_ARM64)
     float32x4_t const p0 = vld1q_f32((const float*)&planes[0]);
     float32x4_t const p1 = vld1q_f32((const float*)&planes[1]);
     float32x4_t const p2 = vld1q_f32((const float*)&planes[2]);

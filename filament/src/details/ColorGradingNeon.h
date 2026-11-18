@@ -17,7 +17,7 @@
 #ifndef TNT_FILAMENT_DETAILS_COLORGRADINGNEON_H
 #define TNT_FILAMENT_DETAILS_COLORGRADINGNEON_H
 
-#if defined(__ARM_NEON)
+#if defined(__ARM_NEON) || defined(_M_ARM64)
 
 #include <utils/compiler.h>
 
@@ -25,7 +25,17 @@
 
 namespace filament {
 
-#if !defined(__aarch64__)
+/**
+ * Builds a float32x4_t from four scalars. Brace-initializing a NEON vector type
+ * (float32x4_t{a, b, c, d}) is a GCC/Clang extension that MSVC doesn't support.
+ */
+UTILS_ALWAYS_INLINE
+inline float32x4_t makeFloat32x4(float const a, float const b, float const c, float const d) {
+    float const lanes[4] = { a, b, c, d };
+    return vld1q_f32(lanes);
+}
+
+#if !defined(__aarch64__) && !defined(_M_ARM64)
 /**
  * ARMv7 NEON compatibility wrappers for ARMv8-A / AArch64 intrinsics.
  */
@@ -426,6 +436,6 @@ inline void v_scotopicAdaptation(float32x4_t& vr, float32x4_t& vg, float32x4_t& 
 
 } // namespace filament
 
-#endif // defined(__ARM_NEON)
+#endif // defined(__ARM_NEON) || defined(_M_ARM64)
 
 #endif // TNT_FILAMENT_DETAILS_COLORGRADINGNEON_H

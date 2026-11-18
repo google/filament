@@ -20,7 +20,7 @@
 #include <math/compiler.h>
 #include <math/scalar.h>
 
-#ifdef __ARM_NEON
+#if defined(__ARM_NEON) || defined(_M_ARM64)
 #include <arm_neon.h>
 #endif
 
@@ -74,7 +74,7 @@ constexpr inline float MATH_PURE log2(float x) noexcept {
 // fast 1/sqrt(), on ARMv8 this is 5 cycles vs. 7 cycles, so maybe not worth it.
 // we keep this mostly for reference and benchmarking.
 inline float MATH_PURE isqrt(float x) noexcept {
-#if defined(__ARM_NEON) && defined(__aarch64__)
+#if (defined(__ARM_NEON) && defined(__aarch64__)) || defined(_M_ARM64)
     float y = vrsqrtes_f32(x);
     return y * vrsqrtss_f32(x, y * y);
 #else
@@ -83,7 +83,7 @@ inline float MATH_PURE isqrt(float x) noexcept {
 }
 
 inline double MATH_PURE isqrt(double x) noexcept {
-#if defined(__ARM_NEON) && defined(__aarch64__)
+#if (defined(__ARM_NEON) && defined(__aarch64__)) || defined(_M_ARM64)
     double y = vrsqrted_f64(x);
     return y * vrsqrtsd_f64(x, y * y);
 #else
@@ -127,7 +127,7 @@ constexpr float exp(float x) noexcept {
  * unsigned saturated arithmetic
  */
 
-#if defined(__ARM_NEON) && defined(__aarch64__)
+#if (defined(__ARM_NEON) && defined(__aarch64__)) || defined(_M_ARM64)
 inline uint8_t  MATH_PURE qadd(uint8_t a,  uint8_t b)  noexcept { return vqaddb_u8(a, b);  }
 inline uint16_t MATH_PURE qadd(uint16_t a, uint16_t b) noexcept { return vqaddh_u16(a, b); }
 inline uint32_t MATH_PURE qadd(uint32_t a, uint32_t b) noexcept { return vqadds_u32(a, b); }

@@ -31,6 +31,7 @@
 #include <backend/DriverApiForward.h>
 #include <backend/DriverEnums.h>
 
+#include <utils/algorithm.h>
 #include <utils/FixedCapacityVector.h>
 #include <utils/JobSystem.h>
 #include <utils/Mutex.h>
@@ -54,7 +55,7 @@
 #include <tuple>
 #include <utility>
 
-#if defined(__ARM_NEON)
+#if defined(__ARM_NEON) || defined(_M_ARM64)
 #include "ColorGradingNeon.h"
 #include <arm_neon.h>
 #endif
@@ -617,7 +618,7 @@ static float3 luminanceScaling(float3 x,
     return chromaScale * chromaRatio + scaledLuminanceDifference * maxReserves;
 }
 
-#if defined(__ARM_NEON)
+#if defined(__ARM_NEON) || defined(_M_ARM64)
 static inline void luminanceScalingNeon(float32x4_t& vr, float32x4_t& vg, float32x4_t& vb,
         const ToneMapper& toneMapper, float3 const luminanceWeights) noexcept {
     float32x4_t const w_r = vdupq_n_f32(luminanceWeights.r);
@@ -864,7 +865,7 @@ FColorGrading::FColorGrading(FEngine& engine, const Builder& builder) {
     assert_invariant(FTexture::isTextureFormatSupported(engine, textureFormat));
     assert_invariant(FTexture::validatePixelFormatAndType(textureFormat, format, type));
 
-#if defined(__ARM_NEON)
+#if defined(__ARM_NEON) || defined(_M_ARM64)
 #if defined(__clang__)
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
@@ -923,7 +924,7 @@ FColorGrading::FColorGrading(FEngine& engine, const Builder& builder) {
                 *p++ = half(hdrColorAt(builder, config, rgb, rgb, rgb).r);
             }
         }
-#if defined(__ARM_NEON)
+#if defined(__ARM_NEON) || defined(_M_ARM64)
     } else if (isDefaultState) {
         generateDefaultLUTNeon(engine, data, config, builder);
         elementSize = sizeof(uint32_t);
@@ -1099,7 +1100,7 @@ float4 FColorGrading::hdrColorAt(Builder const& builder, Config const& config,
     return {v, 0.0f};
 }
 
-#if defined(__ARM_NEON)
+#if defined(__ARM_NEON) || defined(_M_ARM64)
 
 void FColorGrading::generateDefaultLUTNeon(FEngine const& engine, void* data,
         Config const& config, Builder const& builder) noexcept {
@@ -1117,7 +1118,7 @@ void FColorGrading::generateDefaultLUTNeon(FEngine const& engine, void* data,
             FILAMENT_TRACING_NAME(FILAMENT_TRACING_CATEGORY_FILAMENT, "ColorGrading::jobDefaultNeon");
             uint32_t const dim = config.lutDimension;
             uint32_t const mask = dim - 1;
-            uint32_t const shift = __builtin_ctz(dim);
+            uint32_t const shift = utils::ctz(dim);
             uint32_t const sliceCount = dim * dim;
             uint32_t const baseIndex = b << (shift * 2);
             uint32_t* UTILS_RESTRICT const p = static_cast<uint32_t*>(data) + (b * sliceCount);
@@ -1146,9 +1147,9 @@ void FColorGrading::generateDefaultLUTNeon(FEngine const& engine, void* data,
                 float3 const v2 = config.precomputedInR[r2] + config.precomputedInG[g2] + config.precomputedInB[b2];
                 float3 const v3 = config.precomputedInR[r3] + config.precomputedInG[g3] + config.precomputedInB[b3];
 
-                float32x4_t vr = {v0.r, v1.r, v2.r, v3.r};
-                float32x4_t vg = {v0.g, v1.g, v2.g, v3.g};
-                float32x4_t vb = {v0.b, v1.b, v2.b, v3.b};
+                float32x4_t vr = makeFloat32x4(v0.r, v1.r, v2.r, v3.r);
+                float32x4_t vg = makeFloat32x4(v0.g, v1.g, v2.g, v3.g);
+                float32x4_t vb = makeFloat32x4(v0.b, v1.b, v2.b, v3.b);
 
                 toneMapper->ACESLegacyToneMapper::operator()(vr, vg, vb);
 
@@ -1199,7 +1200,7 @@ void FColorGrading::generateMediumLUTNeon(FEngine const& engine, void* data, Con
             FILAMENT_TRACING_NAME(FILAMENT_TRACING_CATEGORY_FILAMENT, "ColorGrading::jobNeon");
             uint32_t const dim = config.lutDimension;
             uint32_t const mask = dim - 1;
-            uint32_t const shift = __builtin_ctz(dim);
+            uint32_t const shift = utils::ctz(dim);
             uint32_t const sliceCount = dim * dim;
             uint32_t const baseIndex = b << (shift * 2);
             bool const hasAdj = config.hasAdjustments;
@@ -1237,9 +1238,9 @@ void FColorGrading::generateMediumLUTNeon(FEngine const& engine, void* data, Con
                     float32x4_t vr, vg, vb;
 
                     if (hasAdj) {
-                        float32x4_t in_r = {config.precomputedLinear[r0], config.precomputedLinear[r1], config.precomputedLinear[r2], config.precomputedLinear[r3]};
-                        float32x4_t in_g = {config.precomputedLinear[g0], config.precomputedLinear[g1], config.precomputedLinear[g2], config.precomputedLinear[g3]};
-                        float32x4_t in_b = {config.precomputedLinear[b0], config.precomputedLinear[b1], config.precomputedLinear[b2], config.precomputedLinear[b3]};
+                        float32x4_t in_r = makeFloat32x4(config.precomputedLinear[r0], config.precomputedLinear[r1], config.precomputedLinear[r2], config.precomputedLinear[r3]);
+                        float32x4_t in_g = makeFloat32x4(config.precomputedLinear[g0], config.precomputedLinear[g1], config.precomputedLinear[g2], config.precomputedLinear[g3]);
+                        float32x4_t in_b = makeFloat32x4(config.precomputedLinear[b0], config.precomputedLinear[b1], config.precomputedLinear[b2], config.precomputedLinear[b3]);
 
                         colorGradingAdjustmentsNeon(in_r, in_g, in_b, config, builder);
 
@@ -1252,9 +1253,9 @@ void FColorGrading::generateMediumLUTNeon(FEngine const& engine, void* data, Con
                         float3 const v2 = config.precomputedInR[r2] + config.precomputedInG[g2] + config.precomputedInB[b2];
                         float3 const v3 = config.precomputedInR[r3] + config.precomputedInG[g3] + config.precomputedInB[b3];
 
-                        vr = float32x4_t{v0.r, v1.r, v2.r, v3.r};
-                        vg = float32x4_t{v0.g, v1.g, v2.g, v3.g};
-                        vb = float32x4_t{v0.b, v1.b, v2.b, v3.b};
+                        vr = makeFloat32x4(v0.r, v1.r, v2.r, v3.r);
+                        vg = makeFloat32x4(v0.g, v1.g, v2.g, v3.g);
+                        vb = makeFloat32x4(v0.b, v1.b, v2.b, v3.b);
                     }
 
                     vst1q_f32(&tile_r[j], vr);
@@ -1298,9 +1299,9 @@ void FColorGrading::generateMediumLUTNeon(FEngine const& engine, void* data, Con
                         float3 const p2 = process(vgetq_lane_f32(cg_r, 2), vgetq_lane_f32(cg_g, 2), vgetq_lane_f32(cg_b, 2));
                         float3 const p3 = process(vgetq_lane_f32(cg_r, 3), vgetq_lane_f32(cg_g, 3), vgetq_lane_f32(cg_b, 3));
 
-                        cg_r = float32x4_t{p0.r, p1.r, p2.r, p3.r};
-                        cg_g = float32x4_t{p0.g, p1.g, p2.g, p3.g};
-                        cg_b = float32x4_t{p0.b, p1.b, p2.b, p3.b};
+                        cg_r = makeFloat32x4(p0.r, p1.r, p2.r, p3.r);
+                        cg_g = makeFloat32x4(p0.g, p1.g, p2.g, p3.g);
+                        cg_b = makeFloat32x4(p0.b, p1.b, p2.b, p3.b);
                     }
 
                     cg_r = vmaxq_f32(vminq_f32(cg_r, vdupq_n_f32(1.0f)), vdupq_n_f32(0.0f));
@@ -1324,9 +1325,9 @@ void FColorGrading::generateMediumLUTNeon(FEngine const& engine, void* data, Con
                         float3 const p2 = process(vgetq_lane_f32(cg_r, 2), vgetq_lane_f32(cg_g, 2), vgetq_lane_f32(cg_b, 2));
                         float3 const p3 = process(vgetq_lane_f32(cg_r, 3), vgetq_lane_f32(cg_g, 3), vgetq_lane_f32(cg_b, 3));
 
-                        cg_r = float32x4_t{p0.r, p1.r, p2.r, p3.r};
-                        cg_g = float32x4_t{p0.g, p1.g, p2.g, p3.g};
-                        cg_b = float32x4_t{p0.b, p1.b, p2.b, p3.b};
+                        cg_r = makeFloat32x4(p0.r, p1.r, p2.r, p3.r);
+                        cg_g = makeFloat32x4(p0.g, p1.g, p2.g, p3.g);
+                        cg_b = makeFloat32x4(p0.b, p1.b, p2.b, p3.b);
                     }
 
                     vst1q_f32(&tile_r[j], cg_r);

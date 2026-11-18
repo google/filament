@@ -21,7 +21,7 @@
 
 #include <math/mathfwd.h>
 
-#if defined(__ARM_NEON)
+#if defined(__ARM_NEON) || defined(_M_ARM64)
 #include <arm_neon.h>
 #endif
 
@@ -74,7 +74,7 @@ struct UTILS_PUBLIC ToneMapper {
      */
     virtual math::float3 operator()(math::float3 c) const noexcept = 0;
 
-#if defined(__ARM_NEON)
+#if defined(__ARM_NEON) || defined(_M_ARM64)
     /**
      * Maps an open domain (or "scene referred" values) color value to display
      * domain (or "display referred") color value. Both the input and output
@@ -126,7 +126,7 @@ struct UTILS_PUBLIC LinearToneMapper final : public ToneMapper {
     ~LinearToneMapper() noexcept override;
 
     math::float3 operator()(math::float3 c) const noexcept override final;
-#if defined(__ARM_NEON)
+#if defined(__ARM_NEON) || defined(_M_ARM64)
     void operator()(float32x4_t& vr, float32x4_t& vg, float32x4_t& vb) const noexcept override final;
 #endif
     bool isOneDimensional() const noexcept override { return true; }
@@ -143,7 +143,7 @@ struct UTILS_PUBLIC ACESToneMapper final : public ToneMapper {
     ~ACESToneMapper() noexcept override;
 
     math::float3 operator()(math::float3 c) const noexcept override final;
-#if defined(__ARM_NEON)
+#if defined(__ARM_NEON) || defined(_M_ARM64)
     void operator()(float32x4_t& vr, float32x4_t& vg, float32x4_t& vb) const noexcept override final;
 #endif
     bool isOneDimensional() const noexcept override { return false; }
@@ -161,7 +161,7 @@ struct UTILS_PUBLIC ACESLegacyToneMapper final : public ToneMapper {
     ~ACESLegacyToneMapper() noexcept override;
 
     math::float3 operator()(math::float3 c) const noexcept override final;
-#if defined(__ARM_NEON)
+#if defined(__ARM_NEON) || defined(_M_ARM64)
     void operator()(float32x4_t& vr, float32x4_t& vg, float32x4_t& vb) const noexcept override final;
 #endif
     bool isOneDimensional() const noexcept override { return false; }
@@ -179,7 +179,7 @@ struct UTILS_PUBLIC FilmicToneMapper final : public ToneMapper {
     ~FilmicToneMapper() noexcept override;
 
     math::float3 operator()(math::float3 x) const noexcept override final;
-#if defined(__ARM_NEON)
+#if defined(__ARM_NEON) || defined(_M_ARM64)
     void operator()(float32x4_t& vr, float32x4_t& vg, float32x4_t& vb) const noexcept override final;
 #endif
     bool isOneDimensional() const noexcept override { return true; }
@@ -196,7 +196,7 @@ struct UTILS_PUBLIC PBRNeutralToneMapper final : public ToneMapper {
     ~PBRNeutralToneMapper() noexcept override;
 
     math::float3 operator()(math::float3 color) const noexcept override final;
-#if defined(__ARM_NEON)
+#if defined(__ARM_NEON) || defined(_M_ARM64)
     void operator()(float32x4_t& vr, float32x4_t& vg, float32x4_t& vb) const noexcept override final;
 #endif
     bool isOneDimensional() const noexcept override { return false; }
@@ -242,7 +242,7 @@ struct UTILS_PUBLIC AgxToneMapper final : public ToneMapper {
     ~AgxToneMapper() noexcept override;
 
     math::float3 operator()(math::float3 v) const noexcept override final;
-#if defined(__ARM_NEON)
+#if defined(__ARM_NEON) || defined(_M_ARM64)
     void operator()(float32x4_t& vr, float32x4_t& vg, float32x4_t& vb) const noexcept override final;
 #endif
     bool isOneDimensional() const noexcept override { return false; }
@@ -291,7 +291,7 @@ struct UTILS_PUBLIC GenericToneMapper final : public ToneMapper {
     GenericToneMapper& operator=(GenericToneMapper&& rhs) noexcept;
 
     math::float3 operator()(math::float3 x) const noexcept override final;
-#if defined(__ARM_NEON)
+#if defined(__ARM_NEON) || defined(_M_ARM64)
     void operator()(float32x4_t& vr, float32x4_t& vg, float32x4_t& vb) const noexcept override final;
 #endif
     bool isOneDimensional() const noexcept override { return true; }

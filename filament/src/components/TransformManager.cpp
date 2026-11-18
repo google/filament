@@ -23,7 +23,7 @@
 
 #include <math/mat4.h>
 
-#if defined(__ARM_NEON)
+#if defined(__ARM_NEON) || defined(_M_ARM64)
 #include <arm_neon.h>
 #endif
 
@@ -44,7 +44,7 @@ namespace {
 
 UTILS_ALWAYS_INLINE
 bool isTransformIdentical(mat4f const& a, mat4f const& b) noexcept {
-#if defined(__ARM_NEON) && defined(__aarch64__)
+#if (defined(__ARM_NEON) && defined(__aarch64__)) || defined(_M_ARM64)
     uint32x4_t const d0 = veorq_u32(vreinterpretq_u32_f32(vld1q_f32(&a[0].x)),
             vreinterpretq_u32_f32(vld1q_f32(&b[0].x)));
     uint32x4_t const d1 = veorq_u32(vreinterpretq_u32_f32(vld1q_f32(&a[1].x)),
@@ -62,7 +62,7 @@ bool isTransformIdentical(mat4f const& a, mat4f const& b) noexcept {
 
 UTILS_ALWAYS_INLINE
 void decomposeDoubleTransform(mat4 const& model, mat4f& local, float3& localLo) noexcept {
-#if defined(__ARM_NEON) && defined(__aarch64__)
+#if (defined(__ARM_NEON) && defined(__aarch64__)) || defined(_M_ARM64)
     float32x4_t const c0 = vcvt_high_f32_f64(vcvt_f32_f64(vld1q_f64(&model[0].x)), vld1q_f64(&model[0].z));
     float32x4_t const c1 = vcvt_high_f32_f64(vcvt_f32_f64(vld1q_f64(&model[1].x)), vld1q_f64(&model[1].z));
     float32x4_t const c2 = vcvt_high_f32_f64(vcvt_f32_f64(vld1q_f64(&model[2].x)), vld1q_f64(&model[2].z));
@@ -818,7 +818,7 @@ void FTransformManager::computeWorldTransform(
         mat4f& UTILS_RESTRICT outWorld,
         mat4f const& UTILS_RESTRICT pt,
         mat4f const& UTILS_RESTRICT local) noexcept {
-#if defined(__ARM_NEON) && defined(__aarch64__)
+#if (defined(__ARM_NEON) && defined(__aarch64__)) || defined(_M_ARM64)
     float32x4_t const p0 = vld1q_f32(&pt[0][0]);
     float32x4_t const p1 = vld1q_f32(&pt[1][0]);
     float32x4_t const p2 = vld1q_f32(&pt[2][0]);
@@ -869,7 +869,7 @@ void FTransformManager::computeWorldTransformAccurate(
         mat4f const& UTILS_RESTRICT local,
         float3 const& UTILS_RESTRICT ptTranslationLo,
         float3 const& UTILS_RESTRICT localTranslationLo) noexcept {
-#if defined(__ARM_NEON) && defined(__aarch64__)
+#if (defined(__ARM_NEON) && defined(__aarch64__)) || defined(_M_ARM64)
     float32x4_t const p0 = vld1q_f32(&pt[0].x);
     float32x4_t const p1 = vld1q_f32(&pt[1].x);
     float32x4_t const p2 = vld1q_f32(&pt[2].x);

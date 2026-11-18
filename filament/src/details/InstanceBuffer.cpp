@@ -37,7 +37,7 @@
 #include <math/mat3.h>
 #include <math/mat4.h>
 
-#if defined(__ARM_NEON)
+#if defined(__ARM_NEON) || defined(_M_ARM64)
 #include <arm_neon.h>
 #endif
 
@@ -55,7 +55,7 @@ namespace {
 
 UTILS_ALWAYS_INLINE
 bool isTransformIdentical(math::mat4f const& a, math::mat4f const& b) noexcept {
-#if defined(__ARM_NEON) && defined(__aarch64__)
+#if (defined(__ARM_NEON) && defined(__aarch64__)) || defined(_M_ARM64)
     uint32x4_t const eq0 = vceqq_f32(vld1q_f32(&a[0].x), vld1q_f32(&b[0].x));
     uint32x4_t const eq1 = vceqq_f32(vld1q_f32(&a[1].x), vld1q_f32(&b[1].x));
     uint32x4_t const eq2 = vceqq_f32(vld1q_f32(&a[2].x), vld1q_f32(&b[2].x));

@@ -28,7 +28,7 @@
 #include <limits>
 #include <new>
 
-#if defined(__ARM_NEON)
+#if defined(__ARM_NEON) || defined(_M_ARM64)
 #include <arm_neon.h>
 #include "details/ColorGradingNeon.h"
 #endif
@@ -204,7 +204,7 @@ static float3 ACES(float3 color, float brightness) noexcept {
 
 DEFAULT_CONSTRUCTORS(ToneMapper)
 
-#if defined(__ARM_NEON)
+#if defined(__ARM_NEON) || defined(_M_ARM64)
 void ToneMapper::operator()(float32x4_t& vr, float32x4_t& vg, float32x4_t& vb) const noexcept {
     alignas(16) float r[4];
     alignas(16) float g[4];
@@ -218,9 +218,9 @@ void ToneMapper::operator()(float32x4_t& vr, float32x4_t& vg, float32x4_t& vb) c
     float3 const c2 = (*this)(float3{r[2], g[2], b[2]});
     float3 const c3 = (*this)(float3{r[3], g[3], b[3]});
 
-    vr = float32x4_t{c0.r, c1.r, c2.r, c3.r};
-    vg = float32x4_t{c0.g, c1.g, c2.g, c3.g};
-    vb = float32x4_t{c0.b, c1.b, c2.b, c3.b};
+    vr = makeFloat32x4(c0.r, c1.r, c2.r, c3.r);
+    vg = makeFloat32x4(c0.g, c1.g, c2.g, c3.g);
+    vb = makeFloat32x4(c0.b, c1.b, c2.b, c3.b);
 }
 #endif
 
@@ -234,7 +234,7 @@ float3 LinearToneMapper::operator()(float3 const c) const noexcept {
     return saturate(c);
 }
 
-#if defined(__ARM_NEON)
+#if defined(__ARM_NEON) || defined(_M_ARM64)
 void LinearToneMapper::operator()(float32x4_t& vr, float32x4_t& vg, float32x4_t& vb) const noexcept {
     float32x4_t const zero = vdupq_n_f32(0.0f);
     float32x4_t const one = vdupq_n_f32(1.0f);
@@ -248,7 +248,7 @@ void LinearToneMapper::operator()(float32x4_t& vr, float32x4_t& vg, float32x4_t&
 // ACES tone mappers
 //------------------------------------------------------------------------------
 
-#if defined(__ARM_NEON)
+#if defined(__ARM_NEON) || defined(_M_ARM64)
 static void v_toneMappingACES(float32x4_t& vr, float32x4_t& vg, float32x4_t& vb, float const brightness) noexcept {
     // Rec2020_to_AP0
     float32x4_t ap0_r = vaddq_f32(vaddq_f32(vmulq_n_f32(vr, Rec2020_to_AP0[0][0]), vmulq_n_f32(vg, Rec2020_to_AP0[1][0])), vmulq_n_f32(vb, Rec2020_to_AP0[2][0]));
@@ -380,7 +380,7 @@ float3 ACESToneMapper::operator()(float3 const c) const noexcept {
     return aces::ACES(c, 1.0f);
 }
 
-#if defined(__ARM_NEON)
+#if defined(__ARM_NEON) || defined(_M_ARM64)
 void ACESToneMapper::operator()(float32x4_t& vr, float32x4_t& vg, float32x4_t& vb) const noexcept {
     v_toneMappingACES(vr, vg, vb, 1.0f);
 }
@@ -392,7 +392,7 @@ float3 ACESLegacyToneMapper::operator()(float3 const c) const noexcept {
     return aces::ACES(c, 1.0f / 0.6f);
 }
 
-#if defined(__ARM_NEON)
+#if defined(__ARM_NEON) || defined(_M_ARM64)
 void ACESLegacyToneMapper::operator()(float32x4_t& vr, float32x4_t& vg, float32x4_t& vb) const noexcept {
     v_toneMappingACES(vr, vg, vb, 1.66666667f);
 }
@@ -410,7 +410,7 @@ float3 FilmicToneMapper::operator()(float3 const x) const noexcept {
     return (x * (a * x + b)) / (x * (c * x + d) + e);
 }
 
-#if defined(__ARM_NEON)
+#if defined(__ARM_NEON) || defined(_M_ARM64)
 void FilmicToneMapper::operator()(float32x4_t& vr, float32x4_t& vg, float32x4_t& vb) const noexcept {
     // Narkowicz 2015, "ACES Filmic Tone Mapping Curve"
     constexpr float a = 2.51f;
@@ -463,7 +463,7 @@ float3 PBRNeutralToneMapper::operator()(float3 color) const noexcept {
     return mix(color, float3(newPeak), g);
 }
 
-#if defined(__ARM_NEON)
+#if defined(__ARM_NEON) || defined(_M_ARM64)
 void PBRNeutralToneMapper::operator()(float32x4_t& vr, float32x4_t& vg, float32x4_t& vb) const noexcept {
     constexpr float startCompression = 0.8f - 0.04f;
     constexpr float desaturation = 0.15f;
@@ -787,7 +787,7 @@ float3 AgxToneMapper::operator()(float3 v) const noexcept {
     return v;
 }
 
-#if defined(__ARM_NEON)
+#if defined(__ARM_NEON) || defined(_M_ARM64)
 static float32x4_t v_agxDefaultContrastApprox(float32x4_t const x) noexcept {
     float32x4_t const x2 = vmulq_f32(x, x);
     float32x4_t const x4 = vmulq_f32(x2, x2);
@@ -991,7 +991,7 @@ float3 GenericToneMapper::operator()(float3 x) const noexcept {
     return mOptions->outputScale * x / (x + mOptions->inputScale);
 }
 
-#if defined(__ARM_NEON)
+#if defined(__ARM_NEON) || defined(_M_ARM64)
 void GenericToneMapper::operator()(float32x4_t& vr, float32x4_t& vg, float32x4_t& vb) const noexcept {
     float const contrast = mOptions->contrast;
     float32x4_t const outScale = vdupq_n_f32(mOptions->outputScale);

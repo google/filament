@@ -26,7 +26,7 @@
 #include <math/vec3.h>
 #include <math/vec4.h>
 
-#if defined(__ARM_NEON)
+#if defined(__ARM_NEON) || defined(_M_ARM64)
 #include <arm_neon.h>
 #endif
 
@@ -186,7 +186,7 @@ inline float sRGBToLinear(const float& sRGB) {
     return std::pow((sRGB + a) / a1, p);
 }
 
-#if defined(__ARM_NEON)
+#if defined(__ARM_NEON) || defined(_M_ARM64)
 // vfmaq_f32 requires FMA (VFPv4), which 32-bit ARM targets built with plain NEON don't have.
 inline float32x4_t fmaSimd(float32x4_t a, float32x4_t b, float32x4_t c) {
 #if defined(__aarch64__) || defined(_M_ARM64) || defined(__ARM_FEATURE_FMA)
@@ -286,7 +286,7 @@ inline std::unique_ptr<uint8_t[]> fromLinearToRGB_10_11_11_REV(const LinearImage
     float const* UTILS_RESTRICT p = image.getPixelRef();
 
     size_t i = 0;
-#if defined(__ARM_NEON)
+#if defined(__ARM_NEON) || defined(_M_ARM64)
     const float32x4_t maxVal = vdupq_n_f32(64512.0f);
     const float32x4_t zero = vdupq_n_f32(0.0f);
     const uint32x4_t mask11 = vdupq_n_u32(0xffff0000u);
@@ -419,7 +419,7 @@ static LinearImage toLinearWithAlpha(size_t w, size_t h, size_t bpr, const uint8
     return result;
 }
 
-#if defined(__ARM_NEON)
+#if defined(__ARM_NEON) || defined(_M_ARM64)
 template<>
 inline LinearImage toLinearWithAlpha<uint8_t>(size_t w, size_t h, size_t bpr, const uint8_t* src) {
     LinearImage result(w, h, 4);
@@ -442,7 +442,9 @@ inline LinearImage toLinearWithAlpha<uint8_t>(size_t w, size_t h, size_t bpr, co
             vst1q_f32(d + 12, sRGBToLinearWithAlphaSimd(vmulq_n_f32(vcvtq_f32_u32(v32_3), invMax)));
         }
         for (; n >= 4; n -= 4, p += 4, d += 4) {
-            const uint32x4_t v32 = { p[0], p[1], p[2], p[3] };
+            // Not a brace-initialized vector: MSVC doesn't support that GCC/Clang extension.
+            const uint32_t lanes[4] = { p[0], p[1], p[2], p[3] };
+            const uint32x4_t v32 = vld1q_u32(lanes);
             vst1q_f32(d, sRGBToLinearWithAlphaSimd(vmulq_n_f32(vcvtq_f32_u32(v32), invMax)));
         }
     }
@@ -490,7 +492,7 @@ static LinearImage asLinearWithAlpha(size_t w, size_t h, size_t bpr, const uint8
     return result;
 }
 
-#if defined(__ARM_NEON)
+#if defined(__ARM_NEON) || defined(_M_ARM64)
 template<>
 inline LinearImage asLinearWithAlpha<uint8_t>(size_t w, size_t h, size_t bpr, const uint8_t* src) {
     LinearImage result(w, h, 4);
@@ -560,7 +562,7 @@ static LinearImage toLinear(size_t w, size_t h, size_t bpr, const uint8_t* src) 
     return result;
 }
 
-#if defined(__ARM_NEON)
+#if defined(__ARM_NEON) || defined(_M_ARM64)
 template<>
 inline LinearImage toLinear<uint8_t>(size_t w, size_t h, size_t bpr, const uint8_t* src) {
     LinearImage result(w, h, 3);
@@ -583,7 +585,9 @@ inline LinearImage toLinear<uint8_t>(size_t w, size_t h, size_t bpr, const uint8
             vst1q_f32(d + 12, sRGBToLinearSimd(vmulq_n_f32(vcvtq_f32_u32(v32_3), invMax)));
         }
         for (; n >= 4; n -= 4, p += 4, d += 4) {
-            const uint32x4_t v32 = { p[0], p[1], p[2], p[3] };
+            // Not a brace-initialized vector: MSVC doesn't support that GCC/Clang extension.
+            const uint32_t lanes[4] = { p[0], p[1], p[2], p[3] };
+            const uint32x4_t v32 = vld1q_u32(lanes);
             vst1q_f32(d, sRGBToLinearSimd(vmulq_n_f32(vcvtq_f32_u32(v32), invMax)));
         }
         for (; n > 0; --n) {
@@ -636,7 +640,7 @@ static LinearImage asLinear(size_t w, size_t h, size_t bpr, const uint8_t* src) 
     return result;
 }
 
-#if defined(__ARM_NEON)
+#if defined(__ARM_NEON) || defined(_M_ARM64)
 template<>
 inline LinearImage asLinear<uint8_t>(size_t w, size_t h, size_t bpr, const uint8_t* src) {
     LinearImage result(w, h, 3);
@@ -710,7 +714,7 @@ static LinearImage toLinearWithAlphaNtohs(size_t w, size_t h, size_t bpr, const 
     return result;
 }
 
-#if defined(__ARM_NEON)
+#if defined(__ARM_NEON) || defined(_M_ARM64)
 template<>
 inline LinearImage toLinearWithAlphaNtohs<uint16_t>(size_t w, size_t h, size_t bpr,
         const uint8_t* src) {
@@ -761,7 +765,7 @@ static LinearImage asLinearWithAlphaNtohs(size_t w, size_t h, size_t bpr, const 
     return result;
 }
 
-#if defined(__ARM_NEON)
+#if defined(__ARM_NEON) || defined(_M_ARM64)
 template<>
 inline LinearImage asLinearWithAlphaNtohs<uint16_t>(size_t w, size_t h, size_t bpr,
         const uint8_t* src) {
@@ -811,7 +815,7 @@ static LinearImage toLinearNtohs(size_t w, size_t h, size_t bpr, const uint8_t* 
     return result;
 }
 
-#if defined(__ARM_NEON)
+#if defined(__ARM_NEON) || defined(_M_ARM64)
 template<>
 inline LinearImage toLinearNtohs<uint16_t>(size_t w, size_t h, size_t bpr, const uint8_t* src) {
     LinearImage result(w, h, 3);
@@ -862,7 +866,7 @@ static LinearImage asLinearNtohs(size_t w, size_t h, size_t bpr, const uint8_t* 
     return result;
 }
 
-#if defined(__ARM_NEON)
+#if defined(__ARM_NEON) || defined(_M_ARM64)
 template<>
 inline LinearImage asLinearNtohs<uint16_t>(size_t w, size_t h, size_t bpr, const uint8_t* src) {
     LinearImage result(w, h, 3);

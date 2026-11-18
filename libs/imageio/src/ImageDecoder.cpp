@@ -41,7 +41,7 @@
 #include <math/vec3.h>
 #include <math/vec4.h>
 
-#if defined(__ARM_NEON)
+#if defined(__ARM_NEON) || defined(_M_ARM64)
 #include <arm_neon.h>
 #endif
 
@@ -493,7 +493,7 @@ LinearImage EXRDecoder::decode() {
         float const* UTILS_RESTRICT s = rgba;
         float* UTILS_RESTRICT d = image.getPixelRef();
         size_t i = 0;
-#if defined(__ARM_NEON)
+#if defined(__ARM_NEON) || defined(_M_ARM64)
         for (; i + 4 <= count; i += 4, s += 16, d += 12) {
             const float32x4x4_t v = vld4q_f32(s);
             const float32x4x3_t rgb = { v.val[0], v.val[1], v.val[2] };
