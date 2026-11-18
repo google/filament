@@ -623,6 +623,9 @@ Filament.loadClassExtensions = function() {
         buffer = getBufferDescriptor(buffer);
         const asset = this._createInstancedAsset(buffer, instances.length);
         buffer.delete();
+        if (!asset) {
+            return null;
+        }
         const instancesVector = asset._getAssetInstances();
         for (let i = 0; i < instancesVector.size(); i++) {
             instances[i] = instancesVector.get(i);

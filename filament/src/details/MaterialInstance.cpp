@@ -75,7 +75,7 @@ FMaterialInstance::FMaterialInstance(FEngine& engine, FMaterial const* material,
           mIsDefaultInstance(false),
           mUseUboBatching(material->useUboBatching()),
           mTransparencyMode(TransparencyMode::DEFAULT),
-          mName(name ? CString(name) : material->getName()) {
+          mName(name ? CString(name) : CString{}) {
     FEngine::DriverApi& driver = engine.getDriverApi();
 
     // even if the material doesn't have any parameters, we allocate a small UBO because it's
@@ -131,10 +131,14 @@ FMaterialInstance::FMaterialInstance(FEngine& engine, FMaterial const* material,
 FMaterialInstance::FMaterialInstance(FEngine& engine,
         FMaterialInstance const* other, const char* name)
         : mMaterial(other->mMaterial),
-          mTextureParameters(other->mTextureParameters),
+          mTextureParameters((other->mTextureParameters && !other->mTextureParameters->empty())
+                  ? std::make_unique<TextureParameterMap>(*other->mTextureParameters)
+                  : nullptr),
           mDescriptorSet(other->mDescriptorSet.duplicate(
                 "MaterialInstance", mMaterial->getDescriptorSetLayout())),
-          mPrograms(other->mPrograms),
+          mInstancePrograms(other->mInstancePrograms
+                  ? std::make_unique<InstancePrograms>(*other->mInstancePrograms)
+                  : nullptr),
           mPolygonOffset(other->mPolygonOffset),
           mStencilState(other->mStencilState),
           mMaskThreshold(other->mMaskThreshold),
@@ -212,8 +216,8 @@ void FMaterialInstance::terminate(FEngine& engine) {
         driver.destroyBufferObject(*ubHandle);
     }
 
-    if (mPrograms.isInitialized()) {
-        mPrograms.terminate(engine);
+    if (mInstancePrograms && mInstancePrograms->programs.isInitialized()) {
+        mInstancePrograms->programs.terminate(engine);
     }
 }
 
@@ -224,16 +228,16 @@ void FMaterialInstance::commit(FEngine& engine) const {
 }
 
 void FMaterialInstance::commit(FEngine::DriverApi& driver, UboManager* uboManager) const {
-    if (!mTextureParameters.empty()) {
+    if (mTextureParameters && !mTextureParameters->empty()) {
         FEngine const& engine = mMaterial->getEngine();
         // First pass: check preconditions
-        for (auto const& [binding, p]: mTextureParameters) {
+        for (auto const& [binding, p]: *mTextureParameters) {
             assert_invariant(p.texture);
             FILAMENT_CHECK_PRECONDITION(engine.isValid(p.texture))
                     << "Invalid texture still bound to MaterialInstance: '" << getName() << "'\n";
         }
         // Second pass: update state
-        for (auto const& [binding, p]: mTextureParameters) {
+        for (auto const& [binding, p]: *mTextureParameters) {
             Handle<HwTexture> const handle = p.texture->getHwHandleForSampling();
             assert_invariant(handle);
             mDescriptorSet.setSampler(mMaterial->getDescriptorSetLayout(),
@@ -278,14 +282,17 @@ void FMaterialInstance::setConstantImpl(std::string_view name, T value) {
     auto it = constants.find(name);
     FILAMENT_CHECK_PRECONDITION(it != constants.end()) << "Constant " << name << " does not exist";
 
-    if (UTILS_UNLIKELY(mPendingSpecializationConstants.empty())) {
-        mPendingSpecializationConstants =
+    if (!mInstancePrograms) {
+        mInstancePrograms = std::make_unique<InstancePrograms>();
+    }
+    if (UTILS_UNLIKELY(mInstancePrograms->pendingSpecializationConstants.empty())) {
+        mInstancePrograms->pendingSpecializationConstants =
                 FixedCapacityVector<backend::Program::SpecializationConstant>(
                         getPrograms().getSpecializationConstants());
     }
 
     uint32_t id = it->second + CONFIG_MAX_INTERNAL_SPEC_CONSTANTS;
-    mPendingSpecializationConstants[id] = value;
+    mInstancePrograms->pendingSpecializationConstants[id] = value;
 }
 
 template<typename T>
@@ -296,8 +303,9 @@ T FMaterialInstance::getConstantImpl(std::string_view name) const {
 
     uint32_t id = it->second + CONFIG_MAX_INTERNAL_SPEC_CONSTANTS;
 
-    if (UTILS_UNLIKELY(!mPendingSpecializationConstants.empty())) {
-        return std::get<T>(mPendingSpecializationConstants[id]);
+    if (UTILS_UNLIKELY(mInstancePrograms &&
+                !mInstancePrograms->pendingSpecializationConstants.empty())) {
+        return std::get<T>(mInstancePrograms->pendingSpecializationConstants[id]);
     }
 
     return getPrograms().getConstant<T>(id);
@@ -361,11 +369,16 @@ void FMaterialInstance::setParameterImpl(std::string_view const name,
     }
 
     if (texture && texture->textureHandleCanMutate()) {
-        mTextureParameters[binding] = { texture, sampler.getSamplerParams() };
+        if (!mTextureParameters) {
+            mTextureParameters = std::make_unique<TextureParameterMap>();
+        }
+        (*mTextureParameters)[binding] = { texture, sampler.getSamplerParams() };
     } else {
         // Ensure to erase the binding from mTextureParameters since it will not
         // be updated.
-        mTextureParameters.erase(binding);
+        if (mTextureParameters) {
+            mTextureParameters->erase(binding);
+        }
 
         Handle<HwTexture> handle{};
         if (texture) {
@@ -442,9 +455,8 @@ bool FMaterialInstance::isDepthCullingEnabled() const noexcept {
 }
 
 const char* FMaterialInstance::getName() const noexcept {
-    // To decide whether to use the parent material name as a fallback, we check for the nullness of
-    // the instance's CString rather than calling empty(). This allows instances to override the
-    // parent material's name with a blank string.
+    // Both nullptr and empty "" leave mName.data() == nullptr without allocating a CString,
+    // falling back to the parent material's name.
     if (mName.data() == nullptr) {
         return mMaterial->getName().c_str_safe();
     }
@@ -555,10 +567,10 @@ void FMaterialInstance::use(FEngine::DriverApi& driver, Variant variant) const {
     assert_invariant(!isUsingUboBatching() || BufferAllocator::isValid(getAllocationId()));
 
     if (UTILS_UNLIKELY(mMissingSamplerDescriptors.any())) {
-        std::call_once(mMissingSamplersFlag, [this] {
+        if (!mMissingSamplersWarned.exchange(true, std::memory_order_relaxed)) {
             auto const& list = mMaterial->getSamplerInterfaceBlock().getSamplerInfoList();
             LOG(WARNING) << "sampler parameters not set in MaterialInstance \""
-                         << mName.c_str_safe() << "\" or Material \""
+                         << getName() << "\" or Material \""
                          << mMaterial->getName().c_str_safe() << "\":";
             mMissingSamplerDescriptors.forEachSetBit([&list](descriptor_binding_t binding) {
                 auto const pos = std::find_if(list.begin(), list.end(), [binding](const auto& item) {
@@ -569,7 +581,7 @@ void FMaterialInstance::use(FEngine::DriverApi& driver, Variant variant) const {
                     LOG(WARNING) << "[" << +binding << "] " << pos->name.c_str();
                 }
             });
-        });
+        }
         mMissingSamplerDescriptors.clear();
     }
 
@@ -655,21 +667,24 @@ void FMaterialInstance::fixMissingSamplers() const {
 }
 
 LocalProgramCache const& FMaterialInstance::getPrograms() const noexcept {
-    return mPrograms.isInitialized() ? mPrograms : mMaterial->getPrograms();
+    return (mInstancePrograms && mInstancePrograms->programs.isInitialized())
+            ? mInstancePrograms->programs
+            : mMaterial->getPrograms();
 }
 
 void FMaterialInstance::flushSpecializationConstants() const noexcept {
-    if (mPendingSpecializationConstants.empty()) {
+    if (!mInstancePrograms || mInstancePrograms->pendingSpecializationConstants.empty()) {
         return;
     }
 
-    if (!mPrograms.isInitialized()) {
-        mPrograms.initializeForMaterial(mMaterial->getEngine(), *mMaterial,
-                std::move(mPendingSpecializationConstants));
+    if (!mInstancePrograms->programs.isInitialized()) {
+        mInstancePrograms->programs.initializeForMaterial(mMaterial->getEngine(), *mMaterial,
+                std::move(mInstancePrograms->pendingSpecializationConstants));
     } else {
-        mPrograms.setConstants(std::move(mPendingSpecializationConstants));
+        mInstancePrograms->programs.setConstants(
+                std::move(mInstancePrograms->pendingSpecializationConstants));
     }
-    mPendingSpecializationConstants.clear();
+    mInstancePrograms->pendingSpecializationConstants.clear();
 }
 
 #if FILAMENT_ENABLE_MATDBG

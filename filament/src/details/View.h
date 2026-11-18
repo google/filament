@@ -394,12 +394,10 @@ public:
     }
 
     void setColorGrading(FColorGrading const* colorGrading) noexcept {
-        mColorGrading = colorGrading == nullptr ? mDefaultColorGrading : colorGrading;
+        mColorGrading = colorGrading;
     }
 
-    const FColorGrading* getColorGrading() const noexcept {
-        return mColorGrading;
-    }
+    const FColorGrading* getColorGrading() const noexcept;
 
     void setDithering(Dithering const dithering) noexcept {
         mDithering = dithering;
@@ -661,6 +659,8 @@ private:
             FScene::RenderableSoa& renderableData,
             utils::Range<uint32_t> visibleRenderables) noexcept;
 
+    void ensureDynamicLightingBuffers(FEngine& engine, backend::DriverApi& driver) noexcept;
+
     static void prepareVisibleLights(FLightManager const& lcm,
             utils::Slice<float> scratch,
             math::mat4f const& viewMatrix, Frustum const& frustum,
@@ -734,7 +734,7 @@ private:
     StereoscopicOptions mStereoscopicOptions;
     BlendMode mBlendMode = BlendMode::OPAQUE;
     const FColorGrading* mColorGrading = nullptr;
-    const FColorGrading* mDefaultColorGrading = nullptr;
+    FEngine& mEngine;
     utils::Entity mFogEntity{};
     bool mIsStereoSupported : 1;
     utils::bitset32 mChannelDepthClearMask{};

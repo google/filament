@@ -16,6 +16,7 @@
 
 #include "details/Engine.h"
 
+#include "Froxelizer.h"
 #include "MaterialParser.h"
 #include "RenderPrimitive.h"
 #include "TextureCache.h"
@@ -52,6 +53,7 @@
 
 #include <private/filament/DescriptorSets.h>
 #include <private/filament/EngineEnums.h>
+#include <private/filament/UibStructs.h>
 #include <private/filament/Variant.h>
 
 #include <filament/ColorGrading.h>
@@ -168,7 +170,7 @@ struct Engine::BuilderDetails {
     void* mSharedContext = nullptr;
     bool mPaused = false;
     std::unordered_map<CString, bool> mFeatureFlags;
-    ColorGrading::Builder mColorGradingBuilder;
+    std::optional<ColorGrading::Builder> mColorGradingBuilder;
 
     static Config validateConfig(Config config) noexcept;
 };
@@ -544,7 +546,13 @@ void FEngine::init() {
                     new UboManager(getDriverApi(), slotSize, mConfig.sharedUboInitialSizeInBytes);
         }
 
-        mDefaultColorGrading = downcast(mColorGradingBuilder.build(*this));
+        // A user-supplied ColorGrading::Builder may hold non-owning pointers (toneMapper,
+        // exportUser) whose lifetime only extends until Engine::Builder::build() returns, so build
+        // it synchronously here. Only the default builder path (!mColorGradingBuilder.has_value())
+        // is deferred to FEngine::getDefaultColorGrading().
+        if (mColorGradingBuilder.has_value()) {
+            mDefaultColorGrading = downcast(mColorGradingBuilder->build(*this));
+        }
 
         constexpr float3 dummyPositions[1] = {};
         constexpr short4 dummyTangents[1] = {};
@@ -569,12 +577,29 @@ void FEngine::init() {
         driverApi.update3DImage(mDummyZeroTextureArray, 0, 0, 0, 0, 1, 1, 1,
                 { zeroRGBA.data(), size(zeroRGBA), Texture::Format::RGBA, Texture::Type::UBYTE });
 
-        mDummyUniformBuffer = driverApi.createBufferObject(CONFIG_MINSPEC_UBO_SIZE,
+        size_t const dummyUboSize = std::max({
+                size_t(CONFIG_MINSPEC_UBO_SIZE),
+                sizeof(PerRenderableUib),
+                sizeof(PerRenderableBoneUib),
+                sizeof(PerRenderableMorphingUib),
+                sizeof(ShadowUib),
+                CONFIG_MAX_LIGHT_COUNT * sizeof(LightsUib),
+                Froxelizer::getFroxelBufferByteCount(driverApi),
+                Froxelizer::getFroxelRecordBufferByteCount(driverApi),
+        });
+        mDummyUniformBuffer = driverApi.createBufferObject(dummyUboSize,
                 BufferObjectBinding::UNIFORM, BufferUsage::STATIC);
+        if (UTILS_UNLIKELY(driverApi.isWorkaroundNeeded(Workaround::ADRENO_UNIFORM_ARRAY_CRASH))) {
+            auto* const initData = driverApi.allocatePod<PerRenderableBoneUib::BoneData>(1);
+            memset(initData, 0, sizeof(PerRenderableBoneUib::BoneData));
+            driverApi.updateBufferObject(mDummyUniformBuffer,
+                    { initData, sizeof(PerRenderableBoneUib::BoneData) }, 0);
+        }
 
         mLightManager.init(*this);
         mDFG.init(*this);
     }
+    mColorGradingBuilder.reset();
 
     mPostProcessManager.init();
 
@@ -1018,6 +1043,15 @@ const FMaterial* FEngine::getSkyboxMaterial() noexcept {
         mSkyboxMaterial = FSkybox::createMaterial(*this);
     }
     return mSkyboxMaterial;
+}
+
+const FColorGrading* FEngine::getDefaultColorGrading() noexcept {
+    if (UTILS_UNLIKELY(mDefaultColorGrading == nullptr &&
+                getSupportedFeatureLevel() >= FeatureLevel::FEATURE_LEVEL_1)) {
+        assert_invariant(!mColorGradingBuilder.has_value());
+        mDefaultColorGrading = downcast(ColorGrading::Builder().build(*this));
+    }
+    return mDefaultColorGrading;
 }
 
 // -----------------------------------------------------------------------------------------------

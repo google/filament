@@ -89,6 +89,7 @@ struct Material::BuilderDetails {
     const void* mPayload = nullptr;
     size_t mSize = 0;
     bool mDefaultMaterial = false;
+    bool mCopyPayload = true;
     int32_t mShBandsCount = 3;
     Builder::ShadowSamplingQuality mShadowSamplingQuality = Builder::ShadowSamplingQuality::LOW;
     UboBatchingMode mUboBatchingMode = UboBatchingMode::DEFAULT;
@@ -96,6 +97,10 @@ struct Material::BuilderDetails {
         CString,
         std::variant<int32_t, float, bool>> mConstantSpecializations;
 };
+
+FMaterial::StaticMaterialBuilder::StaticMaterialBuilder() {
+    mImpl->mCopyPayload = false;
+}
 
 FMaterial::DefaultMaterialBuilder::DefaultMaterialBuilder() {
     mImpl->mDefaultMaterial = true;
@@ -153,7 +158,7 @@ const char* toString(ShaderModel model) {
 
 Material* Material::Builder::build(Engine& engine) const {
     MaterialDefinition* r = downcast(engine).getMaterialCache().acquireMaterial(downcast(engine),
-            mImpl->mPayload, mImpl->mSize);
+            mImpl->mPayload, mImpl->mSize, mImpl->mCopyPayload);
     if (r) {
         return downcast(engine).createMaterial(*this, *r);
     }
@@ -369,7 +374,7 @@ FMaterialInstance* FMaterial::createInstance(const char* name) const noexcept {
 
 FMaterialInstance* FMaterial::getDefaultInstance() noexcept {
     if (UTILS_UNLIKELY(!mDefaultMaterialInstance)) {
-        mDefaultMaterialInstance = mEngine.createMaterialInstance(this, mDefinition.name.c_str());
+        mDefaultMaterialInstance = mEngine.createMaterialInstance(this, nullptr);
         mDefaultMaterialInstance->setDefaultInstance(true);
     }
     return mDefaultMaterialInstance;

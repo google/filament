@@ -44,18 +44,7 @@ StructureDescriptorSet::~StructureDescriptorSet() noexcept {
 }
 
 void StructureDescriptorSet::init(FEngine& engine) noexcept {
-
-    mUniforms.init(engine.getDriverApi());
-
     mDescriptorSetLayout = &engine.getPerViewDescriptorSetLayoutDepthVariant();
-
-    // create the descriptor-set from the layout
-    mDescriptorSet = DescriptorSet{
-        "StructureDescriptorSet", *mDescriptorSetLayout };
-
-    // initialize the descriptor-set
-    mDescriptorSet.setBuffer(*mDescriptorSetLayout, +PerViewBindingPoints::FRAME_UNIFORMS,
-            mUniforms.getUboHandle(), 0, sizeof(PerViewUib));
 }
 
 void StructureDescriptorSet::terminate(DriverApi& driver) {
@@ -65,12 +54,18 @@ void StructureDescriptorSet::terminate(DriverApi& driver) {
 
 void StructureDescriptorSet::bind(DriverApi& driver) const noexcept {
     assert_invariant(mDescriptorSetLayout);
+    if (UTILS_UNLIKELY(!mUniforms.getUboHandle())) {
+        mUniforms.init(driver);
+        mDescriptorSet = DescriptorSet{ "StructureDescriptorSet", *mDescriptorSetLayout };
+        mDescriptorSet.setBuffer(*mDescriptorSetLayout, +PerViewBindingPoints::FRAME_UNIFORMS,
+                mUniforms.getUboHandle(), 0, sizeof(PerViewUib));
+    }
     if (mUniforms.isDirty()) {
         mUniforms.clean();
         driver.updateBufferObject(mUniforms.getUboHandle(),
                 mUniforms.toBufferDescriptor(driver), 0);
-        mDescriptorSet.commit(*mDescriptorSetLayout, driver);
     }
+    mDescriptorSet.commit(*mDescriptorSetLayout, driver);
     mDescriptorSet.bind(driver, DescriptorSetBindingPoints::PER_VIEW);
 }
 
