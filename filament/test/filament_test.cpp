@@ -50,6 +50,7 @@
 #include <filament/Frustum.h>
 #include <filament/IndexBuffer.h>
 #include <filament/InstanceBuffer.h>
+#include <filament/RenderTarget.h>
 #include <filament/SkinningBuffer.h>
 #include <filament/SwapChain.h>
 #include <filament/Texture.h>
@@ -3805,7 +3806,7 @@ TEST(FilamentTest, ECREpochBasedReclamationManagers) {
 
     em.advanceEpoch();
 
-    downcast(engine)->gc();
+    engine->gc();
     ncm.gc();
 
     EXPECT_FALSE(tcm.hasComponent(e1));
@@ -3821,9 +3822,128 @@ TEST(FilamentTest, ECREpochBasedReclamationManagers) {
     EXPECT_NE(engine->getCameraComponent(e2), nullptr);
 
     em.destroy(e2);
-    downcast(engine)->gc();
+    engine->gc();
     ncm.gc();
 
+    Engine::destroy(&engine);
+}
+
+TEST(FilamentTest, EngineGcInStandaloneViewLoop) {
+    Engine* engine = Engine::Builder().backend(Engine::Backend::NOOP).build();
+    EntityManager& em = engine->getEntityManager();
+    TransformManager& tcm = engine->getTransformManager();
+    LightManager& lcm = engine->getLightManager();
+    RenderableManager& rcm = engine->getRenderableManager();
+
+    Renderer* renderer = engine->createRenderer();
+    Scene* scene = engine->createScene();
+    View* view = engine->createView();
+    Entity const cameraEntity = em.create();
+    Camera* camera = engine->createCamera(cameraEntity);
+    Texture* colorTexture = Texture::Builder()
+            .width(64)
+            .height(64)
+            .format(Texture::InternalFormat::RGBA8)
+            .usage(Texture::Usage::COLOR_ATTACHMENT)
+            .build(*engine);
+    RenderTarget* renderTarget = RenderTarget::Builder()
+            .texture(RenderTarget::AttachmentPoint::COLOR, colorTexture)
+            .build(*engine);
+
+    view->setScene(scene);
+    view->setCamera(camera);
+    view->setRenderTarget(renderTarget);
+    view->setViewport({ 0, 0, 64, 64 });
+
+    // Drain any pre-existing free-list entries so newly created entities bump-allocate fresh
+    // generation-0 indices (meaning mFreeList.size() < MIN_FREE_INDICES).
+    engine->gc();
+    engine->gc();
+    std::vector<Entity> drained;
+    while (true) {
+        Entity const e = em.create();
+        drained.push_back(e);
+        if (e.getId() == EntityManager::getIndex(e)) {
+            break;
+        }
+    }
+
+    constexpr size_t kComponentCount = 64;
+    constexpr size_t kExtraCount = 2200;
+    std::vector<Entity> componentEntities(kComponentCount);
+    std::vector<Entity> extraEntities(kExtraCount);
+    em.create(kComponentCount, componentEntities.data());
+    em.create(kExtraCount, extraEntities.data());
+
+    std::unordered_set<uint32_t> destroyedIndices;
+    for (Entity const e : componentEntities) {
+        tcm.create(e);
+        LightManager::Builder(LightManager::Type::POINT).build(*engine, e);
+        RenderableManager::Builder(1)
+                .boundingBox({{ -1, -1, -1 }, { 1, 1, 1 }})
+                .build(*engine, e);
+        scene->addEntity(e);
+        destroyedIndices.insert(EntityManager::getIndex(e));
+    }
+    for (Entity const e : extraEntities) {
+        destroyedIndices.insert(EntityManager::getIndex(e));
+    }
+
+    renderer->renderStandaloneView(view);
+
+    // Destroy entities without explicitly removing components, simulating a standalone-view loop.
+    em.destroy(componentEntities.size(), componentEntities.data());
+    em.destroy(extraEntities.size(), extraEntities.data());
+
+    uint64_t const epochBeforeStandalone = em.getLatestEpochID();
+    renderer->renderStandaloneView(view);
+
+    // renderStandaloneView() alone does not invoke Engine::gc() or advance EBR epochs.
+    EXPECT_EQ(epochBeforeStandalone, em.getLatestEpochID());
+    EXPECT_TRUE(tcm.hasComponent(componentEntities[0]));
+    EXPECT_TRUE(lcm.hasComponent(componentEntities[0]));
+    EXPECT_TRUE(rcm.hasComponent(componentEntities[0]));
+
+    // Calling Engine::gc() in the standalone loop advances epochs, collects amortized dead
+    // components across managers, and allows EBR to recycle destroyed entity indices.
+    for (int i = 0; i < 4; ++i) {
+        renderer->renderStandaloneView(view);
+        engine->gc();
+    }
+
+    EXPECT_GT(em.getLatestEpochID(), epochBeforeStandalone);
+    for (Entity const e : componentEntities) {
+        EXPECT_FALSE(tcm.hasComponent(e));
+        EXPECT_FALSE(lcm.hasComponent(e));
+        EXPECT_FALSE(rcm.hasComponent(e));
+        EXPECT_FALSE(scene->hasEntity(e));
+    }
+
+    // Verify that destroyed 17-bit indices are recycled with a new generation.
+    std::vector<Entity> recycledProbes;
+    bool recycled = false;
+    for (size_t i = 0; i < 1200; ++i) {
+        Entity const probe = em.create();
+        recycledProbes.push_back(probe);
+        if (destroyedIndices.count(EntityManager::getIndex(probe)) > 0) {
+            EXPECT_NE(probe.getId(), EntityManager::getIndex(probe));
+            recycled = true;
+            break;
+        }
+    }
+    EXPECT_TRUE(recycled);
+
+    em.destroy(recycledProbes.size(), recycledProbes.data());
+    em.destroy(drained.size(), drained.data());
+    engine->destroy(renderTarget);
+    engine->destroy(colorTexture);
+    engine->destroy(view);
+    engine->destroy(scene);
+    engine->destroyCameraComponent(cameraEntity);
+    em.destroy(cameraEntity);
+    engine->destroy(renderer);
+    engine->gc();
+    engine->gc();
     Engine::destroy(&engine);
 }
 
@@ -5005,8 +5125,8 @@ TEST_F(SceneCacheTest, SceneHoldsEbrWatermarkAndMultiViewEvictionSurvivesIndexRe
 
     // Flush any pending epochs from earlier tests and drain pre-existing free-list entries until
     // EntityManager bump-allocates a fresh generation-0 index (meaning mFreeList.size() < 1024).
-    downcast(engine)->gc();
-    downcast(engine)->gc();
+    engine->gc();
+    engine->gc();
     while (true) {
         Entity const drain = createEntity();
         if (drain.getId() == EntityManager::getIndex(drain)) {
@@ -5067,7 +5187,7 @@ TEST_F(SceneCacheTest, SceneHoldsEbrWatermarkAndMultiViewEvictionSurvivesIndexRe
     // Now run FEngine::gc() WITHOUT calling prepare() on viewY. FScene::gc() evicts r1/p1/d1 from
     // Scene AND immediately evicts them from all attached View caches (including inactive viewY),
     // then advances its EBR watermark so EntityManager can recycle their 17-bit indices.
-    downcast(engine)->gc();
+    engine->gc();
     EXPECT_FALSE(scene->hasEntity(r1));
     EXPECT_FALSE(hasRenderableRow(viewY, r1));
     EXPECT_FALSE(hasLightRow(viewY, p1));

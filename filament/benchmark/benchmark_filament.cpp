@@ -499,14 +499,14 @@ BENCHMARK_F(EngineGcWorstCaseFixture, worstCaseSequentialGc)(benchmark::State& s
 
         state.ResumeTiming();
 
-        downcast(engine)->gc();
+        engine->gc();
 
         state.PauseTiming();
         for (size_t i = DESTROYED_ENTITIES; i < TOTAL_ENTITIES; ++i) {
             em->destroy(entities[i]);
         }
         em->advanceEpoch();
-        downcast(engine)->gc();
+        engine->gc();
         entities.clear();
         entities.resize(TOTAL_ENTITIES);
     }
@@ -535,7 +535,7 @@ public:
 
     void TearDown(const benchmark::State& state) override {
         downcast(tcm)->unregisterBitset(&dirtyEntities);
-        downcast(engine)->gc();
+        engine->gc();
         Engine::destroy(&engine);
     }
 };
@@ -1527,7 +1527,7 @@ static void BM_SoaCache_GetIndex_Sequential(benchmark::State& state) {
 
     em.destroy(count, entities.data());
     em.advanceEpoch();
-    downcast(engine)->gc();
+    engine->gc();
     em.reclaimSafeEpochs();
     Engine::destroy(&engine);
 }
@@ -1564,7 +1564,7 @@ static void BM_SoaCache_GetIndex_Random(benchmark::State& state) {
 
     em.destroy(count, entities.data());
     em.advanceEpoch();
-    downcast(engine)->gc();
+    engine->gc();
     em.reclaimSafeEpochs();
     Engine::destroy(&engine);
 }
@@ -1598,7 +1598,7 @@ static void BM_SoaCache_AcquireExisting(benchmark::State& state) {
 
     em.destroy(count, entities.data());
     em.advanceEpoch();
-    downcast(engine)->gc();
+    engine->gc();
     em.reclaimSafeEpochs();
     Engine::destroy(&engine);
 }
@@ -1641,7 +1641,7 @@ static void BM_SoaCache_AcquireAndRemoveSwapPop(benchmark::State& state) {
 
     em.destroy(count, entities.data());
     em.advanceEpoch();
-    downcast(engine)->gc();
+    engine->gc();
     em.reclaimSafeEpochs();
     Engine::destroy(&engine);
 }
@@ -1708,7 +1708,7 @@ static void BM_SceneCache_ProcessDeferredUpdates_DirtyRenderables(benchmark::Sta
     }
     em.destroy(TOTAL_COUNT, entities.data());
     em.advanceEpoch();
-    downcast(engine)->gc();
+    engine->gc();
     em.reclaimSafeEpochs();
     Engine::destroy(&engine);
 }

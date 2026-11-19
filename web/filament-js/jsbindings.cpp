@@ -513,6 +513,8 @@ class_<Engine>("Engine")
 
     .function("unprotected", &Engine::unprotected)
 
+    .function("gc", &Engine::gc)
+
     .function("enableAccurateTranslations", &Engine::enableAccurateTranslations)
 
     .function("setAutomaticInstancingEnabled", &Engine::setAutomaticInstancingEnabled)
