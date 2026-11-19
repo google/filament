@@ -139,12 +139,11 @@
 
 #include <viewer/Settings.h>
 
-#include <imageio-lite/ImageEncoder.h>
-
 #if !defined(__ANDROID__)
 #include <imageio/ImageEncoder.h>
 #endif
 
+#include <image/ColorTransform.h>
 #include <image/LinearImage.h>
 
 #include <gltfio/Animator.h>
@@ -544,11 +543,36 @@ Aabb worldBounds(Engine* engine, FilamentAsset const* asset) {
     return bounds;
 }
 
+#if defined(__ANDROID__)
+#define STB_IMAGE_WRITE_STATIC
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+#include <stb_image_write.h>
+#endif
 void writePng(LinearImage const& img, Path const& path) {
     std::ofstream out(path.c_str(), std::ios::binary | std::ios::trunc);
 #if defined(__ANDROID__)
-    imageio_lite::ImageEncoder::encode(
-            out, imageio_lite::ImageEncoder::Format::TIFF, img, "", CString(path.c_str()));
+    uint32_t const w = img.getWidth();
+    uint32_t const h = img.getHeight();
+    uint32_t const c = img.getChannels();
+    std::unique_ptr<uint8_t[]> data;
+    int comp = 0;
+    if (c == 1) {
+        comp = 1;
+        data = image::fromLinearToGrayscale<uint8_t>(img);
+    } else if (c == 4) {
+        comp = 4;
+        data = image::fromLinearToSRGB<uint8_t, 4>(img);
+    } else {
+        comp = 3;
+        data = image::fromLinearToSRGB<uint8_t, 3>(img);
+    }
+    int pngLen = 0;
+    unsigned char* pngBytes = stbi_write_png_to_mem(
+            data.get(), int(w) * comp, int(w), int(h), comp, &pngLen);
+    if (pngBytes) {
+        out.write(reinterpret_cast<char const*>(pngBytes), pngLen);
+        STBIW_FREE(pngBytes);
+    }
 #else
     ImageEncoder::encode(out, ImageEncoder::Format::PNG, img, "", path.c_str());
 #endif
