@@ -767,7 +767,7 @@ bool GLSLPostProcessor::process(const std::string& inputShader, Config const& co
 #endif
                     spirvToMsl(internalConfig.spirvOutput, internalConfig.mslOutput,
                             config.shaderType, config.shaderModel, config.hasFramebufferFetch, descriptors,
-                            mGenerateDebugInfo ? &internalConfig.minifier : nullptr);
+                            !mGenerateDebugInfo ? &internalConfig.minifier : nullptr);
                 }
                 if (internalConfig.wgslOutput) {
                     if (!spirvToWgsl(internalConfig.spirvOutput, internalConfig.wgslOutput,
@@ -864,7 +864,7 @@ bool GLSLPostProcessor::preprocessOptimization(TShader& tShader,
 #endif
         spirvToMsl(internalConfig.spirvOutput, internalConfig.mslOutput, config.shaderType,
                 config.shaderModel, config.hasFramebufferFetch, descriptors,
-                mGenerateDebugInfo ? &internalConfig.minifier : nullptr);
+                !mGenerateDebugInfo ? &internalConfig.minifier : nullptr);
     }
     if (internalConfig.wgslOutput) {
         if (!spirvToWgsl(internalConfig.spirvOutput, internalConfig.wgslOutput,
@@ -916,7 +916,7 @@ bool GLSLPostProcessor::fullOptimization(const TShader& tShader,
 #endif
         spirvToMsl(&spirv, internalConfig.mslOutput, config.shaderType, config.shaderModel,
                 config.hasFramebufferFetch, descriptors,
-                mGenerateDebugInfo ? &internalConfig.minifier : nullptr);
+                !mGenerateDebugInfo ? &internalConfig.minifier : nullptr);
     }
     if (internalConfig.wgslOutput) {
         if (!spirvToWgsl(&spirv, internalConfig.wgslOutput, collectExternalSamplers(config))) {

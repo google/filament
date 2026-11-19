@@ -1870,6 +1870,41 @@ TEST_F(MaterialCompiler, MetalDynamicBufferOffsets) {
     }
 }
 
+TEST_F(MaterialCompiler, MetalShaderMinification) {
+    auto buildMslFragment = [&](MaterialBuilder::Optimization opt,
+            bool generateDebugInfo) -> std::string {
+        MaterialBuilder builder = createTextureGatherPostProcessBuilder();
+        builder.targetApi(MaterialBuilder::TargetApi::METAL);
+        builder.optimization(opt);
+        builder.generateDebugInfo(generateDebugInfo);
+        Package const pkg = builder.build(*jobSystem);
+        EXPECT_TRUE(pkg.isValid());
+
+        filaflat::ShaderContent mslContent;
+        EXPECT_TRUE(extractFragmentShader(pkg, filamat::ChunkType::MaterialMetal,
+                filamat::ChunkType::DictionaryText, mslContent));
+        return std::string(reinterpret_cast<char const*>(mslContent.data()), mslContent.size());
+    };
+
+    constexpr MaterialBuilder::Optimization optimizations[] = {
+        MaterialBuilder::Optimization::NONE,
+        MaterialBuilder::Optimization::PREPROCESSOR,
+        MaterialBuilder::Optimization::PERFORMANCE,
+    };
+
+    for (MaterialBuilder::Optimization const opt : optimizations) {
+        std::string const mslRelease = buildMslFragment(opt, false);
+        std::string const mslDebug = buildMslFragment(opt, true);
+
+        ASSERT_FALSE(mslRelease.empty());
+        ASSERT_FALSE(mslDebug.empty());
+
+        EXPECT_EQ(mslRelease.find("\n    "), std::string::npos);
+        EXPECT_NE(mslDebug.find("\n    "), std::string::npos);
+        EXPECT_LT(mslRelease.size(), mslDebug.size());
+    }
+}
+
 int main(int argc, char** argv) {
     ::testing::InitGoogleTest(&argc, argv);
     const int rv = RUN_ALL_TESTS();
