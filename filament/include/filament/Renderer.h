@@ -681,6 +681,12 @@ public:
      * renderStandaloneView() must be called outside of beginFrame() / endFrame().
      *
      * @note
+     * Unlike endFrame() and skipFrame(), renderStandaloneView() does not invoke Engine::gc().
+     * Applications that render exclusively with renderStandaloneView() (for example, in a loop)
+     * should call Engine::gc() periodically so destroyed entity IDs and dead components are
+     * reclaimed.
+     *
+     * @note
      * renderStandaloneView() must be called from the Engine's main thread
      * (or external synchronization must be provided). In particular, calls to
      * renderStandaloneView() on different Renderer instances **must** be synchronized.
