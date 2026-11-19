@@ -67,6 +67,18 @@ struct VulkanRenderPassContext {
     int currentSubpass = 0;
 };
 
+/** 
+ * For pipeline cache eviction policy.
+ */
+enum class PipelineCacheEvictionPolicy : uint8_t {
+    // Default: time to live
+    TTL_ONLY,
+    // Evict oldest expired pipelines when count > FVK_MAX_PIPELINE_COUNT
+    COUNT,
+    // Evict oldest expired pipelines when total binary size > FVK_MAX_PIPELINE_CACHE_SIZE
+    SIZE,
+};
+
 // This is a collection of immutable data about the vulkan context. This actual handles to the
 // context are stored in VulkanPlatform.
 struct VulkanContext {
@@ -245,6 +257,10 @@ public:
         return mPipelineBinaryFeatures.pipelineBinaries == VK_TRUE;
     }
 
+    inline bool isMaintenance5Supported() const noexcept {
+        return mMaintenance5.maintenance5 == VK_TRUE;
+    }
+
     inline bool pipelineCreationFeedbackSupported() const noexcept {
         return mPipelineCreationFeedbackSupported;
     }
@@ -272,8 +288,8 @@ public:
         return mPipelineDynamicStateEnabled;
     }
 
-    inline bool isPipelineCacheEvictionEnabled() const noexcept {
-        return mPipelineCacheEvictionEnabled;
+    inline PipelineCacheEvictionPolicy getPipelineCacheEvictionPolicy() const noexcept {
+        return mPipelineCacheEvictionPolicy;
     }
 
     inline bool isPipelineCachePersistenceEnabled() const noexcept {
@@ -332,6 +348,9 @@ private:
     VkPhysicalDevicePipelineBinaryFeaturesKHR mPipelineBinaryFeatures = {
         .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PIPELINE_BINARY_FEATURES_KHR,
     };
+    VkPhysicalDeviceMaintenance5FeaturesKHR mMaintenance5 = {
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MAINTENANCE_5_FEATURES_KHR,
+    };
     VkExternalFenceHandleTypeFlags mFenceExportFlags = {};
 
     // These are options that are either supported or not supported in the current
@@ -356,8 +375,9 @@ private:
     bool mParallelShaderCompileDisabled = false;
     bool mStagingBufferBypassEnabled = false;
     bool mPipelineDynamicStateEnabled = false;
-    bool mPipelineCacheEvictionEnabled = false;
     bool mPipelineCachePersistenceEnabled = false;
+    PipelineCacheEvictionPolicy mPipelineCacheEvictionPolicy 
+        = PipelineCacheEvictionPolicy::TTL_ONLY;
 
     fvkutils::VkFormatList mDepthStencilFormats;
     fvkutils::VkFormatList mBlittableDepthStencilFormats;

@@ -220,4 +220,10 @@ static_assert(FVK_MAX_PIPELINE_AGE >= FVK_MAX_COMMAND_BUFFERS);
 static constexpr size_t FVK_MAX_PIPELINE_COUNT = 64;
 #endif // FVK_MAX_PIPELINE_COUNT
 
+// Maximum accumulated pipeline binary size (in bytes) before size-based threshold eviction
+// evicts expired pipelines (default: 16 MB).
+#ifndef FVK_MAX_PIPELINE_CACHE_SIZE
+static constexpr size_t FVK_MAX_PIPELINE_CACHE_SIZE = 16u * 1024u * 1024u;
+#endif // FVK_MAX_PIPELINE_CACHE_SIZE
+
 #endif

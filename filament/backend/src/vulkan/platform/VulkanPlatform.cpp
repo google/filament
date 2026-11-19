@@ -760,6 +760,12 @@ Driver* VulkanPlatform::createDriver(void* sharedContext,
         setErase(deviceExts, VK_EXT_HOST_QUERY_RESET_EXTENSION_NAME);
     }
 
+    if (!mImpl->mContext.isMaintenance5Supported() ||
+            !mImpl->mContext.isPipelineBinarySupported()) {
+        setErase(deviceExts, VK_KHR_MAINTENANCE_5_EXTENSION_NAME);
+        setErase(deviceExts, VK_KHR_PIPELINE_BINARY_EXTENSION_NAME);
+    }
+
     mImpl->mContext.mDebugUtilsNamesEnabled =
             mImpl->mContext.mDebugUtilsEnabled && enableDebugUtilsNames;
     mImpl->mContext.mRenderDocCaptureEnabled = enableRenderDocCapture;
@@ -1235,11 +1241,6 @@ void VulkanPlatform::queryAndSetDeviceFeatures(Platform::DriverConfig const& dri
                                                        .vulkan.enable_pipeline_cache_persistence
                                              : false);
 
-    context.mPipelineCacheEvictionEnabled =
-            (driverConfig.featureFlagManager ? driverConfig.featureFlagManager->features.backend.vulkan
-                                                       .enable_pipeline_cache_threshold_eviction
-                                             : false);
-
     {
         // http://b/208458772. ARM proprietary driver supports this protected memory extension but
         // we are seeing excessive load/store unit activity when this extension is enabled, even if
@@ -1570,10 +1571,27 @@ void VulkanPlatform::createLogicalDeviceAndQueues(
         chainStruct(&deviceCreateInfo, &context.mColorWriteEnableFeatures);
     }
 
+    if (setContains(deviceExtensions, VK_KHR_MAINTENANCE_5_EXTENSION_NAME)) {
+        chainStruct(&deviceCreateInfo, &context.mMaintenance5);
+    }
+
     // Enable pipeline binaries if supported by the device extensions
     if (setContains(deviceExtensions, VK_KHR_PIPELINE_BINARY_EXTENSION_NAME) &&
         context.isPipelineBinarySupported()) {
         chainStruct(&deviceCreateInfo, &context.mPipelineBinaryFeatures);
+    }
+
+    // Note this part of the logic can take into account input from the frontend
+    // of from the caller of the platform API, but for now just use the logic
+    // of whether the extension is present. Right now the flag is off.
+    if (false) {
+        if (context.isPipelineBinarySupported()) {
+            context.mPipelineCacheEvictionPolicy = 
+                PipelineCacheEvictionPolicy::SIZE;
+        } else {
+            context.mPipelineCacheEvictionPolicy = 
+                PipelineCacheEvictionPolicy::COUNT;
+        }
     }
 
     VkPhysicalDeviceHostQueryResetFeaturesEXT hostQueryReset = {

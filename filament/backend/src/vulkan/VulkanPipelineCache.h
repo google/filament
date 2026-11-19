@@ -244,7 +244,7 @@ private:
     struct PipelineCacheEntry {
         VkPipeline handle;
         Timestamp lastUsed;
-        size_t binarySize;
+        size_t binarySize = 0;
     };
 
     using PipelineMap = tsl::robin_map<PipelineKey, PipelineCacheEntry,
@@ -331,8 +331,8 @@ private:
     bool const mHasColorWriteEnable;
     bool const mHasPipelineProtectedAccess;
 
-    // Cached context capabilities for pipeline cache eviction
-    bool const mPipelineCacheThresholdEvictionEnabled;
+    // Total accumulated binary size (in bytes) of all entries currently in mPipelines.
+    size_t mTotalPipelineBinarySize = 0;
 
     [[maybe_unused]] VulkanContext const& mContext;
 
