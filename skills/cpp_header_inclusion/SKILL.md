@@ -40,3 +40,5 @@ AI agents **must never manually sort includes** or guess target dependencies. Al
 ```
 
 *Note: The tool dynamically parses `CMakeLists.txt` files to topologically sort proprietary libraries and includes preprocessor safety checks to avoid breaking platform-conditional include guards.*
+
+*Note: The top-level `third_party/` directory is exempt from the presubmit header check; vendored files there should not be reorganized. Local runs of `check-headers.sh` and `run.py <file>` do not apply this exemption.*
