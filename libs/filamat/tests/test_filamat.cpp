@@ -1534,6 +1534,26 @@ struct SpirvAnalysis {
     bool hasSwitch = false;
 };
 
+static bool extractShader(Package const& package,
+        filamat::ChunkType materialTag,
+        filamat::ChunkType dictTag,
+        ShaderModel model,
+        filament::Variant variant,
+        ShaderStage stage,
+        filaflat::ShaderContent& shaderContent) {
+    filaflat::ChunkContainer container(package.getData(), package.getSize());
+    if (!container.parse()) {
+        return false;
+    }
+    filaflat::BlobDictionary dictionary;
+    filaflat::DictionaryReader::unflatten(container, dictTag, dictionary);
+    filaflat::MaterialChunk materialChunk(container);
+    if (!materialChunk.initialize(materialTag)) {
+        return false;
+    }
+    return materialChunk.getShader(shaderContent, dictionary, model, variant, stage);
+}
+
 static bool extractFragmentShader(Package const& package,
         filamat::ChunkType materialTag,
         filamat::ChunkType dictTag,
@@ -1812,6 +1832,41 @@ TEST_F(MaterialCompiler, TextureGatherWorkaroundMultiTarget) {
         Package const pkgWebGpu = builderWebGpu.build(*jobSystem);
         EXPECT_TRUE(pkgWebGpu.isValid());
 #endif
+    }
+}
+
+TEST_F(MaterialCompiler, MetalDynamicBufferOffsets) {
+    MaterialBuilder builder = createTextureGatherLitSurfaceBuilder();
+    builder.targetApi(MaterialBuilder::TargetApi::METAL);
+    Package const pkg = builder.build(*jobSystem);
+    ASSERT_TRUE(pkg.isValid());
+
+    filaflat::ShaderContent mslContent;
+    ASSERT_TRUE(extractShader(pkg, filamat::ChunkType::MaterialMetal,
+            filamat::ChunkType::DictionaryText, ShaderModel::MOBILE,
+            filament::Variant(filament::Variant::SKN), ShaderStage::VERTEX, mslContent));
+
+    std::string const msl(reinterpret_cast<char const*>(mslContent.data()), mslContent.size());
+
+    size_t const objectPos = msl.find("spvDescriptorSet1.objectUniforms");
+    ASSERT_NE(objectPos, std::string::npos);
+    size_t const objectLineEnd = msl.find('\n', objectPos);
+    EXPECT_NE(msl.substr(objectPos, objectLineEnd - objectPos).find("spvDynamicOffsets[0]"),
+            std::string::npos);
+
+    size_t const bonesPos = msl.find("spvDescriptorSet1.bonesUniforms");
+    ASSERT_NE(bonesPos, std::string::npos);
+    size_t const bonesLineEnd = msl.find('\n', bonesPos);
+    EXPECT_NE(msl.substr(bonesPos, bonesLineEnd - bonesPos).find("spvDynamicOffsets[1]"),
+            std::string::npos);
+
+    size_t morphPos = msl.find("spvDescriptorSet1.morphingUniforms");
+    ASSERT_NE(morphPos, std::string::npos);
+    while (morphPos != std::string::npos) {
+        size_t const morphLineEnd = msl.find('\n', morphPos);
+        EXPECT_EQ(msl.substr(morphPos, morphLineEnd - morphPos).find("spvDynamicOffsets"),
+                std::string::npos);
+        morphPos = msl.find("spvDescriptorSet1.morphingUniforms", morphLineEnd);
     }
 }
 

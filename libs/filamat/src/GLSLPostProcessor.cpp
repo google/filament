@@ -520,7 +520,7 @@ void GLSLPostProcessor::spirvToMsl(const SpirvBlob* spirv, std::string* outMsl,
                         // Note: this requires that the sets and descriptors are sorted (at least
                         // the uniforms).
                         mslCompiler.add_dynamic_buffer(
-                                setIndex, info.binding * 2 + 0, dynamicOffsetsBufferIndex++);
+                                setIndex, info.binding, dynamicOffsetsBufferIndex++);
                     }
                     break;
                 }
