@@ -294,7 +294,7 @@ endfunction()
 function(add_wasm_demo NAME)
     include_directories(${GENERATION_ROOT})
     add_executable(${NAME} ${NAME}.cpp)
-    target_link_libraries(${NAME} PRIVATE sample-resources samples-common)
+    target_link_libraries(${NAME} PRIVATE samples-common)
     target_compile_options(${NAME} PRIVATE ${COMPILER_FLAGS})
     set_target_properties(${NAME} PROPERTIES FOLDER Samples)
 
@@ -333,6 +333,7 @@ endfunction()
 
 if (WASM)
     add_wasm_demo(hellotriangle)
+    target_link_libraries(hellotriangle PRIVATE sample-resources)
 
     add_wasm_demo(gltf_viewer)
     target_link_libraries(gltf_viewer PRIVATE gltf-demo-resources uberarchive gltfio_core viewer)
@@ -507,5 +508,7 @@ if (WASM)
     # build.
     add_dependencies(gltf_viewer assets envs)
 else()
-    add_dependencies(filament textures assets envs)
+    # Attach sample asset and IBL generation to samples-common (linked by every sample and
+    # taa_harness) rather than filament itself, so unit-test-only builds do not run cmgen.
+    add_dependencies(samples-common textures assets envs)
 endif()

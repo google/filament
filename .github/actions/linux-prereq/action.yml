@@ -14,11 +14,17 @@ runs:
         cd ..
 
         sudo apt-get update
-        sudo apt-get install clang-$GITHUB_CLANG_VERSION libc++-$GITHUB_CLANG_VERSION-dev libc++abi-$GITHUB_CLANG_VERSION-dev
-        sudo apt-get install mesa-common-dev libxi-dev libxxf86vm-dev
-        sudo apt-get install ninja-build
-        # The top-level CMakeLists.txt turns ccache on automatically when it is on PATH.
-        sudo apt-get install ccache
+        # The top-level CMakeLists.txt turns ccache and lld on automatically when installed.
+        # libvulkan1 and mesa-vulkan-drivers back headless Vulkan unit tests (e.g. RenderingTest).
+        sudo apt-get install -y \
+            clang-$GITHUB_CLANG_VERSION \
+            lld-$GITHUB_CLANG_VERSION \
+            libc++-$GITHUB_CLANG_VERSION-dev \
+            libc++abi-$GITHUB_CLANG_VERSION-dev \
+            mesa-common-dev libxi-dev libxxf86vm-dev \
+            libxrandr-dev libxinerama-dev libxcursor-dev libx11-xcb-dev libgbm-dev libdrm-dev \
+            libvulkan1 mesa-vulkan-drivers \
+            ninja-build ccache
 
         # Download and extract the correct CMake binary based on runner architecture
         # We pin the CMake version to avoid sudden breakage due to runner updates.
@@ -30,9 +36,6 @@ runs:
         fi
 
         wget -qO- "https://github.com/Kitware/CMake/releases/download/v${GITHUB_CMAKE_VERSION}/cmake-${GITHUB_CMAKE_VERSION}-linux-${CMAKE_ARCH}.tar.gz" | sudo tar xz -C /usr/local --strip-components=1
-
-        # For dawn
-        sudo apt-get install libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev libx11-xcb-dev libgbm-dev libdrm-dev
 
         sudo update-alternatives --install /usr/bin/cc cc /usr/bin/clang-${GITHUB_CLANG_VERSION} 100
         sudo update-alternatives --install /usr/bin/c++ c++ /usr/bin/clang++-${GITHUB_CLANG_VERSION} 100

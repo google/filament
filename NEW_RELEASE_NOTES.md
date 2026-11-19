@@ -6,3 +6,5 @@
 appropriate header in [RELEASE_NOTES.md](./RELEASE_NOTES.md).
 
 ## Release notes for next branch cut
+- gltfio: `AssetLoader::destroyAsset()` now destroys each instance root's transform component
+  directly rather than relying on `Engine` garbage collection (#10852)

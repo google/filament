@@ -53,11 +53,30 @@ function setup_desktop_() {
     # diffimg is built here rather than from a separate release tree. It is the consumer's own
     # command line that the ccache warming job reproduces through --build-only, so everything the
     # test needs has to be compiled by this one invocation.
-    GLTF_VIEWER_PATH="$(pwd)/out/cmake-debug/samples/gltf_viewer"
-    HELLOTRIANGLE_PATH="$(pwd)/out/cmake-debug/samples/hellotriangle"
-    if [[ "$NOREBUILD" == "true" ]] && [[ -f ${GLTF_VIEWER_PATH} ]] && [[ -f ${HELLOTRIANGLE_PATH} ]] \
-       && [[ -f ${DIFFIMG_PATH} ]]; then
-        echo "Skipping build of gltf_viewer, filament-samples and diffimg"
+    #
+    # Build only the sample binaries named in TEST_CONFIG rather than the catch-all
+    # filament-samples target, avoiding linking unused debug+Dawn sample executables.
+    SAMPLE_TARGETS=$(python3 ${RENDERDIFF_TEST_DIR}/src/test_config.py \
+        --test="${TEST_CONFIG}" --list-sample-executables 2>/dev/null || echo "filament-samples")
+    if [[ -z "${SAMPLE_TARGETS}" ]]; then
+        SAMPLE_TARGETS="filament-samples"
+    fi
+    SAMPLES_DIR="$(pwd)/out/cmake-debug/samples"
+    GLTF_VIEWER_PATH="${SAMPLES_DIR}/gltf_viewer"
+    ALL_SAMPLES_BUILT="true"
+    if [[ "${SAMPLE_TARGETS}" == "filament-samples" ]]; then
+        [[ -f "${SAMPLES_DIR}/hellotriangle" ]] || ALL_SAMPLES_BUILT="false"
+    else
+        for sample_bin in ${SAMPLE_TARGETS}; do
+            if [[ ! -f "${SAMPLES_DIR}/${sample_bin}" ]]; then
+                ALL_SAMPLES_BUILT="false"
+                break
+            fi
+        done
+    fi
+    if [[ "$NOREBUILD" == "true" ]] && [[ -f ${GLTF_VIEWER_PATH} ]] \
+       && [[ "${ALL_SAMPLES_BUILT}" == "true" ]] && [[ -f ${DIFFIMG_PATH} ]]; then
+        echo "Skipping build of gltf_viewer, configured samples and diffimg"
     else
         # macOS only: get-mesa leaves Homebrew's clang on PATH, and the samples have to be built
         # with Apple's. On Linux the compiler is deliberately left to CMake, which resolves cc and
@@ -68,7 +87,8 @@ function setup_desktop_() {
             export CXX=`which clang++`
             export CC=`which clang`
         fi
-        ./build.sh -f -W -X ${MESA_DIR} -p desktop debug gltf_viewer filament-samples diffimg || return 1
+        # shellcheck disable=SC2086
+        ./build.sh -f -W -X ${MESA_DIR} -p desktop debug gltf_viewer ${SAMPLE_TARGETS} diffimg || return 1
     fi
 }
 
@@ -208,15 +228,15 @@ render_status=0
 for backend in ${BACKENDS}; do
     if [[ "${PLATFORM}" == "web" ]]; then
         # --executable is the emscripten bundle directory, not a binary: the renderer needs
-        # the shell, the .js loader and the .wasm together. Rendering is sequential (one page
-        # per test), so --num_threads does not apply.
+        # the shell, the .js loader and the .wasm together.
         python3 ${RENDERDIFF_TEST_DIR}/src/render.py \
                 --executable="${WASM_SAMPLES_DIR}" \
                 --platform=web \
                 --backend=$backend \
                 --test="${TEST_CONFIG}" \
                 --output_dir="${RENDER_OUTPUT_DIR}" \
-                ${TEST_FILTER:+--test_filter="$TEST_FILTER"} || render_status=1
+                ${TEST_FILTER:+--test_filter="$TEST_FILTER"} \
+                ${NUM_THREADS:+--num_threads="$NUM_THREADS"} || render_status=1
     else
         FILAMENT_VK_ICD="${MESA_VK_ICD_PATH}" FILAMENT_OPENGL_LIB="${MESA_LIB_DIR}" \
         python3 ${RENDERDIFF_TEST_DIR}/src/render.py \
