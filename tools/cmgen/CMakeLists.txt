@@ -54,6 +54,7 @@ install(TARGETS ${TARGET} RUNTIME DESTINATION bin)
 # ==================================================================================================
 if (FILAMENT_BUILD_TESTING AND NOT ANDROID)
  add_executable(test_${TARGET} tests/test_cmgen.cpp)
+ add_dependencies(test_${TARGET} ${TARGET})
  target_link_libraries(test_${TARGET} PRIVATE imageio gtest)
  set_target_properties(test_${TARGET} PROPERTIES FOLDER Tests)
 endif()

@@ -11,16 +11,23 @@ set -e
 # `wait -n`.
 
 FULL_TEST=false
+LIST_TARGETS=false
 JOBS=""
 JOB_TIMEOUT=600
 
 function print_help {
-    echo "Usage: $0 [-f] [-j jobs] [-t seconds]"
-    echo "  -f    Run full test suite (ignores --gtest_filter arguments in test_list.txt)"
-    echo "  -j    Number of test processes to run at once (default: number of CPUs)"
-    echo "  -t    Seconds before a single test process is killed (default: ${JOB_TIMEOUT})."
-    echo "        Only enforced when the timeout command (GNU coreutils) is installed."
+    echo "Usage: $0 [-f] [-j jobs] [-t seconds] [--list-targets]"
+    echo "  -f              Run full test suite (ignores --gtest_filter arguments in test_list.txt)"
+    echo "  -j              Number of test processes to run at once (default: number of CPUs)"
+    echo "  -t              Seconds before a single test process is killed (default: ${JOB_TIMEOUT})."
+    echo "                  Only enforced when the timeout command (GNU coreutils) is installed."
+    echo "  --list-targets  Print unique CMake target names from test_list.txt and exit."
 }
+
+if [[ "${1:-}" == "--list-targets" ]]; then
+    LIST_TARGETS=true
+    shift
+fi
 
 while getopts "fj:t:h" opt; do
     case ${opt} in
@@ -73,6 +80,35 @@ TEST_LIST=test/filament-unit-test/test_list.txt
 BUILD_DIR=out/cmake-debug
 RESULTS_DIR=out/test-results
 
+if [[ "${LIST_TARGETS}" == "true" ]]; then
+    TARGETS=()
+    set -f
+    while read -r line || [[ -n "${line}" ]]; do
+        if [[ -z "${line// /}" || "${line}" == \#* ]]; then
+            continue
+        fi
+        # shellcheck disable=SC2086
+        set -- ${line}
+        while [[ "$1" == shards=* || "$1" == partition=* || "$1" == exclusive ]]; do
+            shift
+        done
+        target_name=$(basename "$1")
+        already_listed=false
+        for existing in ${TARGETS[@]+"${TARGETS[@]}"}; do
+            if [[ "${existing}" == "${target_name}" ]]; then
+                already_listed=true
+                break
+            fi
+        done
+        if [[ "${already_listed}" == "false" ]]; then
+            TARGETS+=("${target_name}")
+        fi
+    done < "${TEST_LIST}"
+    set +f
+    echo "${TARGETS[*]}"
+    exit 0
+fi
+
 # The tests that render create Vulkan instances. The Vulkan loader loads every installed driver
 # for them, and unloads the drivers when the instance is destroyed. In a build with sanitizers,
 # LeakSanitizer then reports what a driver still referenced from its globals as leaked, which
@@ -89,6 +125,7 @@ JOB_SHARD_INDICES=()
 JOB_SHARD_TOTALS=()
 JOB_OUT_DIRS=()
 JOB_EXCLUSIVE=()
+SEEN_BINARIES=()
 
 # The entries can carry gtest filter patterns such as -Foo.*, which must reach the binary as
 # written rather than be expanded against the files in the working directory.
@@ -104,10 +141,13 @@ while read -r line || [[ -n "${line}" ]]; do
     # shellcheck disable=SC2086
     set -- ${line}
     shards=1
+    partition=""
     exclusive=false
-    while [[ "$1" == shards=* || "$1" == exclusive ]]; do
+    while [[ "$1" == shards=* || "$1" == partition=* || "$1" == exclusive ]]; do
         if [[ "$1" == exclusive ]]; then
             exclusive=true
+        elif [[ "$1" == partition=* ]]; then
+            partition="${1#partition=}"
         else
             shards="${1#shards=}"
             if ! [[ "${shards}" =~ ^[1-9][0-9]*$ ]]; then
@@ -121,6 +161,9 @@ while read -r line || [[ -n "${line}" ]]; do
     shift
 
     args=()
+    if [[ -n "${partition}" ]]; then
+        args+=("--gtest_filter=${partition}")
+    fi
     for arg in "$@"; do
         if [[ "${FULL_TEST}" == "true" && "${arg}" == --gtest_filter=* ]]; then
             continue
@@ -135,16 +178,37 @@ while read -r line || [[ -n "${line}" ]]; do
     fi
 
     test_name=$(basename "${binary}")
+    occ=0
+    for seen in ${SEEN_BINARIES[@]+"${SEEN_BINARIES[@]}"}; do
+        if [[ "${seen}" == "${test_name}" ]]; then
+            occ=$((occ + 1))
+        fi
+    done
+    SEEN_BINARIES+=("${test_name}")
+
     # Cleared once per binary rather than per job, so that results left by an earlier run with a
-    # different shard count do not linger beside the new ones.
-    rm -rf "${RESULTS_DIR:?}/${test_name}"
+    # different shard or partition count do not linger beside the new ones.
+    if [[ ${occ} -eq 0 ]]; then
+        set +f
+        rm -rf "${RESULTS_DIR:?}/${test_name}" "${RESULTS_DIR:?}/${test_name}".part*
+        set -f
+        base_out_dir="${RESULTS_DIR}/${test_name}"
+    else
+        base_out_dir="${RESULTS_DIR}/${test_name}.part${occ}"
+    fi
+
+    label_base="${test_name}"
+    if [[ -n "${partition}" ]]; then
+        label_base="${test_name} [${partition}]"
+    fi
+
     for ((i = 0; i < shards; i++)); do
         if [[ ${shards} -gt 1 ]]; then
-            JOB_LABELS+=("${test_name} (shard $((i + 1)) of ${shards})")
-            JOB_OUT_DIRS+=("${RESULTS_DIR}/${test_name}/shard${i}")
+            JOB_LABELS+=("${label_base} (shard $((i + 1)) of ${shards})")
+            JOB_OUT_DIRS+=("${base_out_dir}/shard${i}")
         else
-            JOB_LABELS+=("${test_name}")
-            JOB_OUT_DIRS+=("${RESULTS_DIR}/${test_name}")
+            JOB_LABELS+=("${label_base}")
+            JOB_OUT_DIRS+=("${base_out_dir}")
         fi
         JOB_BINARIES+=("${binary}")
         JOB_ARGS+=("${args[*]}")

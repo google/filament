@@ -396,7 +396,7 @@ VulkanTexture::VulkanTexture(VulkanContext const& context, VkDevice device, VmaA
     : HwTexture(getSamplerTypeFromDepth(depth), levels, samples, width, height, depth,
               TextureFormat::UNUSED, tusage, false),
       mState(fvkmemory::resource_ptr<VulkanTextureState>::construct(resourceManager, stagePool,
-              commands, allocator, device, image, memory, nullptr /* allocation */,
+              commands, allocator, device, image, memory, VmaAllocation{} /* allocation */,
               stagingMemory, stagingBuffer, ahBuffer,
               format, fvkutils::getViewType(SamplerType::SAMPLER_2D),
               /*mipLevels=*/levels, getLayerCountFromDepth(depth), conversion,

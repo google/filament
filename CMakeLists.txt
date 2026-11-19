@@ -544,7 +544,7 @@ endif()
 # Debug compiler flags
 # ==================================================================================================
 if (FILAMENT_ENABLE_ASAN_UBSAN)
-   set(EXTRA_SANITIZE_OPTIONS "-fsanitize=address -fsanitize=undefined")
+   set(EXTRA_SANITIZE_OPTIONS "-fsanitize=address -fsanitize=undefined -O1 -fno-omit-frame-pointer -Wno-pass-failed")
 endif()
 if (FILAMENT_ENABLE_TSAN)
    set(EXTRA_SANITIZE_OPTIONS "-fsanitize=thread")
@@ -583,6 +583,13 @@ endif()
 # See: https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=ffcf9c5700e49c0aee42dcba9a12ba21338e8136
 if (LINUX)
     set(NO_EXEC_STACK "-Wl,-z,noexecstack")
+    if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+        include(CheckLinkerFlag)
+        check_linker_flag(CXX "-fuse-ld=lld" FILAMENT_HAS_LLD)
+        if (FILAMENT_HAS_LLD)
+            set(LINKER_LLD "-fuse-ld=lld")
+        endif()
+    endif()
 endif()
 
 set(B_SYMBOLIC_FUNCTIONS "-Wl,-Bsymbolic-functions")
@@ -603,8 +610,8 @@ if (APPLE)
     set(CMAKE_CXX_ARCHIVE_CREATE "<CMAKE_AR> qc -S <TARGET> <LINK_FLAGS> <OBJECTS>")
 endif()
 
-set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${GC_SECTIONS} ${NO_EXEC_STACK}")
-set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} ${GC_SECTIONS} ${B_SYMBOLIC_FUNCTIONS} ${BINARY_ALIGNMENT}")
+set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${GC_SECTIONS} ${NO_EXEC_STACK} ${LINKER_LLD}")
+set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} ${GC_SECTIONS} ${B_SYMBOLIC_FUNCTIONS} ${BINARY_ALIGNMENT} ${LINKER_LLD}")
 
 if (WASM_PTHREADS)
     set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -pthread")

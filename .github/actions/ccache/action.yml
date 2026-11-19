@@ -34,11 +34,9 @@ inputs:
       Every value needs a writer in postsubmit that compiles the same configuration, otherwise
       readers restore an entry that cannot hit:
 
-        - desktop-release: the ccache-arm-linux warmer. Read by build-linux, and by the release
-          half of test-code-correctness. WebGPU is on, because build/linux/build.sh passes -W;
-          both readers have to pass it too, since it reaches every compile line.
-        - desktop-asan-debug: the ccache-arm-linux warmer. Read by the debug half of
-          test-code-correctness.
+        - desktop-release: the ccache-arm-linux warmer. Read by build-linux. WebGPU is on,
+          because build/linux/build.sh passes -W.
+        - desktop-asan-debug: the ccache-arm-linux warmer. Read by test-code-correctness.
         - desktop-backend-test: the ccache-arm-linux warmer. Read by test-backend.
         - desktop-renderdiff: the ccache-arm-linux warmer. Read by test-renderdiff, and by the
           golden generation jobs, which have to compile what presubmit compiles. Debug with WebGPU

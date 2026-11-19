@@ -34,16 +34,19 @@ This module is imported lazily by RendererFactory so that a desktop-only run doe
 playwright installed.
 """
 
-import base64
+import concurrent.futures
 import functools
 import http.server
 import json
 import os
+import queue
+import shutil
 import socketserver
 import struct
 import threading
+import uuid
 
-from renderers import BaseRenderer, GltfRenderTestCase
+from renderers import BaseRenderer, GltfRenderTestCase, default_concurrent_renders
 from results import RESULT_OK, RESULT_FAILED
 from utils import important_print
 
@@ -109,9 +112,24 @@ RENDER_TIMEOUT_MS = 600000
 STAGING_TIMEOUT_MS = 120000
 
 
-# Synthetic origin-relative path used to hand host files to the page without copying them into
-# the served directory. Intercepted with page.route().
+# Synthetic origin-relative paths served directly by _LocalServer so assets and rendered TIFFs
+# stream as raw loopback TCP bytes rather than base64-encoded CDP JSON messages.
 ASSET_ROUTE_PREFIX = '/__renderdiff_asset__/'
+OUTPUT_ROUTE_PREFIX = '/__renderdiff_out__/'
+HOST_PAGE_PATH = '/__renderdiff_host__.html'
+
+_HOST_PAGE_HTML = b"""<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <style>
+    html, body { margin: 0; padding: 0; overflow: hidden; background: #1a1a1a; }
+    iframe { width: 1024px; height: 768px; border: 0; display: block; }
+  </style>
+</head>
+<body></body>
+</html>
+"""
 
 # TIFF tags we care about.
 _TAG_IMAGE_WIDTH = 256
@@ -198,18 +216,83 @@ class RasterizerMismatch(RuntimeError):
 
 
 class _LocalServer:
-  """Serves the WASM bundle directory over loopback on an ephemeral port."""
+  """Serves the WASM bundle, staged model assets, and rendered outputs over threaded loopback HTTP."""
 
   def __init__(self, directory: str):
+    outer = self
+    self._lock = threading.Lock()
+    self._assets = {}
+    self._uploads = {}
 
     class Handler(http.server.SimpleHTTPRequestHandler):
+      extensions_map = {
+          **http.server.SimpleHTTPRequestHandler.extensions_map,
+          '.wasm': 'application/wasm',
+          '.js': 'text/javascript',
+          '.data': 'application/octet-stream',
+      }
 
       def log_message(self, fmt, *args):
         pass  # The default handler spams stderr with one line per request.
 
+      def end_headers(self):
+        # Allow each worker's Chromium HTTP cache to reuse gltf_viewer.js/.data/.html across
+        # iframe test runs instead of re-reading them per test.
+        if not self.path.startswith((ASSET_ROUTE_PREFIX, OUTPUT_ROUTE_PREFIX)):
+          self.send_header('Cache-Control', 'public, max-age=3600')
+        super().end_headers()
+
+      def do_GET(self):
+        path = self.path.split('?', 1)[0]
+        if path == HOST_PAGE_PATH:
+          self.send_response(200)
+          self.send_header('Content-Type', 'text/html; charset=utf-8')
+          self.send_header('Content-Length', str(len(_HOST_PAGE_HTML)))
+          self.end_headers()
+          self.wfile.write(_HOST_PAGE_HTML)
+          return
+
+        if path.startswith(ASSET_ROUTE_PREFIX):
+          rest = path[len(ASSET_ROUTE_PREFIX):]
+          parts = rest.split('/', 1)
+          host_path = outer.lookup_asset(parts[0], parts[1] if len(parts) == 2 else '')
+          if host_path is None:
+            self.send_error(404, f'unknown asset {rest}')
+            return
+          try:
+            size = os.path.getsize(host_path)
+            with open(host_path, 'rb') as f:
+              self.send_response(200)
+              self.send_header('Content-Type', 'application/octet-stream')
+              self.send_header('Content-Length', str(size))
+              self.end_headers()
+              shutil.copyfileobj(f, self.wfile)
+          except OSError as e:
+            self.send_error(500, str(e))
+          return
+
+        super().do_GET()
+
+      def do_PUT(self):
+        path = self.path.split('?', 1)[0]
+        if not path.startswith(OUTPUT_ROUTE_PREFIX):
+          self.send_error(404)
+          return
+        rest = path[len(OUTPUT_ROUTE_PREFIX):]
+        parts = rest.split('/', 1)
+        if len(parts) != 2:
+          self.send_error(400)
+          return
+        length = int(self.headers.get('Content-Length', '0'))
+        body = self.rfile.read(length) if length > 0 else b''
+        outer.store_upload(parts[0], parts[1], body)
+        self.send_response(200)
+        self.send_header('Content-Length', '0')
+        self.end_headers()
+
     handler = functools.partial(Handler, directory=directory)
 
-    class Server(socketserver.TCPServer):
+    class Server(socketserver.ThreadingTCPServer):
       allow_reuse_address = True
       daemon_threads = True
 
@@ -221,6 +304,30 @@ class _LocalServer:
   @property
   def base_url(self) -> str:
     return f'http://127.0.0.1:{self.port}'
+
+  def register_assets(self, token: str, by_index: dict):
+    with self._lock:
+      self._assets[token] = by_index
+
+  def unregister_token(self, token: str):
+    with self._lock:
+      self._assets.pop(token, None)
+      stale_keys = [k for k in self._uploads if k[0] == token]
+      for k in stale_keys:
+        self._uploads.pop(k, None)
+
+  def lookup_asset(self, token: str, index: str):
+    with self._lock:
+      by_index = self._assets.get(token)
+      return by_index.get(index) if by_index else None
+
+  def store_upload(self, token: str, name: str, data: bytes):
+    with self._lock:
+      self._uploads[(token, name)] = data
+
+  def pop_upload(self, token: str, name: str):
+    with self._lock:
+      return self._uploads.pop((token, name), None)
 
   def shutdown(self):
     self._httpd.shutdown()
@@ -252,10 +359,11 @@ class WebRenderer(BaseRenderer):
   def __init__(self, platform: str, backend: str, executable: str, num_threads: int = None,
                test_filter: str = None):
     super().__init__(platform, backend, executable)
-    # Rendering is sequential: each test needs its own wasm instance (a second callMain() on a
-    # module that already built an Engine is not supported), and SwiftShader saturates the CPU
-    # anyway. num_threads is accepted so the CLI is uniform with the desktop renderer.
-    self.num_threads = num_threads
+    # Each test runs in an isolated iframe inside one of N headless Chromium workers. Every worker
+    # compiles gltf_viewer.wasm once on its host page and hands the compiled WebAssembly.Module to
+    # each test iframe via instantiateWasm, overlapping single-threaded WASM asset decoding and
+    # scene setup with SwiftShader rasterization across the runner's cores.
+    self.concurrent_renders = num_threads if num_threads else default_concurrent_renders()
     self.test_filter = test_filter
 
     if backend not in FILAMENT_API:
@@ -276,7 +384,8 @@ class WebRenderer(BaseRenderer):
 
     self._server = None
     self._browser = None
-    self._playwright = None
+    self._tls = threading.local()
+    self._rasterizer_lock = threading.Lock()
     self.rasterizer = None
 
   def get_env(self) -> dict:
@@ -298,21 +407,9 @@ class WebRenderer(BaseRenderer):
 
   # ---------------------------------------------------------------- browser lifecycle
 
-  def _start(self):
-    from playwright.sync_api import sync_playwright
-
-    self._server = _LocalServer(self.bundle_dir)
-    self._playwright = sync_playwright().start()
-    # channel='chromium' selects the full browser. Playwright's default headless build is
-    # chrome-headless-shell, which has no WebGPU support at all.
-    self._browser = self._playwright.chromium.launch(
-        channel='chromium',
-        headless=True,
-        args=DETERMINISM_FLAGS + BACKEND_FLAGS[self.backend])
-    self._check_browser_version()
-
-  def _check_browser_version(self):
-    version = self._browser.version
+  def _check_browser_version(self, browser=None):
+    target = browser if browser is not None else self._browser
+    version = target.version
     if version == EXPECTED_BROWSER_VERSION:
       return
     if os.environ.get('RDIFF_ALLOW_ANY_BROWSER') == '1':
@@ -328,49 +425,67 @@ class WebRenderer(BaseRenderer):
         f'If the pin itself is being updated, change EXPECTED_BROWSER_VERSION in '
         f'web_renderer.py and regenerate the web goldens.')
 
-  def _stop(self):
-    if self._browser:
-      self._browser.close()
-      self._browser = None
-    if self._playwright:
-      self._playwright.stop()
-      self._playwright = None
-    if self._server:
-      self._server.shutdown()
-      self._server = None
-
   def _check_rasterizer(self, page):
-    """Confirms we are on SwiftShader. Recorded once, then asserted."""
-    if self.rasterizer is not None:
-      return
+    """Confirms we are on SwiftShader. Recorded once across workers, then asserted."""
+    with self._rasterizer_lock:
+      if self.rasterizer is not None:
+        return
 
-    if self.backend == 'webgpu':
-      self.rasterizer = page.evaluate("""async () => {
-          if (!navigator.gpu) { return 'no navigator.gpu'; }
-          const adapter = await navigator.gpu.requestAdapter();
-          if (!adapter) { return 'no adapter'; }
-          const info = adapter.info || {};
-          return [info.vendor, info.architecture, info.device, info.description]
-              .filter(Boolean).join(' / ');
-      }""")
-    else:
-      self.rasterizer = page.evaluate("""() => {
-          const gl = document.createElement('canvas').getContext('webgl2');
-          if (!gl) { return 'no webgl2 context'; }
-          const ext = gl.getExtension('WEBGL_debug_renderer_info');
-          return ext ? gl.getParameter(ext.UNMASKED_RENDERER_WEBGL)
-                     : gl.getParameter(gl.RENDERER);
-      }""")
+      if self.backend == 'webgpu':
+        self.rasterizer = page.evaluate("""async () => {
+            if (!navigator.gpu) { return 'no navigator.gpu'; }
+            const adapter = await navigator.gpu.requestAdapter();
+            if (!adapter) { return 'no adapter'; }
+            const info = adapter.info || {};
+            return [info.vendor, info.architecture, info.device, info.description]
+                .filter(Boolean).join(' / ');
+        }""")
+      else:
+        self.rasterizer = page.evaluate("""() => {
+            const gl = document.createElement('canvas').getContext('webgl2');
+            if (!gl) { return 'no webgl2 context'; }
+            const ext = gl.getExtension('WEBGL_debug_renderer_info');
+            const renderer = ext ? gl.getParameter(ext.UNMASKED_RENDERER_WEBGL)
+                                 : gl.getParameter(gl.RENDERER);
+            const lose = gl.getExtension('WEBGL_lose_context');
+            if (lose) { lose.loseContext(); }
+            return renderer;
+        }""")
 
-    important_print(f'rasterizer: {self.rasterizer}')
-    if 'swiftshader' not in (self.rasterizer or '').lower():
-      # Hardware rasterization produces pixels that will not match the goldens, and worse, will
-      # not match the next machine's either. Fail loudly rather than write junk goldens.
-      if os.environ.get('RDIFF_ALLOW_ANY_RASTERIZER') != '1':
-        raise RasterizerMismatch(
-            f"expected a SwiftShader rasterizer but got '{self.rasterizer}'. Web goldens are "
-            f'only reproducible under software rasterization. Set '
-            f'RDIFF_ALLOW_ANY_RASTERIZER=1 to override for local experiments.')
+      important_print(f'rasterizer: {self.rasterizer}')
+      if 'swiftshader' not in (self.rasterizer or '').lower():
+        # Hardware rasterization produces pixels that will not match the goldens, and worse, will
+        # not match the next machine's either. Fail loudly rather than write junk goldens.
+        if os.environ.get('RDIFF_ALLOW_ANY_RASTERIZER') != '1':
+          raise RasterizerMismatch(
+              f"expected a SwiftShader rasterizer but got '{self.rasterizer}'. Web goldens are "
+              f'only reproducible under software rasterization. Set '
+              f'RDIFF_ALLOW_ANY_RASTERIZER=1 to override for local experiments.')
+
+  def _init_host_page(self, browser, console: list):
+    """Creates a worker host page and compiles gltf_viewer.wasm once for iframe reuse."""
+    page = browser.new_page(viewport={'width': 1024, 'height': 768})
+    page.on('console', lambda msg: console.append(f'[{msg.type}] {msg.text}'))
+    page.on('pageerror', lambda err: console.append(f'[pageerror] {err}'))
+    page.goto(f'{self._server.base_url}{HOST_PAGE_PATH}', wait_until='load')
+    self._check_rasterizer(page)
+    page.evaluate(
+        """async (timeoutMs) => {
+            const abort = new AbortController();
+            const timer = setTimeout(() => abort.abort(), timeoutMs);
+            try {
+              const response = await fetch('/gltf_viewer.wasm', {signal: abort.signal});
+              if (!response.ok) {
+                throw new Error(`fetching gltf_viewer.wasm: HTTP ${response.status}`);
+              }
+              globalThis.__renderdiffCompiledWasm =
+                  await WebAssembly.compileStreaming(Promise.resolve(response));
+            } finally {
+              clearTimeout(timer);
+            }
+        }""",
+        MODULE_READY_TIMEOUT_MS)
+    return page
 
   # ---------------------------------------------------------------- rendering
 
@@ -396,48 +511,49 @@ class WebRenderer(BaseRenderer):
 
   def render_in_browser(self, case, out_tif_name: str) -> tuple:
     out_name = case.get_out_name(self)
-    page = self._browser.new_page(viewport={'width': 1024, 'height': 768})
+    browser = self._tls.browser
+    console = self._tls.console
+    console.clear()
 
-    console = []
-    page.on('console', lambda msg: console.append(f'[{msg.type}] {msg.text}'))
-    page.on('pageerror', lambda err: console.append(f'[pageerror] {err}'))
+    if self._tls.page is None or self._tls.page.is_closed():
+      self._tls.page = self._init_host_page(browser, console)
+      console.clear()
+    page = self._tls.page
+
+    token = uuid.uuid4().hex
+    manifest = self._asset_manifest(case.model_path)
+    by_index = {str(i): host for i, (_, host) in enumerate(manifest)}
+    self._server.register_assets(token, by_index)
 
     try:
-      manifest = self._asset_manifest(case.model_path)
-      by_index = {str(i): host for i, (_, host) in enumerate(manifest)}
+      page.evaluate(
+          """() => new Promise((resolve, reject) => {
+              const prev = document.getElementById('runner');
+              if (prev) { prev.remove(); }
+              const frame = document.createElement('iframe');
+              frame.id = 'runner';
+              frame.onload = () => resolve();
+              frame.onerror = () => reject(new Error('failed to load gltf_viewer.html iframe'));
+              frame.src = '/gltf_viewer.html?autorun=0';
+              document.body.appendChild(frame);
+          })""")
 
-      def serve_asset(route):
-        # This must always fulfill. An unhandled exception here would leave the page's fetch()
-        # pending forever, and page.evaluate() has no timeout of its own.
-        index = route.request.url.rsplit('/', 1)[-1]
-        host = by_index.get(index)
-        try:
-          if host is None:
-            raise FileNotFoundError(f'no asset with index {index}')
-          with open(host, 'rb') as f:
-            body = f.read()
-        except OSError as e:
-          route.fulfill(status=500, body=str(e))
-          return
-        route.fulfill(status=200, body=body,
-                      headers={'Content-Type': 'application/octet-stream'})
+      frame_el = page.query_selector('#runner')
+      frame = frame_el.content_frame() if frame_el else None
+      if frame is None:
+        return self._fail(out_name, console, 'runner iframe was not attached')
 
-      page.route(f'**{ASSET_ROUTE_PREFIX}*', serve_asset)
-
-      page.goto(f'{self._server.base_url}/gltf_viewer.html?autorun=0', wait_until='load')
-      page.wait_for_function(
+      frame.wait_for_function(
           "() => globalThis.filamentApp && (filamentApp.status === 'ready' || filamentApp.error)",
           timeout=MODULE_READY_TIMEOUT_MS)
-      error = page.evaluate('() => filamentApp.error')
+      error = frame.evaluate('() => filamentApp.error')
       if error is not None:
         return self._fail(out_name, console, f"page failed before running: {error}")
-
-      self._check_rasterizer(page)
 
       with open(case.test_json_path) as f:
         spec_text = f.read()
 
-      page.evaluate(
+      frame.evaluate(
           """async ({spec, files, timeoutMs}) => {
               const fs = filamentApp.module.FS;
               const stage = (path, bytes) => {
@@ -447,25 +563,29 @@ class WebRenderer(BaseRenderer):
               fs.mkdirTree('/work');
               fs.chdir('/work');
               stage('/work/spec.json', new TextEncoder().encode(spec));
-              for (const [memfsPath, url] of files) {
-                // AbortController, because a hung fetch would hang page.evaluate() and there
-                // is no way to interrupt it from the driver side.
-                const abort = new AbortController();
-                const timer = setTimeout(() => abort.abort(), timeoutMs);
-                try {
-                  const response = await fetch(url, {signal: abort.signal});
-                  if (!response.ok) {
-                    throw new Error(`staging ${memfsPath}: HTTP ${response.status}`);
+              // Fetch up to 4 model resources concurrently over loopback.
+              let cursor = 0;
+              const worker = async () => {
+                while (cursor < files.length) {
+                  const [memfsPath, url] = files[cursor++];
+                  const abort = new AbortController();
+                  const timer = setTimeout(() => abort.abort(), timeoutMs);
+                  try {
+                    const response = await fetch(url, {signal: abort.signal});
+                    if (!response.ok) {
+                      throw new Error(`staging ${memfsPath}: HTTP ${response.status}`);
+                    }
+                    stage(memfsPath, new Uint8Array(await response.arrayBuffer()));
+                  } finally {
+                    clearTimeout(timer);
                   }
-                  stage(memfsPath, new Uint8Array(await response.arrayBuffer()));
-                } finally {
-                  clearTimeout(timer);
                 }
-              }
+              };
+              await Promise.all(Array.from({length: Math.min(4, files.length)}, () => worker()));
           }""",
           {
               'spec': spec_text,
-              'files': [[memfs, f'{ASSET_ROUTE_PREFIX}{i}']
+              'files': [[memfs, f'{ASSET_ROUTE_PREFIX}{token}/{i}']
                         for i, (memfs, _) in enumerate(manifest)],
               'timeoutMs': STAGING_TIMEOUT_MS,
           })
@@ -480,22 +600,22 @@ class WebRenderer(BaseRenderer):
           model_memfs,
       ]
       print(f'{out_name}: argv={argv}')
-      page.evaluate('(argv) => filamentApp.run(argv)', argv)
+      frame.evaluate('(argv) => filamentApp.run(argv)', argv)
 
       try:
-        page.wait_for_function('() => filamentApp.exited || filamentApp.error !== null',
-                               timeout=RENDER_TIMEOUT_MS)
+        frame.wait_for_function('() => filamentApp.exited || filamentApp.error !== null',
+                                timeout=RENDER_TIMEOUT_MS)
       except Exception:
-        status = page.evaluate('() => filamentApp.status')
+        status = frame.evaluate('() => filamentApp.status')
         return self._fail(out_name, console,
                           f"timed out after {RENDER_TIMEOUT_MS}ms in status '{status}'")
 
-      status = page.evaluate('() => filamentApp.status')
-      error = page.evaluate('() => filamentApp.error')
+      status = frame.evaluate('() => filamentApp.status')
+      error = frame.evaluate('() => filamentApp.error')
       if error is not None:
         return self._fail(out_name, console, f"final status '{status}': {error}")
 
-      listing = page.evaluate(
+      listing = frame.evaluate(
           "() => filamentApp.module.FS.readdir('/work').filter(n => n[0] !== '.')")
 
       tif_name = f'{case.test_name}0.tif'
@@ -504,7 +624,7 @@ class WebRenderer(BaseRenderer):
         return self._fail(out_name, console,
                           f'{tif_name} was not produced; /work contains {listing}')
 
-      tif = self._read_memfs(page, f'/work/{tif_name}')
+      tif = self._read_memfs(frame, token, 'tif', f'/work/{tif_name}')
       problem = self._validate_tif(tif)
       if problem:
         return self._fail(out_name, console, problem)
@@ -513,7 +633,7 @@ class WebRenderer(BaseRenderer):
         f.write(tif)
 
       if json_name in listing:
-        settings = self._read_memfs(page, f'/work/{json_name}')
+        settings = self._read_memfs(frame, token, 'json', f'/work/{json_name}')
         with open(os.path.join(case.output_dir, f'{out_name}.json'), 'wb') as f:
           f.write(settings)
 
@@ -523,11 +643,52 @@ class WebRenderer(BaseRenderer):
       # Fatal for every test, not just this one.
       raise
     except Exception as e:
-      # One broken model or a flaky page should cost us that test, not the whole suite.
+      # If the renderer process crashed, force the next test on this worker to rebuild the host
+      # page rather than trying to reuse a dead target.
+      try:
+        page.close()
+      except Exception:
+        pass
+      self._tls.page = None
       return self._fail(out_name, console, f'{type(e).__name__}: {e}')
     finally:
-      page.close()
-      self._write_console_log(case, out_name, console)
+      if self._tls.page is not None and not self._tls.page.is_closed():
+        try:
+          # Explicitly release the iframe's GPU device / WebGL context before detaching the DOM
+          # node so Chromium never accumulates live contexts while waiting on garbage collection.
+          self._tls.page.evaluate(
+              """() => {
+                  const f = document.getElementById('runner');
+                  if (!f) { return; }
+                  try {
+                    const win = f.contentWindow;
+                    const app = win && win.filamentApp;
+                    if (app && app.module && app.module.preinitializedWebGPUDevice) {
+                      app.module.preinitializedWebGPUDevice.destroy();
+                      app.module.preinitializedWebGPUDevice = null;
+                    }
+                    const canvas = win && win.document && win.document.getElementById('canvas');
+                    if (canvas) {
+                      const gl = canvas.getContext('webgl2');
+                      if (gl) {
+                        const lose = gl.getExtension('WEBGL_lose_context');
+                        if (lose) { lose.loseContext(); }
+                      }
+                      canvas.width = 1;
+                      canvas.height = 1;
+                    }
+                  } catch (_) {}
+                  f.src = 'about:blank';
+                  f.remove();
+              }""")
+        except Exception:
+          try:
+            self._tls.page.close()
+          except Exception:
+            pass
+          self._tls.page = None
+      self._server.unregister_token(token)
+      self._write_console_log(case, out_name, list(console))
 
   @staticmethod
   def _write_console_log(case, out_name: str, console: list):
@@ -547,24 +708,21 @@ class WebRenderer(BaseRenderer):
     except OSError as e:
       print(f'{out_name}: could not write the browser console log: {e}')
 
-  @staticmethod
-  def _read_memfs(page, path: str) -> bytes:
-    """Reads a MEMFS file as base64.
-
-    Returning the raw Uint8Array would marshal a megabyte of pixels as a JSON array of numbers,
-    which is an order of magnitude slower than base64.
-    """
-    encoded = page.evaluate(
-        """(path) => {
+  def _read_memfs(self, frame, token: str, slot: str, path: str) -> bytes:
+    """Uploads a MEMFS file as raw bytes to _LocalServer over loopback HTTP PUT."""
+    frame.evaluate(
+        """async ({path, url}) => {
             const bytes = filamentApp.module.FS.readFile(path, {encoding: 'binary'});
-            let binary = '';
-            const chunk = 0x8000;
-            for (let i = 0; i < bytes.length; i += chunk) {
-              binary += String.fromCharCode.apply(null, bytes.subarray(i, i + chunk));
+            const response = await fetch(url, {method: 'PUT', body: bytes});
+            if (!response.ok) {
+              throw new Error(`uploading ${path}: HTTP ${response.status}`);
             }
-            return btoa(binary);
-        }""", path)
-    return base64.b64decode(encoded)
+        }""",
+        {'path': path, 'url': f'{OUTPUT_ROUTE_PREFIX}{token}/{slot}'})
+    data = self._server.pop_upload(token, slot)
+    if data is None:
+      raise RuntimeError(f'upload for {path} missing from server')
+    return data
 
   def _validate_tif(self, tif: bytes):
     """Returns a failure message, or None if the image is usable as a golden."""
@@ -601,16 +759,73 @@ class WebRenderer(BaseRenderer):
 
   # ---------------------------------------------------------------- driver
 
+  def _worker_loop(self, case_queue: queue.Queue, abort_event: threading.Event) -> list:
+    from playwright.sync_api import sync_playwright
+
+    worker_results = []
+    with sync_playwright() as pw:
+      # channel='chromium' selects the full browser. Playwright's default headless build is
+      # chrome-headless-shell, which has no WebGPU support at all.
+      browser = pw.chromium.launch(
+          channel='chromium',
+          headless=True,
+          args=DETERMINISM_FLAGS + BACKEND_FLAGS[self.backend])
+      try:
+        self._check_browser_version(browser)
+        self._tls.browser = browser
+        self._tls.console = []
+        self._tls.page = self._init_host_page(browser, self._tls.console)
+
+        while not abort_event.is_set():
+          try:
+            case = case_queue.get_nowait()
+          except queue.Empty:
+            break
+          worker_results.append(case.render(self))
+      except RasterizerMismatch:
+        abort_event.set()
+        raise
+      finally:
+        if getattr(self._tls, 'page', None) is not None:
+          try:
+            self._tls.page.close()
+          except Exception:
+            pass
+          self._tls.page = None
+        self._tls.browser = None
+        browser.close()
+    return worker_results
+
   def run_tests(self, test_config, output_dir: str) -> list:
     cases = self._collect_test_cases(test_config, output_dir)
     if not cases:
       return []
 
+    num_workers = max(1, min(self.concurrent_renders, len(cases)))
+    print(f'Rendering {self.platform}-{self.backend} with up to '
+          f'{num_workers} concurrent browser workers')
+
+    case_queue = queue.Queue()
+    # Start larger models first so a single heavy asset does not trail at the end of the queue.
+    ordered_cases = sorted(
+        cases,
+        key=lambda c: os.path.getsize(c.model_path) if os.path.exists(c.model_path) else 0,
+        reverse=True)
+    for case in ordered_cases:
+      case_queue.put(case)
+
+    abort_event = threading.Event()
     results = []
-    self._start()
+    self._server = _LocalServer(self.bundle_dir)
     try:
-      for case in cases:
-        results.append(case.render(self))
+      with concurrent.futures.ThreadPoolExecutor(max_workers=num_workers) as executor:
+        futures = [
+            executor.submit(self._worker_loop, case_queue, abort_event)
+            for _ in range(num_workers)
+        ]
+        for future in concurrent.futures.as_completed(futures):
+          results.extend(future.result())
     finally:
-      self._stop()
+      self._server.shutdown()
+      self._server = None
     return results
