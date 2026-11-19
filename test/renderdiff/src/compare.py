@@ -1,3 +1,4 @@
+import concurrent.futures
 import glob
 import os
 import sys
@@ -146,10 +147,16 @@ def _compare_goldens(base_dir, comparison_dir, diffimg_path, out_dir=None, test_
       mkdir_p(output_test_dir)
     base_test_dir = os.path.abspath(os.path.join(base_dir, test_dir))
     comp_test_dir = os.path.abspath(os.path.join(comparison_dir, test_dir))
-    results = [
-      single_test(base_test_dir, comp_test_dir, golden_file) \
-      for golden_file in all_files if os.path.dirname(golden_file) == base_test_dir
+    dir_goldens = [
+      golden_file for golden_file in all_files if os.path.dirname(golden_file) == base_test_dir
     ]
+    if dir_goldens:
+      max_workers = min(len(dir_goldens), os.cpu_count() or 4)
+      with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
+        results = list(executor.map(
+          lambda gf: single_test(base_test_dir, comp_test_dir, gf),
+          dir_goldens
+        ))
     seen_test_cases = set([r['name'] for r in results])
 
     # For files that are rendered but not in the golden directory

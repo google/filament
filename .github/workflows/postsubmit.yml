@@ -172,10 +172,9 @@ jobs:
   # Sole writer of the ARM Linux compiler caches. Every ARM Linux presubmit job restores what this
   # job produces, so what it compiles is exactly the set of configurations those jobs compile:
   #
-  #   desktop-release         build-linux (WebGPU on, from build/linux/build.sh), and the release
-  #                           half of test-code-correctness
-  #   desktop-asan-debug      the asan/ubsan debug half of test-code-correctness, with matdbg
-  #                           and fgviewer enabled
+  #   desktop-release         build-linux (WebGPU on, from build/linux/build.sh)
+  #   desktop-asan-debug      test-code-correctness: asan/ubsan debug with matdbg, fgviewer,
+  #                           and the unit test targets in test/filament-unit-test/test_list.txt
   #   desktop-backend-test    test-backend: asan/ubsan debug with webgpu and osmesa
   #   desktop-renderdiff      test-renderdiff: debug with webgpu and osmesa, no sanitizers, plus
   #                           every sample binary. Also read by the golden generation jobs.
@@ -207,7 +206,9 @@ jobs:
             build: cd build/linux && printf "y" | ./build.sh presubmit
           - config: desktop-asan-debug
             mesa: false
-            build: ./build.sh -b -d -t -p desktop debug
+            build: >-
+              ./build.sh -b -d -t -p desktop debug matdbg fgviewer
+              $(bash test/filament-unit-test/test.sh --list-targets)
           # --build-only stops before running the tests: this job wants the objects, and the tests
           # already run in presubmit. Calling the same script the consumer calls is what keeps the
           # cached objects flag-identical to what it will ask for.
@@ -235,8 +236,6 @@ jobs:
       # prerequisites exactly: a prerequisite that changes an include path or a define changes the
       # compiler command line, which is what ccache hashes.
       - uses: ./.github/actions/get-mesa
-        if: ${{ matrix.mesa }}
-      - uses: ./.github/actions/get-vulkan-sdk
         if: ${{ matrix.mesa }}
       # After get-mesa, for the reason documented on the presubmit test-backend job.
       - uses: ./.github/actions/ccache
