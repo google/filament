@@ -513,6 +513,7 @@ $dokka.location:com.google.android.filament/Engine/enableAccurateTranslations/#/
 $dokka.location:com.google.android.filament/Engine/flush/#/PointingToDeclaration/filament-android/com.google.android.filament/-engine/flush.md
 $dokka.location:com.google.android.filament/Engine/flushAndWait/#/PointingToDeclaration/filament-android/com.google.android.filament/-engine/flush-and-wait.md
 $dokka.location:com.google.android.filament/Engine/flushAndWait/#long/PointingToDeclaration/filament-android/com.google.android.filament/-engine/flush-and-wait.md
+$dokka.location:com.google.android.filament/Engine/gc/#/PointingToDeclaration/filament-android/com.google.android.filament/-engine/gc.md
 $dokka.location:com.google.android.filament/Engine/getActiveFeatureLevel/#/PointingToDeclaration/filament-android/com.google.android.filament/-engine/get-active-feature-level.md
 $dokka.location:com.google.android.filament/Engine/getBackend/#/PointingToDeclaration/filament-android/com.google.android.filament/-engine/get-backend.md
 $dokka.location:com.google.android.filament/Engine/getBufferObjectCount/#/PointingToDeclaration/filament-android/com.google.android.filament/-engine/get-buffer-object-count.md
