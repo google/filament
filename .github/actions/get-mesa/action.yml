@@ -18,9 +18,49 @@ runs:
       with:
         path: mesa/out
         key: ${{ runner.os }}-${{ runner.arch }}-mesa-out-${{ env.GITHUB_MESA_VERSION }}-llvm${{ env.GITHUB_LLVM_VERSION }}-clang${{ env.GITHUB_CLANG_VERSION }}-${{ hashFiles('build/common/get-mesa.sh') }}
-    # On a cache hit the script still runs, but only to install the system dependencies: the cached
-    # libraries load them at runtime, and later steps rely on the toolchain it selects.
+    # On a Linux cache hit, install only the runtime shared libraries that prebuilt mesa/out
+    # loads plus the Clang toolchain downstream Filament builds expect, rather than running
+    # get-mesa.sh's full source-build dependency removal and ~120 build-only package installs.
+    # Keeping this fast path here rather than in get-mesa.sh also preserves hashFiles(get-mesa.sh)
+    # in the cache key above.
+    - name: Install Mesa runtime dependencies (Linux cache hit)
+      if: runner.os == 'Linux' && steps.cache-mesa.outputs.cache-hit == 'true'
+      shell: bash
+      run: |
+        set -xe
+        DPKG_ARCH=$(dpkg --print-architecture)
+        EXTRA_RUNTIME_PACKAGES=""
+        if [[ "$DPKG_ARCH" == "amd64" ]]; then
+            EXTRA_RUNTIME_PACKAGES="libdrm-intel1:${DPKG_ARCH}"
+        fi
+        sudo apt-get -y install \
+            ${EXTRA_RUNTIME_PACKAGES} \
+            libclang-cpp${GITHUB_CLANG_VERSION} \
+            libdrm-amdgpu1:${DPKG_ARCH} libdrm-dev:${DPKG_ARCH} libdrm-nouveau2:${DPKG_ARCH} libdrm-radeon1:${DPKG_ARCH} \
+            libelf-dev:${DPKG_ARCH} libexpat1-dev:${DPKG_ARCH} \
+            libgl1:${DPKG_ARCH} libglvnd0:${DPKG_ARCH} libglx0:${DPKG_ARCH} \
+            libllvm${GITHUB_LLVM_VERSION}:${DPKG_ARCH} libllvmspirvlib${GITHUB_CLANG_VERSION}:${DPKG_ARCH} \
+            libpciaccess0:${DPKG_ARCH} libsensors5:${DPKG_ARCH} \
+            libvulkan-dev:${DPKG_ARCH} libvulkan1:${DPKG_ARCH} \
+            libwayland-client0:${DPKG_ARCH} libwayland-server0:${DPKG_ARCH} \
+            libx11-xcb1:${DPKG_ARCH} libxcb-dri2-0:${DPKG_ARCH} libxcb-dri3-0:${DPKG_ARCH} \
+            libxcb-glx0:${DPKG_ARCH} libxcb-present0:${DPKG_ARCH} libxcb-randr0:${DPKG_ARCH} \
+            libxcb-render0:${DPKG_ARCH} libxcb-shape0:${DPKG_ARCH} libxcb-shm0:${DPKG_ARCH} \
+            libxcb-sync1:${DPKG_ARCH} libxcb-xfixes0:${DPKG_ARCH} \
+            libxfixes3:${DPKG_ARCH} libxrandr2:${DPKG_ARCH} libxrender1:${DPKG_ARCH} \
+            libxshmfence1:${DPKG_ARCH} libxxf86vm1:${DPKG_ARCH} \
+            libzstd-dev:${DPKG_ARCH} zlib1g-dev:${DPKG_ARCH} \
+            clang-${GITHUB_CLANG_VERSION} lld-${GITHUB_CLANG_VERSION} \
+            libc++-${GITHUB_CLANG_VERSION}-dev libc++abi-${GITHUB_CLANG_VERSION}-dev
+        sudo update-alternatives --install /usr/bin/cc cc /usr/bin/clang-${GITHUB_CLANG_VERSION} 100
+        sudo update-alternatives --install /usr/bin/c++ c++ /usr/bin/clang++-${GITHUB_CLANG_VERSION} 100
+        if ! command -v clang > /dev/null 2>&1; then
+            sudo ln -sf /usr/bin/clang-${GITHUB_CLANG_VERSION} /usr/bin/clang
+            sudo ln -sf /usr/bin/clang++-${GITHUB_CLANG_VERSION} /usr/bin/clang++
+        fi
+    # On a cache miss (or on macOS, where brew sets up LLVM/X11), run get-mesa.sh as before.
     - name: Get Mesa
+      if: runner.os != 'Linux' || steps.cache-mesa.outputs.cache-hit != 'true'
       env:
         MESA_SKIP_BUILD: ${{ steps.cache-mesa.outputs.cache-hit }}
       run: |
