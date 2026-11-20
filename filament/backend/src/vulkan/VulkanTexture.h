@@ -21,6 +21,7 @@
 #include "VulkanCommands.h"
 #include "VulkanConstants.h"
 #include "VulkanMemory.h"
+#include "VulkanSmallImagePool.h"
 #include "VulkanStagePool.h"
 
 #include "vulkan/memory/Resource.h"
@@ -172,7 +173,7 @@ struct VulkanTexture : public HwTexture, fvkmemory::Resource {
             VmaAllocator allocator, fvkmemory::ResourceManager* resourceManager,
             VulkanCommands* commands, SamplerType target, uint8_t levels, TextureFormat tformat,
             uint8_t samples, uint32_t w, uint32_t h, uint32_t depth, TextureUsage tusage,
-            VulkanStagePool& stagePool);
+            VulkanStagePool& stagePool, VulkanSmallImagePool const& smallImagePool);
 
     // Specialized constructor for internally created textures (e.g. from a swap chain)
     VulkanTexture(VulkanContext const& context, VkDevice device, VmaAllocator allocator,
