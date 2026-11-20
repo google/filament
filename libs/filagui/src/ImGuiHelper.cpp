@@ -361,12 +361,12 @@ void ImGuiHelper::processImGuiCommands(ImDrawData* commands, const ImGuiIO& io) 
     ImVec2 const clipScale = commands->FramebufferScale;
 
     // Ensure that we have enough vertex buffers and index buffers.
-    createBuffers(commands->CmdListsCount);
+    createBuffers(commands->CmdLists.Size);
 
     // Count how many primitives we'll need, then create a Renderable builder.
     size_t nPrims = 0;
     std::unordered_map<uint64_t, filament::MaterialInstance*> scissorRects;
-    for (int cmdListIndex = 0; cmdListIndex < commands->CmdListsCount; cmdListIndex++) {
+    for (int cmdListIndex = 0; cmdListIndex < commands->CmdLists.Size; cmdListIndex++) {
         const ImDrawList* cmds = commands->CmdLists[cmdListIndex];
         nPrims += cmds->CmdBuffer.size();
     }
@@ -379,7 +379,7 @@ void ImGuiHelper::processImGuiCommands(ImDrawData* commands, const ImGuiIO& io) 
     int primIndex = 0;
     int material2dIndex = 0;
     int materialExternalIndex = 0;
-    for (int cmdListIndex = 0; cmdListIndex < commands->CmdListsCount; cmdListIndex++) {
+    for (int cmdListIndex = 0; cmdListIndex < commands->CmdLists.Size; cmdListIndex++) {
         const ImDrawList* cmds = commands->CmdLists[cmdListIndex];
         populateVertexData(bufferIndex,
                 cmds->VtxBuffer.Size * sizeof(ImDrawVert), cmds->VtxBuffer.Data,
@@ -440,7 +440,7 @@ void ImGuiHelper::processImGuiCommands(ImDrawData* commands, const ImGuiIO& io) 
         }
         bufferIndex++;
     }
-    if (commands->CmdListsCount > 0) {
+    if (commands->CmdLists.Size > 0) {
         rbuilder.build(*mEngine, mRenderable);
     }
 }
