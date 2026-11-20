@@ -1450,6 +1450,9 @@ void OpenGLDriver::createTextureExternalImage2R(Handle<HwTexture> th, SamplerTyp
         // the target and id can be reset each time
         t->gl.target = t->externalTexture->target;
         t->gl.id = t->externalTexture->id;
+        // Keep the external image alive until the texture is destroyed, i.e.
+        // once the GPU is done with it (see destroyTextureCommon()).
+        t->externalTexture->image = image;
     }
     mHandleAllocator.associateTagToHandle(th.getId(), std::move(tag));
 }
@@ -2447,7 +2450,20 @@ void OpenGLDriver::destroyTextureCommon(OpenGLState& gl, Handle<HwTexture> th) {
                     detachStream(t);
                 }
                 if (UTILS_UNLIKELY(t->externalTexture)) {
+                    // Defer the destruction until the GPU is done with the
+                    // texture, so that the external image it holds isn't released
+                    // or reused while still in use.
+#ifndef FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2
+                    if (gl.hasFences()) {
+                        whenGpuCommandsComplete([this, externalTexture = t->externalTexture]() {
+                            mPlatform.destroyExternalImageTexture(externalTexture);
+                        });
+                    } else {
+                        mPlatform.destroyExternalImageTexture(t->externalTexture);
+                    }
+#else
                     mPlatform.destroyExternalImageTexture(t->externalTexture);
+#endif
                 } else {
                     glDeleteTextures(1, &t->gl.id);
                 }

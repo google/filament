@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+#include <backend/CallbackHandler.h>
 #include <backend/Platform.h>
 
 #include <utils/compiler.h>
@@ -111,7 +112,15 @@ utils::io::ostream& operator<<(utils::io::ostream& out,
 
 // --------------------------------------------------------------------------------------------------------------------
 
-Platform::ExternalImage::~ExternalImage() noexcept = default;
+Platform::ExternalImage::~ExternalImage() noexcept {
+    if (mCallback) {
+        if (mHandler) {
+            mHandler->post(mUserData, mCallback);
+        } else {
+            mCallback(mUserData);
+        }
+    }
+}
 
 // --------------------------------------------------------------------------------------------------------------------
 
