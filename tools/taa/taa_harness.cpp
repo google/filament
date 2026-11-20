@@ -277,6 +277,10 @@ bool parseJitterPattern(std::string const& name,
     if (name == "halton8") { *out = JitterPattern::HALTON_23_X8; return true; }
     if (name == "halton16") { *out = JitterPattern::HALTON_23_X16; return true; }
     if (name == "halton32") { *out = JitterPattern::HALTON_23_X32; return true; }
+    if (name == "halton_scaled" || name == "halton-scaled") {
+        *out = JitterPattern::HALTON_23_SCALED;
+        return true;
+    }
     return false;
 }
 
@@ -2332,6 +2336,7 @@ char const* jitterPatternName(TemporalAntiAliasingOptions::JitterPattern const p
         case JP::HALTON_23_X8: return "halton_23_x8";
         case JP::HALTON_23_X16: return "halton_23_x16";
         case JP::HALTON_23_X32: return "halton_23_x32";
+        case JP::HALTON_23_SCALED: return "halton_23_scaled";
     }
     return "halton_23_x16";
 }
@@ -4273,7 +4278,8 @@ samples::SampleParameters createAppParameters() {
                 "lanczos-filament (what it actually evaluates), or box "
                 "(default: box in --benchmark, lanczos otherwise)", ""),
         samples::Parameter::makeString("jitter-pattern", 'J',
-                "rgss4, helix4, halton8, halton16, halton32 (overrides --settings)", ""),
+                "rgss4, helix4, halton8, halton16, halton32, halton_scaled (overrides --settings)",
+                ""),
         samples::Parameter::makeString("settings", 's',
                 "JSON settings file; view.taa and view.motionVectors are applied to every run", ""),
         samples::Parameter::makeFloat("diff-gain", 'G',
