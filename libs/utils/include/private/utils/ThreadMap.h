@@ -104,7 +104,8 @@ public:
      * Associates the specified slot index with a thread ID and value.
      *
      * Precondition: index < getCapacity(). Two threads must not call set() concurrently
-     * with the same slot index.
+     * with the same slot index. Reassigning a slot to a different thread ID requires clearing
+     * it first via erase() or eraseAt().
      *
      * @param index Slot index (must be < getCapacity()).
      * @param value The value to associate with the thread.
@@ -127,8 +128,11 @@ public:
         }
         for (size_type i = 0; i < mCapacity; ++i) {
             Entry const& entry = mEntries[i];
+            // acquire: pairs with set()'s tid release so the value load sees the published value.
             if (entry.tid.load(std::memory_order_acquire) == tid) {
-                value_type const val = entry.value.load(std::memory_order_relaxed);
+                // acquire: pairs with set()'s value release and stops the tid re-check hoisting.
+                value_type const val = entry.value.load(std::memory_order_acquire);
+                // acquire: pairs with set()/erase() and orders caller reads after slot validation.
                 if (entry.tid.load(std::memory_order_acquire) == tid) {
                     return val;
                 }
@@ -149,6 +153,7 @@ public:
             return INVALID_INDEX;
         }
         for (size_type i = 0; i < mCapacity; ++i) {
+            // acquire: pairs with set()'s tid release so caller sees state published before set().
             if (mEntries[i].tid.load(std::memory_order_acquire) == tid) {
                 return i;
             }
@@ -246,12 +251,18 @@ typename ThreadMap<VALUE>::size_type ThreadMap<VALUE>::getCapacity() const noexc
 }
 
 template <typename VALUE>
-void ThreadMap<VALUE>::set(size_type const index, value_type const value, key_type const tid) noexcept {
+void ThreadMap<VALUE>::set(size_type const index, value_type const value,
+        key_type const tid) noexcept {
     assert_invariant(index < mCapacity);
     assert_invariant(tid != key_type{});
 
     Entry& entry = mEntries[index];
-    entry.value.store(value, std::memory_order_relaxed);
+    // relaxed: caller has exclusive slot ownership, so only an invariant check is needed.
+    key_type const oldTid = entry.tid.load(std::memory_order_relaxed);
+    assert_invariant(oldTid == key_type{} || oldTid == tid);
+    // release: pairs with get()'s value acquire so readers seeing new value also see prior erase.
+    entry.value.store(value, std::memory_order_release);
+    // release: publishes value and prior writes before tid becomes visible to get()/findIndex().
     entry.tid.store(tid, std::memory_order_release);
 }
 
@@ -264,8 +275,9 @@ bool ThreadMap<VALUE>::erase(key_type const tid) noexcept {
     for (size_type i = 0; i < mCapacity; ++i) {
         Entry& entry = mEntries[i];
         key_type expected = tid;
+        // acq_rel: syncs with prior set() and blocks later set() hoisting; relaxed on fail.
         if (entry.tid.compare_exchange_strong(expected, key_type{},
-                std::memory_order_release, std::memory_order_relaxed)) {
+                std::memory_order_acq_rel, std::memory_order_relaxed)) {
             return true;
         }
     }
@@ -277,10 +289,12 @@ bool ThreadMap<VALUE>::eraseAt(size_type const index) noexcept {
     assert_invariant(index < mCapacity);
 
     Entry& entry = mEntries[index];
+    // relaxed: only reads the expected tid for the CAS below, which provides synchronization.
     key_type expected = entry.tid.load(std::memory_order_relaxed);
     if (expected != key_type{}) {
+        // acq_rel: syncs with prior set() and blocks later set() hoisting; relaxed on fail.
         if (entry.tid.compare_exchange_strong(expected, key_type{},
-                std::memory_order_release, std::memory_order_relaxed)) {
+                std::memory_order_acq_rel, std::memory_order_relaxed)) {
             return true;
         }
     }
@@ -298,6 +312,7 @@ template <typename VALUE>
 typename ThreadMap<VALUE>::size_type ThreadMap<VALUE>::size() const noexcept {
     size_type count = 0;
     for (size_type i = 0; i < mCapacity; ++i) {
+        // relaxed: size() is an approximate count and does not synchronize with entry values.
         if (mEntries[i].tid.load(std::memory_order_relaxed) != key_type{}) {
             ++count;
         }
