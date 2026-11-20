@@ -840,6 +840,7 @@ export class Engine {
     public static create(canvas: HTMLCanvasElement, options?: { backend?: Backend }): Engine;
     public static destroy(engine: Engine): void;
     public execute(): void;
+    public gc(): void;
     public createCamera(entity: Entity): Camera;
     public createMaterial(urlOrBuffer: BufferReference, options?: { uboBatching?: Material$UboBatchingMode }): Material;
     public createRenderer(): Renderer;

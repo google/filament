@@ -186,14 +186,21 @@ jobs:
               'test-backend-metal': false,
             };
 
-            function enableAll() {
+            // Enables all jobs. Pass includeCheckHeaders = false for third_party/ fallback
+            // files so they do not trigger 'check-headers' while preserving an earlier true;
+            // the changedFiles === null fallback calls enableAll() with the default true.
+            function enableAll(includeCheckHeaders = true) {
               for (const key of Object.keys(jobs)) {
+                // Skip rather than setting false so a prior non-third_party C/C++ file's true stands.
+                if (key === 'check-headers' && !includeCheckHeaders) continue;
                 jobs[key] = true;
               }
             }
 
             function classifyFile(file) {
-              if (matchesGlob(file, ['**/*.{c,cpp,h,hpp}'])) {
+              // third_party/ is exempt; the Check - header organization step filters
+              // third_party/ per file.
+              if (!file.startsWith('third_party/') && matchesGlob(file, ['**/*.{c,cpp,h,hpp}'])) {
                 jobs['check-headers'] = true;
               }
 
@@ -418,10 +425,13 @@ jobs:
                 return;
               }
 
-              enableAll();
+              // Unmatched third_party/ files still enable all build/test jobs, but skip
+              // 'check-headers' because third_party/ is exempt (preserving any prior true).
+              enableAll(!file.startsWith('third_party/'));
             }
 
             if (changedFiles === null) {
+              // File list unavailable; enable every job including 'check-headers'.
               enableAll();
             } else {
               const activeFiles = changedFiles.filter(f => !isInertFile(f));
@@ -839,18 +849,33 @@ jobs:
           COMMIT_MESSAGE: ${{ steps.get_commit_msg.outputs.msg }}
           GIHUB_SHA: ${{ github.sha }}
         run: |
+          FILES=()
           if [ "${{ github.event_name }}" = "pull_request" ]; then
-            FILES=()
-            while IFS= read -r -d '' file; do
-              FILES+=("$file")
-            done < <(git diff -z --name-only --diff-filter=d ${{ github.event.pull_request.base.sha }} ${{ github.event.pull_request.head.sha }})
-            if [ ${#FILES[@]} -gt 0 ]; then
-              bash test/code-correctness/check-headers.sh "${FILES[@]}"
-            else
-              echo "No files to check."
-            fi
+            DIFF_CMD=(
+              git diff -z --name-only --diff-filter=d
+              "${{ github.event.pull_request.base.sha }}"
+              "${{ github.event.pull_request.head.sha }}"
+              --
+            )
           else
-            bash test/code-correctness/check-headers.sh ${GITHUB_SHA}
+            DIFF_CMD=(
+              git diff-tree --no-commit-id -z --name-only --diff-filter=d -r
+              "${GITHUB_SHA}"
+              --
+            )
+          fi
+          TMP_FILES=$(mktemp)
+          trap 'rm -f "$TMP_FILES"' EXIT
+          "${DIFF_CMD[@]}" > "$TMP_FILES" || exit $?
+          while IFS= read -r -d '' file; do
+            if [[ "$file" != third_party/* ]]; then
+              FILES+=("$file")
+            fi
+          done < "$TMP_FILES"
+          if [ ${#FILES[@]} -gt 0 ]; then
+            bash test/code-correctness/check-headers.sh "${FILES[@]}"
+          else
+            echo "No files to check."
           fi
       - uses: ./.github/actions/linux-prereq
         if: needs.check-verification.outputs.code-correctness == 'true'
