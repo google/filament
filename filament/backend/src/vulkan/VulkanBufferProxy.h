@@ -23,6 +23,9 @@
 #include "VulkanMemory.h"
 #include "VulkanStagePool.h"
 
+#include "vulkan/memory/Resource.h"
+#include "vulkan/utils/CommandBufferAgeCounter.h"
+
 #include <backend/DriverEnums.h>
 
 namespace filament::backend {
@@ -38,15 +41,41 @@ public:
             VulkanStagePool& stagePool, VulkanBufferCache& bufferCache, VulkanBufferBinding binding,
             BufferUsage usage, uint32_t numBytes);
 
-    void loadFromCpu(VulkanCommandBuffer& commands, const void* cpuData, uint32_t byteOffset,
-            uint32_t numBytes);
+    // Uploads `numBytes` of `cpuData` at `byteOffset`. This either writes straight into the
+    // buffer's memory, or records a staging copy into the recording command buffer of `commands`.
+    // A command buffer is only started (via VulkanCommands::get()) for the staging copy. Returns
+    // the command buffer that the copy was recorded into, or nullptr if no GPU work was needed.
+    VulkanCommandBuffer* loadFromCpu(VulkanCommands& commands, const void* cpuData,
+            uint32_t byteOffset, uint32_t numBytes);
 
     VkBuffer getVkBuffer() const noexcept;
 
-    void referencedBy(VulkanCommandBuffer& commands);
+    // Records that `commands` reads from this buffer: the command buffer holds the backing
+    // VulkanBuffer until it completes, and loadFromCpu() will not memcpy into it (and will issue a
+    // barrier) until then. Calling this repeatedly for the same command buffer is cheap, since the
+    // buffer is only acquired once per command buffer.
+    void referencedBy(VulkanCommandBuffer& commands,
+            fvkutils::CommandBufferAgeCounter const& ageCounter);
+
+    // Incremented every time the backing VkBuffer is swapped out. Descriptor sets record the
+    // generation when they write this buffer into a descriptor, and compare it later to detect a
+    // stale VkBuffer.
+    uint64_t getGeneration() const noexcept { return mGeneration; }
+
+    // Declares the current contents dead (see DriverAPI's resetBufferObject()). If the GPU may
+    // still be reading the buffer, and it can be orphaned, this swaps in a fresh one, so that the
+    // next update can write it directly even if it does not cover the whole buffer.
+    void reset(fvkutils::CommandBufferAgeCounter const& ageCounter);
 
 private:
     VulkanBufferBinding getBinding() const noexcept;
+
+    // Returns true if mBuffer may be swapped out for a fresh VkBuffer (see orphan()).
+    bool canOrphan() const noexcept;
+
+    // Swaps out mBuffer for a fresh VkBuffer. Command buffers that use the old one keep it alive
+    // until they complete, after which it is recycled.
+    void orphan();
 
     bool const mStagingBufferBypassEnabled;
     VmaAllocator mAllocator;
@@ -55,8 +84,10 @@ private:
 
     fvkmemory::resource_ptr<VulkanBuffer> mBuffer;
 
-    uint32_t mLastReadAge;
-    BufferUsage mUsage;
+    BufferUsage const mUsage;
+    VulkanBufferBinding const mBinding;
+    uint32_t const mNumBytes;
+    uint64_t mGeneration = 0;
 };
 
 } // namespace filament::backend

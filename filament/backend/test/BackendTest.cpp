@@ -62,9 +62,12 @@ void BackendTest::init(Backend backend, OperatingSystem operatingSystem, bool is
     sArgv = argv;
 }
 
-BackendTest::BackendTest() : commandBufferQueue(CONFIG_MIN_COMMAND_BUFFERS_SIZE,
-        CONFIG_COMMAND_BUFFERS_SIZE, /*mPaused=*/false) {
-    initializeDriver();
+BackendTest::BackendTest() : BackendTest(getDriverConfig()) {}
+
+BackendTest::BackendTest(Platform::DriverConfig const& driverConfig)
+        : commandBufferQueue(CONFIG_MIN_COMMAND_BUFFERS_SIZE,
+                CONFIG_COMMAND_BUFFERS_SIZE, /*mPaused=*/false) {
+    initializeDriver(driverConfig);
     mImageExpectations.emplace(getDriverApi());
     mCleanup = std::make_unique<Cleanup>(getDriverApi());
     NativeView nativeView = getNativeView();
@@ -105,11 +108,11 @@ Platform::DriverConfig BackendTest::getDriverConfig() {
     return driverConfig;
 }
 
-void BackendTest::initializeDriver() {
+void BackendTest::initializeDriver(Platform::DriverConfig const& driverConfig) {
     auto backend = static_cast<filament::backend::Backend>(sBackend);
     mPlatform = PlatformFactory::create(&backend);
     assert_invariant(static_cast<uint8_t>(backend) == static_cast<uint8_t>(sBackend));
-    driver = mPlatform->createDriver(nullptr, getDriverConfig());
+    driver = mPlatform->createDriver(nullptr, driverConfig);
     assert_invariant(driver);
     commandStream = std::make_unique<CommandStream>(*driver, commandBufferQueue.getCircularBuffer());
 }
