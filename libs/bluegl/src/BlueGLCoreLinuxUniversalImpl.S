@@ -19,3 +19,6 @@
 #else
 #   include "BlueGLCoreLinuxImpl.S"
 #endif
+
+/* Mark the object as not needing an executable stack; without this note, GNU ld assumes it does. */
+.section .note.GNU-stack,"",%progbits
