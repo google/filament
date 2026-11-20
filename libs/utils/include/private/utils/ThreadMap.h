@@ -52,8 +52,8 @@ namespace utils {
  *    set() and unregisters itself via erase()/eraseAt(). Lookups (get()) are predominantly
  *    invoked by a thread querying its own state.
  * 4. Lock-Free and Wait-Free: All reads and writes complete in bounded, single-pass O(N) scans
- *    with acquire-release atomics, without locks, CAS spin loops, seqlocks, version counters,
- *    or spurious misses.
+ *    with acquire-release atomics and per-slot generation counters to prevent ABA on slot
+ *    reassignment, without locks or CAS spin loops.
  */
 template <typename VALUE>
 class ThreadMap {
@@ -64,7 +64,8 @@ class ThreadMap {
     static_assert(std::atomic<std::thread::id>::is_always_lock_free,
             "ThreadMap requires std::atomic<std::thread::id> to be lock-free on this platform");
     static_assert(std::has_unique_object_representations_v<std::thread::id>,
-            "ThreadMap requires std::thread::id to have unique object representations (no padding bits)");
+            "ThreadMap requires std::thread::id to have unique object representations "
+            "(no padding bits)");
 
 public:
     using value_type = VALUE;
@@ -72,11 +73,6 @@ public:
     using key_type = std::thread::id;
 
     static constexpr size_type INVALID_INDEX = std::numeric_limits<size_type>::max();
-
-    struct Entry {
-        std::atomic<key_type> tid{};
-        std::atomic<value_type> value{};
-    };
 
     /**
      * Constructs a ThreadMap with the specified maximum thread capacity.
@@ -123,22 +119,7 @@ public:
      * @note Thread-safe (wait-free). Performs a single bounded O(N) scan.
      */
     inline value_type get(key_type const tid = std::this_thread::get_id()) const noexcept {
-        if (UTILS_UNLIKELY(tid == key_type{} || mCapacity == 0)) {
-            return value_type{};
-        }
-        for (size_type i = 0; i < mCapacity; ++i) {
-            Entry const& entry = mEntries[i];
-            // acquire: pairs with set()'s tid release so the value load sees the published value.
-            if (entry.tid.load(std::memory_order_acquire) == tid) {
-                // acquire: pairs with set()'s value release and stops the tid re-check hoisting.
-                value_type const val = entry.value.load(std::memory_order_acquire);
-                // acquire: pairs with set()/erase() and orders caller reads after slot validation.
-                if (entry.tid.load(std::memory_order_acquire) == tid) {
-                    return val;
-                }
-            }
-        }
-        return value_type{};
+        return getWithHook(tid, [](ReadSlotStage) noexcept {});
     }
 
     /**
@@ -154,7 +135,7 @@ public:
         }
         for (size_type i = 0; i < mCapacity; ++i) {
             // acquire: pairs with set()'s tid release so caller sees state published before set().
-            if (mEntries[i].tid.load(std::memory_order_acquire) == tid) {
+            if (mTids[i].load(std::memory_order_acquire) == tid) {
                 return i;
             }
         }
@@ -213,8 +194,63 @@ public:
     bool empty() const noexcept;
 
 private:
+    friend struct ThreadMapTestPeer;
+
+    enum class ReadSlotStage : uint8_t {
+        AFTER_SEQ_LOAD,
+        AFTER_VALUE_LOAD,
+    };
+
+    struct Slot {
+        std::atomic<value_type> value{};
+        std::atomic<uintptr_t> seq{0};
+    };
+
+    template <typename Hook>
+    UTILS_ALWAYS_INLINE bool readSlot(std::atomic<key_type> const* const tids,
+            size_type const index, key_type const tid, value_type& outValue,
+            Hook&& hook) const noexcept {
+        // acquire: pairs with set()'s tid release so the seq/value loads see the published slot.
+        if (tids[index].load(std::memory_order_acquire) == tid) {
+            // Capture the generation counter before reading value, and re-verify both tid and
+            // seq after reading value. Together with set() bumping seq between value.store and
+            // tid.store on slot claim, this prevents ABA across erase+reassignment cycles.
+            Slot const& slot = mSlots[index];
+            uintptr_t const seq = slot.seq.load(std::memory_order_acquire);
+            hook(ReadSlotStage::AFTER_SEQ_LOAD);
+            // acquire: pairs with set()'s value release and stops the tid re-check hoisting.
+            value_type const val = slot.value.load(std::memory_order_acquire);
+            hook(ReadSlotStage::AFTER_VALUE_LOAD);
+            // acquire: pairs with set()/erase() and orders caller reads after slot validation.
+            if (tids[index].load(std::memory_order_acquire) == tid &&
+                    slot.seq.load(std::memory_order_relaxed) == seq) {
+                outValue = val;
+                return true;
+            }
+        }
+        return false;
+    }
+
+    template <typename Hook>
+    UTILS_ALWAYS_INLINE value_type getWithHook(key_type const tid,
+            Hook&& hook) const noexcept {
+        if (UTILS_UNLIKELY(tid == key_type{} || mCapacity == 0)) {
+            return value_type{};
+        }
+        size_type const capacity = mCapacity;
+        std::atomic<key_type> const* const tids = mTids.get();
+        for (size_type i = 0; i < capacity; ++i) {
+            value_type val{};
+            if (readSlot(tids, i, tid, val, hook)) {
+                return val;
+            }
+        }
+        return value_type{};
+    }
+
     size_type mCapacity = 0;
-    std::unique_ptr<Entry[]> mEntries;
+    std::unique_ptr<std::atomic<key_type>[]> mTids;
+    std::unique_ptr<Slot[]> mSlots;
 };
 
 // ------------------------------------------------------------------------------------------------
@@ -224,7 +260,8 @@ private:
 template <typename VALUE>
 ThreadMap<VALUE>::ThreadMap(size_type const capacity)
         : mCapacity(capacity),
-          mEntries(capacity ? std::make_unique<Entry[]>(capacity) : nullptr) {
+          mTids(capacity ? std::make_unique<std::atomic<key_type>[]>(capacity) : nullptr),
+          mSlots(capacity ? std::make_unique<Slot[]>(capacity) : nullptr) {
 }
 
 template <typename VALUE>
@@ -233,14 +270,16 @@ ThreadMap<VALUE>::~ThreadMap() = default;
 template <typename VALUE>
 ThreadMap<VALUE>::ThreadMap(ThreadMap&& rhs) noexcept
         : mCapacity(std::exchange(rhs.mCapacity, 0)),
-          mEntries(std::move(rhs.mEntries)) {
+          mTids(std::move(rhs.mTids)),
+          mSlots(std::move(rhs.mSlots)) {
 }
 
 template <typename VALUE>
 ThreadMap<VALUE>& ThreadMap<VALUE>::operator=(ThreadMap&& rhs) noexcept {
     if (this != &rhs) {
         mCapacity = std::exchange(rhs.mCapacity, 0);
-        mEntries = std::move(rhs.mEntries);
+        mTids = std::move(rhs.mTids);
+        mSlots = std::move(rhs.mSlots);
     }
     return *this;
 }
@@ -256,14 +295,20 @@ void ThreadMap<VALUE>::set(size_type const index, value_type const value,
     assert_invariant(index < mCapacity);
     assert_invariant(tid != key_type{});
 
-    Entry& entry = mEntries[index];
+    std::atomic<key_type>& slotTid = mTids[index];
     // relaxed: caller has exclusive slot ownership, so only an invariant check is needed.
-    key_type const oldTid = entry.tid.load(std::memory_order_relaxed);
+    key_type const oldTid = slotTid.load(std::memory_order_relaxed);
     assert_invariant(oldTid == key_type{} || oldTid == tid);
+    Slot& slot = mSlots[index];
     // release: pairs with get()'s value acquire so readers seeing new value also see prior erase.
-    entry.value.store(value, std::memory_order_release);
-    // release: publishes value and prior writes before tid becomes visible to get()/findIndex().
-    entry.tid.store(tid, std::memory_order_release);
+    slot.value.store(value, std::memory_order_release);
+    if (oldTid != tid) {
+        // acq_rel: bumps the generation before the new tid is published so get() can detect
+        // an erase+reassignment (ABA) cycle between its two tid checks.
+        slot.seq.fetch_add(1, std::memory_order_acq_rel);
+    }
+    // release: publishes value, seq and prior writes before tid becomes visible to get().
+    slotTid.store(tid, std::memory_order_release);
 }
 
 
@@ -273,10 +318,9 @@ bool ThreadMap<VALUE>::erase(key_type const tid) noexcept {
         return false;
     }
     for (size_type i = 0; i < mCapacity; ++i) {
-        Entry& entry = mEntries[i];
         key_type expected = tid;
         // acq_rel: syncs with prior set() and blocks later set() hoisting; relaxed on fail.
-        if (entry.tid.compare_exchange_strong(expected, key_type{},
+        if (mTids[i].compare_exchange_strong(expected, key_type{},
                 std::memory_order_acq_rel, std::memory_order_relaxed)) {
             return true;
         }
@@ -288,12 +332,12 @@ template <typename VALUE>
 bool ThreadMap<VALUE>::eraseAt(size_type const index) noexcept {
     assert_invariant(index < mCapacity);
 
-    Entry& entry = mEntries[index];
+    std::atomic<key_type>& slotTid = mTids[index];
     // relaxed: only reads the expected tid for the CAS below, which provides synchronization.
-    key_type expected = entry.tid.load(std::memory_order_relaxed);
+    key_type expected = slotTid.load(std::memory_order_relaxed);
     if (expected != key_type{}) {
         // acq_rel: syncs with prior set() and blocks later set() hoisting; relaxed on fail.
-        if (entry.tid.compare_exchange_strong(expected, key_type{},
+        if (slotTid.compare_exchange_strong(expected, key_type{},
                 std::memory_order_acq_rel, std::memory_order_relaxed)) {
             return true;
         }
@@ -312,8 +356,8 @@ template <typename VALUE>
 typename ThreadMap<VALUE>::size_type ThreadMap<VALUE>::size() const noexcept {
     size_type count = 0;
     for (size_type i = 0; i < mCapacity; ++i) {
-        // relaxed: size() is an approximate count and does not synchronize with entry values.
-        if (mEntries[i].tid.load(std::memory_order_relaxed) != key_type{}) {
+        // relaxed: size() is an approximate count and does not synchronize with slot values.
+        if (mTids[i].load(std::memory_order_relaxed) != key_type{}) {
             ++count;
         }
     }

@@ -27,6 +27,21 @@
 
 using namespace utils;
 
+namespace utils {
+
+struct ThreadMapTestPeer {
+    template <typename VALUE, typename Hook>
+    static VALUE getWithHook(ThreadMap<VALUE> const& map,
+            typename ThreadMap<VALUE>::key_type const tid, Hook&& hook) noexcept {
+        return map.getWithHook(tid, hook);
+    }
+
+    template <typename VALUE>
+    using ReadSlotStage = typename ThreadMap<VALUE>::ReadSlotStage;
+};
+
+} // namespace utils
+
 TEST(ThreadMapTest, BasicOperations) {
     ThreadMap<int> map(4);
     EXPECT_EQ(4u, map.getCapacity());
@@ -329,6 +344,84 @@ TEST(ThreadMapTest, EraseAbaProtection) {
 
     EXPECT_EQ(0u, stolenSlots.load())
             << "erase(tidA) suffered from an race and unregistered tidB's slot!";
+}
+
+TEST(ThreadMapTest, DeterministicSlotReassignmentAbaProtection) {
+    constexpr uint64_t VAL1 = 0x1111222233334444ull;
+    constexpr uint64_t VAL2 = 0xAAAABBBBCCCCDDDDull;
+    constexpr uint64_t VAL3 = 0x5555666677778888ull;
+
+    using Stage = ThreadMapTestPeer::ReadSlotStage<uint64_t>;
+
+    std::thread t1([] {});
+    std::thread t2([] {});
+    auto const tid1 = t1.get_id();
+    auto const tid2 = t2.get_id();
+    t1.join();
+    t2.join();
+
+    // 1. Classic ABA across erase + reassignment to tid2 + reassignment back to tid1:
+    //    value is loaded while tid2 owns the slot, then tid1 reclaims the slot before
+    //    the post-read tid re-check. The seq counter must reject the stale tid2 value.
+    {
+        ThreadMap<uint64_t> map(1);
+        map.set(0, VAL1, tid1);
+        uint64_t const observed = ThreadMapTestPeer::getWithHook(map, tid1,
+                [&](Stage const stage) {
+                    if (stage == Stage::AFTER_SEQ_LOAD) {
+                        EXPECT_TRUE(map.eraseAt(0));
+                        map.set(0, VAL2, tid2);
+                    } else if (stage == Stage::AFTER_VALUE_LOAD) {
+                        EXPECT_TRUE(map.eraseAt(0));
+                        map.set(0, VAL3, tid1);
+                    }
+                });
+        EXPECT_EQ(0u, observed);
+        EXPECT_EQ(VAL3, map.get(tid1));
+    }
+
+    // 2. Erase + reassignment to the same tid1 between seq load and value load must be rejected.
+    {
+        ThreadMap<uint64_t> map(1);
+        map.set(0, VAL1, tid1);
+        uint64_t const observed = ThreadMapTestPeer::getWithHook(map, tid1,
+                [&](Stage const stage) {
+                    if (stage == Stage::AFTER_SEQ_LOAD) {
+                        EXPECT_TRUE(map.eraseAt(0));
+                        map.set(0, VAL2, tid1);
+                    }
+                });
+        EXPECT_EQ(0u, observed);
+        EXPECT_EQ(VAL2, map.get(tid1));
+    }
+
+    // 3. Erase + reassignment to tid2 before value load must be rejected by the tid re-check.
+    {
+        ThreadMap<uint64_t> map(1);
+        map.set(0, VAL1, tid1);
+        uint64_t const observed = ThreadMapTestPeer::getWithHook(map, tid1,
+                [&](Stage const stage) {
+                    if (stage == Stage::AFTER_SEQ_LOAD) {
+                        EXPECT_TRUE(map.eraseAt(0));
+                        map.set(0, VAL2, tid2);
+                    }
+                });
+        EXPECT_EQ(0u, observed);
+        EXPECT_EQ(VAL2, map.get(tid2));
+    }
+
+    // 4. In-place value update for the same tid1 does not bump seq and remains readable.
+    {
+        ThreadMap<uint64_t> map(1);
+        map.set(0, VAL1, tid1);
+        uint64_t const observed = ThreadMapTestPeer::getWithHook(map, tid1,
+                [&](Stage const stage) {
+                    if (stage == Stage::AFTER_SEQ_LOAD) {
+                        map.set(0, VAL3, tid1);
+                    }
+                });
+        EXPECT_EQ(VAL3, observed);
+    }
 }
 
 
