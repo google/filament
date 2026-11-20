@@ -645,7 +645,7 @@ SubpixelRingMetrics subpixelRingFlicker(std::vector<LinearImage> const& captures
     uint32_t const w = captures[0].getWidth();
     uint32_t const h = captures[0].getHeight();
     double const scale = double(h) / 512.0;
-    double const cx = 256.0 * scale;
+    double const cx = double(w) * 0.5;
     double const cy = 275.0 * scale;
     constexpr double kRingBounds[4][2] = {
         { 14.0, 22.0 },

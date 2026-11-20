@@ -43,6 +43,8 @@ import re
 import shutil
 import subprocess
 import sys
+import tarfile
+import threading
 import time
 from typing import Any
 
@@ -50,6 +52,7 @@ from typing import Any
 APK_PACKAGE = "com.google.android.filament.taaharness"
 APK_INSTRUMENTATION = f"{APK_PACKAGE}/.TaaHarnessInstrumentation"
 APP_FILES_DIR = f"/sdcard/Android/data/{APK_PACKAGE}/files"
+APP_INTERNAL_FILES_DIR = f"/data/user/0/{APK_PACKAGE}/files"
 TRACE_TMP_DIR = "/data/local/tmp/taa_harness_trace"
 DEFAULT_APK_REL_PATH = (
     "android/samples/sample-taa-harness/build/outputs/apk/debug/sample-taa-harness-debug.apk"
@@ -456,6 +459,75 @@ class AdbDevice:
     def shell(self, command: str, check: bool = True) -> subprocess.CompletedProcess[str]:
         return self.run(["shell", command], check=check)
 
+    def shell_with_keepalive(
+        self, command: str, check: bool = True, heartbeat_sec: float = 25.0
+    ) -> subprocess.CompletedProcess[str]:
+        stop_event = threading.Event()
+
+        def _heartbeat() -> None:
+            while not stop_event.wait(heartbeat_sec):
+                subprocess.run(
+                    self._base_cmd() + ["shell", "true"],
+                    capture_output=True,
+                    check=False,
+                )
+
+        worker = threading.Thread(target=_heartbeat, daemon=True)
+        worker.start()
+        try:
+            return self.shell(command, check=check)
+        finally:
+            stop_event.set()
+            worker.join(timeout=2.0)
+
+    def can_run_as(self) -> bool:
+        proc = self.shell(f"run-as {APK_PACKAGE} mkdir -p files", check=False)
+        return proc.returncode == 0
+
+    def pull_run_as_file(self, rel_path: str, local: Path) -> bool:
+        proc = subprocess.run(
+            self._base_cmd() + ["exec-out", "run-as", APK_PACKAGE, "cat", f"files/{rel_path}"],
+            capture_output=True,
+            check=False,
+        )
+        if proc.returncode != 0 or not proc.stdout:
+            return False
+        local.parent.mkdir(parents=True, exist_ok=True)
+        local.write_bytes(proc.stdout)
+        return True
+
+    def pull_run_as_dir(self, rel_dir: str, local_dir: Path) -> bool:
+        ls_proc = self.shell(f"run-as {APK_PACKAGE} ls -1 files/{rel_dir}", check=False)
+        if ls_proc.returncode != 0:
+            return False
+        entries = [e.strip() for e in ls_proc.stdout.splitlines() if e.strip()]
+        if not entries:
+            return False
+        shutil.rmtree(local_dir, ignore_errors=True)
+        local_dir.mkdir(parents=True, exist_ok=True)
+        for entry in entries:
+            tar_proc = subprocess.run(
+                self._base_cmd()
+                + [
+                    "exec-out",
+                    "run-as",
+                    APK_PACKAGE,
+                    "tar",
+                    "-cf",
+                    "-",
+                    "-C",
+                    f"files/{rel_dir}",
+                    entry,
+                ],
+                capture_output=True,
+                check=False,
+            )
+            if tar_proc.returncode != 0 or not tar_proc.stdout:
+                return False
+            with tarfile.open(fileobj=io.BytesIO(tar_proc.stdout), mode="r:*") as tf:
+                tf.extractall(path=local_dir)
+        return True
+
     def push(self, local: Path, remote: str) -> None:
         self.run(["push", str(local), remote], check=True)
 
@@ -525,12 +597,15 @@ def build_harness_flags(
     perf_resolution: str,
     perf_warmup: int,
     perf_frames: int,
+    resolution: str | None = None,
     run_perf: bool = True,
     run_quality: bool = False,
     dump_dirname: str | None = None,
     settings_arg: str | None = None,
 ) -> list[str]:
     flags = [f"-a {api}"]
+    if resolution:
+        flags.append(f"--resolution {resolution}")
     if run_perf:
         flags.extend(
             [
@@ -632,6 +707,16 @@ def main() -> int:
         "--no-perf",
         action="store_true",
         help="Skip timed --perf windows (requires --quality or --dump)",
+    )
+    parser.add_argument(
+        "--resolution",
+        help="Output resolution for quality runs: WxH or 720p/1080p/1440p/4k",
+    )
+    parser.add_argument(
+        "--timeout",
+        type=int,
+        default=0,
+        help="Per-run timeout in seconds (0 = auto: 3600s for --dump/--quality, 180s for --perf)",
     )
     parser.add_argument("--perf-resolution", default="1920x1080")
     parser.add_argument("--perf-warmup", type=int, default=64)
@@ -744,31 +829,45 @@ def main() -> int:
         pulled_jsons: list[Path] = []
         all_verified = True
         suite_t0 = time.monotonic()
+        use_run_as = adb.can_run_as()
 
         for tag, settings_arg in benchmark_runs:
             json_filename = f"taa_{tag}.json"
-            remote_json = f"{APP_FILES_DIR}/{json_filename}"
+            base_remote_dir = APP_INTERNAL_FILES_DIR if use_run_as else APP_FILES_DIR
+            remote_json = f"{base_remote_dir}/{json_filename}"
             local_json = out_dir / json_filename
             dump_dirname = f"dump_{tag}" if args.dump else None
-            remote_dump = f"{APP_FILES_DIR}/{dump_dirname}" if dump_dirname else None
+            remote_dump = f"{base_remote_dir}/{dump_dirname}" if dump_dirname else None
             local_dump = (out_dir / dump_dirname) if dump_dirname else None
 
             flags = build_harness_flags(
                 api=args.api,
-                json_filename=json_filename,
+                json_filename=remote_json if use_run_as else json_filename,
                 upscaling=args.upscaling,
                 perf_resolution=args.perf_resolution,
                 perf_warmup=args.perf_warmup,
                 perf_frames=args.perf_frames,
+                resolution=args.resolution,
                 run_perf=not args.no_perf,
                 run_quality=args.quality,
-                dump_dirname=dump_dirname,
+                dump_dirname=remote_dump if (use_run_as and remote_dump) else dump_dirname,
                 settings_arg=settings_arg,
             )
-            if remote_dump:
-                adb.shell(f"rm -rf {remote_dump}", check=False)
+            if use_run_as:
+                rm_targets = f"files/{json_filename}" + (
+                    f" files/{dump_dirname}" if dump_dirname else ""
+                )
+                adb.shell(f"run-as {APK_PACKAGE} rm -rf {rm_targets}", check=False)
+            else:
+                adb.shell(f"rm -f {remote_json}", check=False)
+                if remote_dump:
+                    adb.shell(f"rm -rf {remote_dump}", check=False)
 
-            timeout_sec = 600 if (args.quality or args.dump) else 180
+            timeout_sec = (
+                args.timeout
+                if args.timeout > 0
+                else (3600 if (args.quality or args.dump) else 180)
+            )
             remote_trace = f"/data/misc/perfetto-traces/taa_{tag}.perfetto-trace"
             local_trace = out_dir / f"taa_{tag}.perfetto-trace"
             if args.verify_systrace:
@@ -794,7 +893,7 @@ def main() -> int:
                 cmd_str = f"timeout {timeout_sec} {inst_cmd}"
 
             run_t0 = time.monotonic()
-            proc = adb.shell(cmd_str, check=False)
+            proc = adb.shell_with_keepalive(cmd_str, check=False)
             run_elapsed = time.monotonic() - run_t0
             rc, parsed_stdout = adb.parse_instrument_output(proc.stdout)
             print(parsed_stdout)
@@ -806,11 +905,28 @@ def main() -> int:
                 print(f"ERROR: taa_harness failed with exit code {err_code}", file=sys.stderr)
                 return err_code
 
-            adb.pull(remote_json, local_json)
-            pulled_jsons.append(local_json)
-            if remote_dump and local_dump:
-                shutil.rmtree(local_dump, ignore_errors=True)
-                adb.pull(remote_dump, local_dump)
+            if use_run_as:
+                if adb.pull_run_as_file(json_filename, local_json):
+                    if dump_dirname:
+                        try:
+                            jdata = json.loads(local_json.read_text(encoding="utf-8"))
+                            if jdata.get("dump_directory") != dump_dirname:
+                                jdata["dump_directory"] = dump_dirname
+                                local_json.write_text(
+                                    json.dumps(jdata, indent=2) + "\n", encoding="utf-8"
+                                )
+                        except (OSError, json.JSONDecodeError):
+                            pass
+                    pulled_jsons.append(local_json)
+                if dump_dirname and local_dump:
+                    adb.pull_run_as_dir(dump_dirname, local_dump)
+                    adb.shell(f"run-as {APK_PACKAGE} rm -rf files/{dump_dirname}", check=False)
+            else:
+                adb.pull(remote_json, local_json)
+                pulled_jsons.append(local_json)
+                if remote_dump and local_dump:
+                    shutil.rmtree(local_dump, ignore_errors=True)
+                    adb.pull(remote_dump, local_dump)
 
             if args.verify_systrace:
                 adb.pull(remote_trace, local_trace)
