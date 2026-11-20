@@ -614,6 +614,20 @@ class AndroidFlagBuilderTest(unittest.TestCase):
         self.assertIn("-d dump_adaptive", both)
         self.assertIn("-s adaptive.json", both)
 
+        quality_1080p = build_harness_flags(
+            api="vulkan",
+            json_filename="taa_default.json",
+            upscaling="2",
+            perf_resolution="1920x1080",
+            perf_warmup=64,
+            perf_frames=128,
+            resolution="1920x1080",
+            run_perf=False,
+            run_quality=True,
+        )
+        self.assertIn("--resolution 1920x1080", quality_1080p)
+        self.assertIn("-b", quality_1080p)
+
 
 if __name__ == "__main__":
     unittest.main()
