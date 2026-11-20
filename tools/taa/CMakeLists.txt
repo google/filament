@@ -36,6 +36,7 @@ target_include_directories(${TARGET} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../../s
 target_link_libraries(${TARGET} PRIVATE
     taa_metrics
     samples-common
+    stb
     uberarchive
     viewer
     filamentapp
