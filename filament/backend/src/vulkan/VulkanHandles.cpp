@@ -146,7 +146,7 @@ fvkmemory::resource_ptr<VulkanTexture> initMsaaTexture(
         fvkmemory::resource_ptr<VulkanTexture> texture, VkDevice device,
         VkPhysicalDevice physicalDevice, VulkanContext const& context, VmaAllocator allocator,
         VulkanCommands* commands, fvkmemory::ResourceManager* resManager, uint8_t levels,
-        uint8_t samples, VulkanStagePool& stagePool) {
+        uint8_t samples, VulkanStagePool& stagePool, VulkanSmallImagePool const& smallImagePool) {
     assert_invariant(texture);
     auto msTexture = texture->getSidecar();
     if (UTILS_UNLIKELY(!msTexture)) {
@@ -157,7 +157,8 @@ fvkmemory::resource_ptr<VulkanTexture> initMsaaTexture(
 
         msTexture = resource_ptr<VulkanTexture>::construct(resManager, device, physicalDevice,
                 context, allocator, resManager, commands, texture->target, levels, texture->format,
-                samples, texture->width, texture->height, texture->depth, usage, stagePool);
+                samples, texture->width, texture->height, texture->depth, usage, stagePool,
+                smallImagePool);
         texture->setSidecar(msTexture);
     }
     return msTexture;
@@ -309,7 +310,8 @@ VulkanRenderTarget::VulkanRenderTarget(VkDevice device, VkPhysicalDevice physica
         VulkanContext const& context, fvkmemory::ResourceManager* resourceManager,
         VmaAllocator allocator, VulkanCommands* commands, uint32_t width, uint32_t height,
         uint8_t samples, VulkanAttachment color[MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT],
-        VulkanAttachment depthStencil, VulkanStagePool& stagePool, uint8_t layerCount)
+        VulkanAttachment depthStencil, VulkanStagePool& stagePool,
+        VulkanSmallImagePool const& smallImagePool, uint8_t layerCount)
     : HwRenderTarget(width, height),
       mOffscreen(true),
       mProtected(false),
@@ -365,7 +367,8 @@ VulkanRenderTarget::VulkanRenderTarget(VkDevice device, VkPhysicalDevice physica
             VulkanAttachment msaaAttachment = {};
             if (texture->samples == 1) {
                 auto msaaTexture = initMsaaTexture(texture, device, physicalDevice, context,
-                        allocator, commands, resourceManager, texture->levels, samples, stagePool);
+                        allocator, commands, resourceManager, texture->levels, samples, stagePool,
+                        smallImagePool);
                 if (msaaTexture && msaaTexture->isTransientAttachment()) {
                     rpkey.usesLazilyAllocatedMemory |= (1 << index);
                 }
@@ -407,7 +410,8 @@ VulkanRenderTarget::VulkanRenderTarget(VkDevice device, VkPhysicalDevice physica
                 // Create sidecar MSAA texture for the depth attachment if it does not already
                 // exist.
                 auto msaaTexture = initMsaaTexture(depthStencilTexture, device, physicalDevice, context,
-                        allocator, commands, resourceManager, msLevel, samples, stagePool);
+                        allocator, commands, resourceManager, msLevel, samples, stagePool,
+                        smallImagePool);
                 mInfo->msaaDepthStencilIndex = (uint8_t) attachments.size();
                 VulkanAttachment msaaAttachment = {
                     .texture = msaaTexture,
