@@ -338,6 +338,15 @@ set(MATERIAL_MULTIVIEW_SRCS
         src/materials/skybox.mat
 )
 
+set(MATERIAL_MULTIVIEW_ONLY_SRCS
+        src/materials/blitMultiview.mat
+)
+
+if (FILAMENT_ENABLE_MULTIVIEW)
+    list(APPEND MATERIAL_SRCS ${MATERIAL_MULTIVIEW_ONLY_SRCS})
+    list(APPEND MATERIAL_MULTIVIEW_SRCS ${MATERIAL_MULTIVIEW_ONLY_SRCS})
+endif()
+
 # This set of materials should only be compiled for vulkan or metal because they contain operations
 # not allowed on other platforms. (e.g. sampling from a multi-sampled texture).
 set(MATERIAL_VULKAN_METAL_SRCS
@@ -474,7 +483,10 @@ foreach(mat_dir ${MATERIAL_DIRS})
             set(COMMENT_STR "Compiling material ${fullname} (Vulkan/Metal)")
         endif()
 
-        compile_material(${output_path} ${fullname} MATC_CUSTOM_FLAGS "${COMMENT_STR}")
+        check_in_list(MATERIAL_MULTIVIEW_ONLY_SRCS ${mat_src} is_multiview_only)
+        if (NOT is_multiview_only)
+            compile_material(${output_path} ${fullname} MATC_CUSTOM_FLAGS "${COMMENT_STR}")
+        endif()
 
         # --- Multiview variant ---
         check_in_list(MATERIAL_MULTIVIEW_SRCS ${mat_src} is_multiview)
