@@ -58,7 +58,7 @@ runs:
     - uses: ./.github/actions/get-mesa
       if: inputs.platform == 'desktop'
     - uses: ./.github/actions/get-vulkan-sdk
-      if: inputs.platform == 'desktop'
+      if: inputs.platform == 'desktop' && runner.os != 'Linux'
     # The web leg builds wasm, so it needs the emsdk that build.sh -p wasm expects on $EMSDK.
     # generate.sh installs playwright and the pinned browser itself, because the browser build is
     # part of the golden contract.
@@ -97,7 +97,7 @@ runs:
     # them away, and gdb is not installed. Neither failure stops the job, since a lost backtrace
     # costs a diagnostic, not a test result.
     - name: Prepare crash capture
-      if: runner.os == 'Linux'
+      if: runner.os == 'Linux' && inputs.platform == 'desktop'
       shell: bash
       run: |
         sudo mkdir -p /tmp/renderdiff-cores
@@ -152,6 +152,7 @@ runs:
 
         python3 ${TEST_DIR}/src/golden_manager.py \
                 --branch="${{ inputs.golden-branch }}" \
+                --platform="${{ inputs.platform }}" \
                 --output=${GOLDEN_OUTPUT_DIR}
 
         python3 ${TEST_DIR}/src/compare.py \

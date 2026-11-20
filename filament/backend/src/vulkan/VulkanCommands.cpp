@@ -473,6 +473,7 @@ bool VulkanCommands::flush() {
             //    2) reading/writing of buffers (i.e. UBO) of the previous command buffer
             // Restricting the wait stages will allow for vertex work to proceed (more overlapping
             // vertex/fragment work).
+            pool->getRecording().acquire(mLastSubmit);
             pool->waitFor(mLastSubmit->getVkSemaphore(),
                     VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT | VK_PIPELINE_STAGE_TRANSFER_BIT);
         }

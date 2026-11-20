@@ -208,14 +208,35 @@
 
     const autorun = new URLSearchParams(globalThis.location.search).get('autorun') !== '0';
 
-    FilamentSample({
+    const moduleConfig = {
       canvas: document.getElementById('canvas'),
       print: (text) => console.log(text),
       printErr: (text) => console.error(text),
       // An abort during callMain() rejects the promise below, but one after main() returns happens
       // inside a rAF callback, outside this chain, where the page would report 'running' forever.
       onAbort: (reason) => fail('aborted', reason),
-    }).then((module) => {
+    };
+
+    // Allow a same-origin parent harness to supply a pre-compiled WebAssembly.Module so a suite
+    // of isolated iframe runs compiles the .wasm binary once per worker instead of once per test.
+    let cachedWasmModule = null;
+    try {
+      if (globalThis.parent && globalThis.parent !== globalThis) {
+        cachedWasmModule = globalThis.parent.__renderdiffCompiledWasm || null;
+      }
+    } catch (_) {
+      cachedWasmModule = null;
+    }
+    if (cachedWasmModule) {
+      moduleConfig.instantiateWasm = (imports, successCallback) => {
+        WebAssembly.instantiate(cachedWasmModule, imports).then(
+            (instance) => successCallback(instance, cachedWasmModule),
+            (error) => fail('instantiation-failed', error));
+        return {};
+      };
+    }
+
+    FilamentSample(moduleConfig).then((module) => {
       app.module = module;
       app.status = 'ready';
       if (autorun) {

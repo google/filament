@@ -742,6 +742,11 @@ public class Renderer {
      * beginFrame / endFrame block, but incurs less overhead. It can be used
      * as a poor man's compute API.</p>
      *
+     * <p>Unlike endFrame() and skipFrame(), renderStandaloneView() does not invoke Engine::gc().
+     * Applications that render exclusively with renderStandaloneView() (for example, in a loop)
+     * should call Engine::gc() periodically so destroyed entity IDs and dead components are
+     * reclaimed.</p>
+     *
      * <p>renderStandaloneView() must be called from the Engine's main thread
      * (or external synchronization must be provided). In particular, calls to
      * renderStandaloneView() on different Renderer instances <b>must</b> be synchronized.</p>

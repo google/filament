@@ -325,11 +325,13 @@ double shiftedRmse(LinearImage const& a, LinearImage const& b, std::vector<uint8
             }
             double const sx = double(x) + dx;
             double const sy = double(y) + dy;
-            auto const x0 = uint32_t(std::floor(sx));
-            auto const y0 = uint32_t(std::floor(sy));
-            if (x0 < 1 || y0 < 1 || x0 + 2 >= w || y0 + 2 >= h) {
+            int const ix0 = int(std::floor(sx));
+            int const iy0 = int(std::floor(sy));
+            if (ix0 < 1 || iy0 < 1 || uint32_t(ix0 + 2) >= w || uint32_t(iy0 + 2) >= h) {
                 continue;
             }
+            uint32_t const x0 = uint32_t(ix0);
+            uint32_t const y0 = uint32_t(iy0);
             double const fx = sx - double(x0);
             double const fy = sy - double(y0);
             float const* pa = a.getPixelRef(x, y);
@@ -643,7 +645,7 @@ SubpixelRingMetrics subpixelRingFlicker(std::vector<LinearImage> const& captures
     uint32_t const w = captures[0].getWidth();
     uint32_t const h = captures[0].getHeight();
     double const scale = double(h) / 512.0;
-    double const cx = 256.0 * scale;
+    double const cx = double(w) * 0.5;
     double const cy = 275.0 * scale;
     constexpr double kRingBounds[4][2] = {
         { 14.0, 22.0 },
