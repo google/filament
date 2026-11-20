@@ -16,7 +16,6 @@ vec3 vignette(const vec3 color, const highp vec2 uv, const vec4 vignette, const 
     vec2 distance = abs(uv - 0.5) * midPoint;
     distance.x *= aspect;
     distance = pow(saturate(distance), vec2(radius));
-
     float amount = pow(saturate(1.0 - dot(distance, distance)), feather * 5.0);
     return color * mix(vignetteColor.rgb, vec3(1.0), amount);
 }

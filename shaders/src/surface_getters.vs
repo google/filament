@@ -38,60 +38,59 @@ int getVertexIndex() {
 #endif
 
 #if defined(VARIANT_HAS_SKINNING_OR_MORPHING)
-#define MAX_SKINNING_BUFFER_WIDTH 2048u
-vec3 mulBoneNormal(vec3 n, uint j) {
+#define MAX_SKINNING_BUFFER_WIDTH_LOG2 11u
+#define MAX_SKINNING_BUFFER_WIDTH (1u << MAX_SKINNING_BUFFER_WIDTH_LOG2)
+#define MAX_SKINNING_BUFFER_WIDTH_MASK (MAX_SKINNING_BUFFER_WIDTH - 1u)
+
+highp mat3 computeBoneCofactor(uint j) {
+    highp vec3 r0 = bonesUniforms.bones[j].transform[0].xyz;
+    highp vec3 r1 = bonesUniforms.bones[j].transform[1].xyz;
+    highp vec3 r2 = bonesUniforms.bones[j].transform[2].xyz;
 
     highp mat3 cof;
-
-    // the last element must be computed by hand
-    highp float a = bonesUniforms.bones[j].transform[0][0];
-    highp float b = bonesUniforms.bones[j].transform[0][1];
-    highp float c = bonesUniforms.bones[j].transform[0][2];
-    highp float d = bonesUniforms.bones[j].transform[1][0];
-    highp float e = bonesUniforms.bones[j].transform[1][1];
-    highp float f = bonesUniforms.bones[j].transform[1][2];
-    highp float g = bonesUniforms.bones[j].transform[2][0];
-    highp float h = bonesUniforms.bones[j].transform[2][1];
-    highp float i = bonesUniforms.bones[j].transform[2][2];
-
     cof[0] = bonesUniforms.bones[j].cof0;
-
-    cof[1].xyz = vec3(
+    cof[1] = vec3(
             bonesUniforms.bones[j].cof1x,
-            a * i - c * g,
-            c * d - a * f);
+            r0.x * r2.z - r0.z * r2.x,
+            r0.z * r1.x - r0.x * r1.z);
+    cof[2] = vec3(
+            r1.x * r2.y - r1.y * r2.x,
+            r0.y * r2.x - r0.x * r2.y,
+            r0.x * r1.y - r0.y * r1.x);
+    return cof;
+}
 
-    cof[2].xyz = vec3(
-            d * h - e * g,
-            b * g - a * h,
-            a * e - b * d);
+vec3 mulBoneNormal(vec3 n, uint j) {
+    return normalize(computeBoneCofactor(j) * n);
+}
 
-    return normalize(cof * n);
+void accumulateBoneNormalTangent(inout vec3 normSum, inout vec3 tangSum,
+        const vec3 n, const vec3 t, uint j, float weight) {
+    highp mat3 cof = computeBoneCofactor(j);
+    normSum += weight * normalize(cof * n);
+    tangSum += weight * normalize(cof * t);
 }
 
 vec3 mulBoneVertex(vec3 v, uint i) {
-    // last row of bonesUniforms.transform[i] (row major) is assumed to be [0,0,0,1]
-    highp mat4x3 m = transpose(bonesUniforms.bones[i].transform);
-    return v.x * m[0].xyz + (v.y * m[1].xyz + (v.z * m[2].xyz + m[3].xyz));
+    // last row of bonesUniforms.bones[i].transform (row major) is assumed to be [0,0,0,1]
+    return vec4(v, 1.0) * bonesUniforms.bones[i].transform;
 }
 
 void skinPosition(inout vec3 p, const uvec4 ids, const vec4 weights) {
+    vec3 posSum = weights.x * mulBoneVertex(p, uint(ids.x))
+            + weights.y * mulBoneVertex(p, uint(ids.y))
+            + weights.z * mulBoneVertex(p, uint(ids.z));
     // standard skinning for 4 weights, some of them could be zero
     if (weights.w >= 0.0) {
-        p = weights.x * mulBoneVertex(p, uint(ids.x))
-            + weights.y * mulBoneVertex(p, uint(ids.y))
-            + weights.z * mulBoneVertex(p, uint(ids.z))
-            + weights.w * mulBoneVertex(p, uint(ids.w));
+        p = posSum + weights.w * mulBoneVertex(p, uint(ids.w));
         return;
     }
     // skinning for >4 weights
-    vec3 posSum = weights.x * mulBoneVertex(p, uint(ids.x));
-    posSum += weights.y * mulBoneVertex(p, uint(ids.y));
-    posSum += weights.z * mulBoneVertex(p, uint(ids.z));
-    uint pairIndex = uint(-weights.w - 1.);
+    uint pairIndex = uint(-weights.w - 1.0);
     uint pairStop = pairIndex + uint(ids.w - 3u);
     for (uint i = pairIndex; i < pairStop; ++i) {
-        ivec2 texcoord = ivec2(i % MAX_SKINNING_BUFFER_WIDTH, i / MAX_SKINNING_BUFFER_WIDTH);
+        ivec2 texcoord = ivec2(
+                i & MAX_SKINNING_BUFFER_WIDTH_MASK, i >> MAX_SKINNING_BUFFER_WIDTH_LOG2);
         vec2 indexWeight = texelFetch(sampler1_indicesAndWeights, texcoord, 0).rg;
         posSum += mulBoneVertex(p, uint(indexWeight.r)) * indexWeight.g;
     }
@@ -99,63 +98,55 @@ void skinPosition(inout vec3 p, const uvec4 ids, const vec4 weights) {
 }
 
 void skinNormal(inout vec3 n, const uvec4 ids, const vec4 weights) {
+    vec3 normSum = weights.x * mulBoneNormal(n, uint(ids.x))
+            + weights.y * mulBoneNormal(n, uint(ids.y))
+            + weights.z * mulBoneNormal(n, uint(ids.z));
     // standard skinning for 4 weights, some of them could be zero
     if (weights.w >= 0.0) {
-        n = weights.x * mulBoneNormal(n, uint(ids.x))
-            + weights.y * mulBoneNormal(n, uint(ids.y))
-            + weights.z * mulBoneNormal(n, uint(ids.z))
-            + weights.w * mulBoneNormal(n, uint(ids.w));
+        n = normSum + weights.w * mulBoneNormal(n, uint(ids.w));
         return;
     }
     // skinning for >4 weights
-    vec3 normSum = weights.x * mulBoneNormal(n, uint(ids.x));
-    normSum += weights.y * mulBoneNormal(n, uint(ids.y));
-    normSum += weights.z * mulBoneNormal(n, uint(ids.z));
-    uint pairIndex = uint(-weights.w - 1.);
+    uint pairIndex = uint(-weights.w - 1.0);
     uint pairStop = pairIndex + uint(ids.w - 3u);
-    for (uint i = pairIndex; i < pairStop; i = i + 1u) {
-        ivec2 texcoord = ivec2(i % MAX_SKINNING_BUFFER_WIDTH, i / MAX_SKINNING_BUFFER_WIDTH);
+    for (uint i = pairIndex; i < pairStop; ++i) {
+        ivec2 texcoord = ivec2(
+                i & MAX_SKINNING_BUFFER_WIDTH_MASK, i >> MAX_SKINNING_BUFFER_WIDTH_LOG2);
         vec2 indexWeight = texelFetch(sampler1_indicesAndWeights, texcoord, 0).rg;
-
         normSum += mulBoneNormal(n, uint(indexWeight.r)) * indexWeight.g;
     }
     n = normSum;
 }
 
 void skinNormalTangent(inout vec3 n, inout vec3 t, const uvec4 ids, const vec4 weights) {
+    highp mat3 cof = computeBoneCofactor(uint(ids.x));
+    vec3 normSum = weights.x * normalize(cof * n);
+    vec3 tangSum = weights.x * normalize(cof * t);
+    accumulateBoneNormalTangent(normSum, tangSum, n, t, uint(ids.y), weights.y);
+    accumulateBoneNormalTangent(normSum, tangSum, n, t, uint(ids.z), weights.z);
     // standard skinning for 4 weights, some of them could be zero
     if (weights.w >= 0.0) {
-        n = weights.x * mulBoneNormal(n, uint(ids.x))
-            + weights.y * mulBoneNormal(n, uint(ids.y))
-            + weights.z * mulBoneNormal(n, uint(ids.z))
-            + weights.w * mulBoneNormal(n, uint(ids.w));
-        t = weights.x * mulBoneNormal(t, uint(ids.x))
-            + weights.y * mulBoneNormal(t, uint(ids.y))
-            + weights.z * mulBoneNormal(t, uint(ids.z))
-            + weights.w * mulBoneNormal(t, uint(ids.w));
+        accumulateBoneNormalTangent(normSum, tangSum, n, t, uint(ids.w), weights.w);
+        n = normSum;
+        t = tangSum;
         return;
     }
     // skinning for >4 weights
-    vec3 normSum = weights.x * mulBoneNormal(n, uint(ids.x));
-    normSum += weights.y * mulBoneNormal(n, uint(ids.y)) ;
-    normSum += weights.z * mulBoneNormal(n, uint(ids.z));
-    vec3 tangSum = weights.x * mulBoneNormal(t, uint(ids.x));
-    tangSum += weights.y * mulBoneNormal(t, uint(ids.y));
-    tangSum += weights.z * mulBoneNormal(t, uint(ids.z));
-    uint pairIndex = uint(-weights.w - 1.);
+    uint pairIndex = uint(-weights.w - 1.0);
     uint pairStop = pairIndex + uint(ids.w - 3u);
-    for (uint i = pairIndex; i < pairStop; i = i + 1u) {
-        ivec2 texcoord = ivec2(i % MAX_SKINNING_BUFFER_WIDTH, i / MAX_SKINNING_BUFFER_WIDTH);
+    for (uint i = pairIndex; i < pairStop; ++i) {
+        ivec2 texcoord = ivec2(
+                i & MAX_SKINNING_BUFFER_WIDTH_MASK, i >> MAX_SKINNING_BUFFER_WIDTH_LOG2);
         vec2 indexWeight = texelFetch(sampler1_indicesAndWeights, texcoord, 0).rg;
-
-        normSum += mulBoneNormal(n, uint(indexWeight.r)) * indexWeight.g;
-        tangSum += mulBoneNormal(t, uint(indexWeight.r)) * indexWeight.g;
+        accumulateBoneNormalTangent(normSum, tangSum, n, t, uint(indexWeight.r), indexWeight.g);
     }
     n = normSum;
     t = tangSum;
 }
 
-#define MAX_MORPH_TARGET_BUFFER_WIDTH 2048
+#define MAX_MORPH_TARGET_BUFFER_WIDTH_LOG2 11
+#define MAX_MORPH_TARGET_BUFFER_WIDTH (1 << MAX_MORPH_TARGET_BUFFER_WIDTH_LOG2)
+#define MAX_MORPH_TARGET_BUFFER_WIDTH_MASK (MAX_MORPH_TARGET_BUFFER_WIDTH - 1)
 
 #if CLIENT_MATERIAL_API_LEVEL >= UNSTABLE_MATERIAL_API_LEVEL
 /**
@@ -163,7 +154,9 @@ void skinNormalTangent(inout vec3 n, inout vec3 t, const uvec4 ids, const vec4 w
  */
 void morphData2(inout vec2 v, highp sampler2DArray data) {
     int index = getVertexIndex() + pushConstants.morphingBufferOffset;
-    ivec3 texcoord = ivec3(index % MAX_MORPH_TARGET_BUFFER_WIDTH, index / MAX_MORPH_TARGET_BUFFER_WIDTH, 0);
+    ivec3 texcoord = ivec3(
+            index & MAX_MORPH_TARGET_BUFFER_WIDTH_MASK,
+            index >> MAX_MORPH_TARGET_BUFFER_WIDTH_LOG2, 0);
     int c = object_uniforms_morphTargetCount;
     for (int i = 0; i < c; ++i) {
         float w = morphingUniforms.weights[i][0];
@@ -179,7 +172,9 @@ void morphData2(inout vec2 v, highp sampler2DArray data) {
  */
 void morphData3(inout vec3 v, highp sampler2DArray data) {
     int index = getVertexIndex() + pushConstants.morphingBufferOffset;
-    ivec3 texcoord = ivec3(index % MAX_MORPH_TARGET_BUFFER_WIDTH, index / MAX_MORPH_TARGET_BUFFER_WIDTH, 0);
+    ivec3 texcoord = ivec3(
+            index & MAX_MORPH_TARGET_BUFFER_WIDTH_MASK,
+            index >> MAX_MORPH_TARGET_BUFFER_WIDTH_LOG2, 0);
     int c = object_uniforms_morphTargetCount;
     for (int i = 0; i < c; ++i) {
         float w = morphingUniforms.weights[i][0];
@@ -195,7 +190,9 @@ void morphData3(inout vec3 v, highp sampler2DArray data) {
  */
 void morphData4(inout vec4 v, highp sampler2DArray data) {
     int index = getVertexIndex() + pushConstants.morphingBufferOffset;
-    ivec3 texcoord = ivec3(index % MAX_MORPH_TARGET_BUFFER_WIDTH, index / MAX_MORPH_TARGET_BUFFER_WIDTH, 0);
+    ivec3 texcoord = ivec3(
+            index & MAX_MORPH_TARGET_BUFFER_WIDTH_MASK,
+            index >> MAX_MORPH_TARGET_BUFFER_WIDTH_LOG2, 0);
     int c = object_uniforms_morphTargetCount;
     for (int i = 0; i < c; ++i) {
         float w = morphingUniforms.weights[i][0];
@@ -216,7 +213,9 @@ void morphPosition(inout vec4 p) {
 
 void morphPosition(inout vec4 p) {
     int index = getVertexIndex() + pushConstants.morphingBufferOffset;
-    ivec3 texcoord = ivec3(index % MAX_MORPH_TARGET_BUFFER_WIDTH, index / MAX_MORPH_TARGET_BUFFER_WIDTH, 0);
+    ivec3 texcoord = ivec3(
+            index & MAX_MORPH_TARGET_BUFFER_WIDTH_MASK,
+            index >> MAX_MORPH_TARGET_BUFFER_WIDTH_LOG2, 0);
     int c = object_uniforms_morphTargetCount;
     for (int i = 0; i < c; ++i) {
         float w = morphingUniforms.weights[i][0];
@@ -231,7 +230,9 @@ void morphPosition(inout vec4 p) {
 void morphNormal(inout vec3 n) {
     vec3 baseNormal = n;
     int index = getVertexIndex() + pushConstants.morphingBufferOffset;
-    ivec3 texcoord = ivec3(index % MAX_MORPH_TARGET_BUFFER_WIDTH, index / MAX_MORPH_TARGET_BUFFER_WIDTH, 0);
+    ivec3 texcoord = ivec3(
+            index & MAX_MORPH_TARGET_BUFFER_WIDTH_MASK,
+            index >> MAX_MORPH_TARGET_BUFFER_WIDTH_LOG2, 0);
     int c = object_uniforms_morphTargetCount;
     for (int i = 0; i < c; ++i) {
         float w = morphingUniforms.weights[i][0];
