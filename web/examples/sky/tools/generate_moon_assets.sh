@@ -12,7 +12,7 @@ cd "$(dirname "$0")"
 # Check dependencies
 if ! python3 -c "import numpy, PIL" 2>/dev/null; then
     echo "Installing dependencies (numpy, Pillow)..."
-    pip3 install numpy Pillow
+    python3 -m pip install --require-hashes -r requirements.txt
 fi
 
 echo "Generating Moon Asset (Size: ${SIZE}x${SIZE})..."
