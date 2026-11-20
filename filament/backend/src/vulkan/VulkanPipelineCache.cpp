@@ -168,6 +168,98 @@ void printPipelineFeedbackInfo(VkPipelineCreationFeedbackCreateInfo const& feedb
 }
 #endif
 
+/**
+ * Queries the total binary size (in bytes) of a compiled VkPipeline
+ * using the VK_KHR_pipeline_binary extension. Returns 0 if unsupported or on error.
+ */
+size_t queryPipelineBinarySize(VkDevice device, VkPipeline pipeline) noexcept {
+    if (pipeline == VK_NULL_HANDLE ||
+            !vkCreatePipelineBinariesKHR ||
+            !vkGetPipelineBinaryDataKHR ||
+            !vkDestroyPipelineBinaryKHR) {
+        return 0;
+    }
+
+    auto releaseCapturedData = [&]() noexcept {
+        if (vkReleaseCapturedPipelineDataKHR) {
+            VkReleaseCapturedPipelineDataInfoKHR releaseInfo = {
+                .sType = VK_STRUCTURE_TYPE_RELEASE_CAPTURED_PIPELINE_DATA_INFO_KHR,
+                .pNext = nullptr,
+                .pipeline = pipeline,
+            };
+            vkReleaseCapturedPipelineDataKHR(device, &releaseInfo, VKALLOC);
+        }
+    };
+
+    VkPipelineBinaryCreateInfoKHR binaryCreateInfo = {
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_BINARY_CREATE_INFO_KHR,
+        .pNext = nullptr,
+        .pKeysAndDataInfo = nullptr,
+        .pipeline = pipeline,
+        .pPipelineCreateInfo = nullptr,
+    };
+
+    VkPipelineBinaryHandlesInfoKHR handlesInfo = {
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_BINARY_HANDLES_INFO_KHR,
+        .pNext = nullptr,
+        .pipelineBinaryCount = 0,
+        .pPipelineBinaries = nullptr,
+    };
+
+    //Query the number of binaries associated with this pipeline.
+    VkResult result = vkCreatePipelineBinariesKHR(
+            device, &binaryCreateInfo, VKALLOC, &handlesInfo);
+    if (result != VK_SUCCESS || handlesInfo.pipelineBinaryCount == 0) {
+        releaseCapturedData();
+        return 0;
+    }
+
+    //Zero-initialize storage to VK_NULL_HANDLE and retrieve the binary handles.
+    std::vector<VkPipelineBinaryKHR> binaries(handlesInfo.pipelineBinaryCount, VK_NULL_HANDLE);
+    handlesInfo.pPipelineBinaries = binaries.data();
+
+    result = vkCreatePipelineBinariesKHR(
+            device, &binaryCreateInfo, VKALLOC, &handlesInfo);
+    const bool querySucceeded = (result == VK_SUCCESS || result == VK_INCOMPLETE);
+
+    //Query each binary's byte size and destroy all non-null handles.
+    size_t totalSize = 0;
+    for (VkPipelineBinaryKHR binary : binaries) {
+        if (binary == VK_NULL_HANDLE) {
+            continue;
+        }
+
+        if (querySucceeded) {
+            VkPipelineBinaryDataInfoKHR dataInfo = {
+                .sType = VK_STRUCTURE_TYPE_PIPELINE_BINARY_DATA_INFO_KHR,
+                .pNext = nullptr,
+                .pipelineBinary = binary,
+            };
+
+            // Required non-null output struct per VUID-vkGetPipelineBinaryDataKHR-pPipelineBinaryKey-parameter.
+            VkPipelineBinaryKeyKHR binaryKey = {
+                .sType = VK_STRUCTURE_TYPE_PIPELINE_BINARY_KEY_KHR,
+                .pNext = nullptr,
+            };
+
+            size_t binarySize = 0;
+            if (vkGetPipelineBinaryDataKHR(
+                        device, &dataInfo, &binaryKey, &binarySize, nullptr) == VK_SUCCESS) {
+                totalSize += binarySize;
+            }
+        }
+
+        vkDestroyPipelineBinaryKHR(device, binary, VKALLOC);
+    }
+
+    //Free driver-retained captured binary blobs from the VkPipeline.
+    releaseCapturedData();
+
+    return totalSize;
+}
+
+
+
 } // namespace
 
 VulkanPipelineCache::VulkanPipelineCache(DriverBase& driver, VulkanPlatform& platform,
@@ -180,7 +272,6 @@ VulkanPipelineCache::VulkanPipelineCache(DriverBase& driver, VulkanPlatform& pla
           mHasDynamicState2(context.isExtendedDynamicState2Supported() && context.isPipelineDynamicStateEnabled()),
           mHasColorWriteEnable(context.isColorWriteEnableSupported() && context.isPipelineDynamicStateEnabled()),
           mHasPipelineProtectedAccess(context.isPipelineProtectedAccessSupported()),
-          mPipelineCacheThresholdEvictionEnabled(context.isPipelineCacheEvictionEnabled()),
           mContext(context) {
     std::vector<uint8_t> initialData;
     if (mContext.isPipelineCachePersistenceEnabled() && mPlatform.hasRetrieveBlobFunc()) {
@@ -251,14 +342,24 @@ VulkanPipelineCache::PipelineCacheEntry* VulkanPipelineCache::getOrCreatePipelin
         pipeline.lastUsed = mCurrentTime;
         FILAMENT_TRACING_EVENT(FILAMENT_TRACING_CATEGORY_FILAMENT,
                 "Pipeline(Hit)", "program", mBoundProgram.c_str_safe());
+        
+        // if on, store the binary size. Note outBinarySize is allowed to be null
+        // for the prewarm use case where we don't cache the info about the pipeline
+        if ((pipeline.binarySize == 0) && 
+            mContext.getPipelineCacheEvictionPolicy() == PipelineCacheEvictionPolicy::SIZE) {
+            pipeline.binarySize = queryPipelineBinarySize(mDevice, pipeline.handle);
+            mTotalPipelineBinarySize += pipeline.binarySize;
+        }
         return &pipeline;
     }
     FILAMENT_TRACING_EVENT(FILAMENT_TRACING_CATEGORY_FILAMENT,
             "Pipeline(Miss)", "program", mBoundProgram.c_str_safe());
     PipelineCacheEntry cacheEntry {
-        .handle = createPipeline(mStaticPipelineKey),
+        .handle = VK_NULL_HANDLE,
         .lastUsed = mCurrentTime,
     };
+    cacheEntry.handle = createPipeline(mStaticPipelineKey, &cacheEntry.binarySize);
+
     assert_invariant(cacheEntry.handle != VK_NULL_HANDLE && "Pipeline handle is VK_NULL_HANDLE");
     return &mPipelines.emplace(mStaticPipelineKey, cacheEntry).first.value();
 }
@@ -379,7 +480,7 @@ void VulkanPipelineCache::asyncPrewarmCache(
                 return;
             }
 
-            VkPipeline pipeline = createPipeline(key, dynamicOptions);
+            VkPipeline pipeline = createPipeline(key, dynamicOptions, nullptr);
             mCallbackManager.put(cmh);
             // We don't actually need this pipeline, we just wanted to force the
             // driver to cache the pipeline's information.
@@ -393,7 +494,8 @@ void VulkanPipelineCache::asyncPrewarmCache(
 }
 
 VkPipeline VulkanPipelineCache::createPipeline(
-        const PipelineKey& key, const PipelineDynamicOptions& dynamicOptions) noexcept {
+        const PipelineKey& key, const PipelineDynamicOptions& dynamicOptions,
+        size_t* outBinarySize) noexcept {
     assert_invariant(key.shaders[0] && "Vertex shader is not bound.");
     assert_invariant(key.layout && "No pipeline layout specified");
 
@@ -659,6 +761,16 @@ VkPipeline VulkanPipelineCache::createPipeline(
         FVK_LOGE << "vkCreateGraphicsPipelines error " << error;
         return VK_NULL_HANDLE;
     }
+
+    // If outBinarySize is passed down, store the binary size. Note outBinarySize 
+    // is allowed to be null for the prewarm use case where we don't cache 
+    // the info about the pipeline.
+    if ((outBinarySize != nullptr) && 
+        mContext.getPipelineCacheEvictionPolicy() == PipelineCacheEvictionPolicy::SIZE) {
+        *outBinarySize = queryPipelineBinarySize(mDevice, pipeline);
+        mTotalPipelineBinarySize += *outBinarySize;
+    }
+
     mPipelinesCreated.fetch_add(1, std::memory_order_relaxed);
     return pipeline;
 }
@@ -854,16 +966,28 @@ void VulkanPipelineCache::gc() noexcept {
     // buffer is undefined." Therefore, we need to clear all bindings at this time.
     resetBoundPipeline();
 
-    if (mPipelineCacheThresholdEvictionEnabled) {
-        // Capacity based eviction
-        if (mPipelines.size() <= FVK_MAX_PIPELINE_COUNT) {
-            return;
+    auto policy = mContext.getPipelineCacheEvictionPolicy();
+    if (policy == PipelineCacheEvictionPolicy::SIZE && !mContext.isPipelineBinarySupported()) {
+        policy = PipelineCacheEvictionPolicy::COUNT;
+    }
+
+    if (policy != PipelineCacheEvictionPolicy::TTL_ONLY) {
+        // Capacity based eviction (SIZE or COUNT)
+        if (policy == PipelineCacheEvictionPolicy::SIZE) {
+            if (mTotalPipelineBinarySize <= FVK_MAX_PIPELINE_CACHE_SIZE) {
+                return;
+            }
+        } else {
+            if (mPipelines.size() <= FVK_MAX_PIPELINE_COUNT) {
+                return;
+            }
         }
 
         // Figure out which pipelines have exceeded their time to live. Their keys are stored rather
         // than iterators because tsl::robin_map::erase() invalidates every iterator.
         struct ExpiredCandidate {
             Timestamp lastUsed;
+            size_t binarySize;
             PipelineKey key;
         };
         using PipeIterator = decltype(mPipelines)::iterator;
@@ -873,7 +997,11 @@ void VulkanPipelineCache::gc() noexcept {
         for (PipeIterator iter = mPipelines.begin(); iter != mPipelines.end(); ++iter) {
             const PipelineCacheEntry& cacheEntry = iter.value();
             if (cacheEntry.lastUsed + FVK_MAX_PIPELINE_AGE < mCurrentTime) {
-                expiredCandidates.push_back({ cacheEntry.lastUsed, iter->first });
+                expiredCandidates.push_back({
+                    cacheEntry.lastUsed,
+                    cacheEntry.binarySize,
+                    iter->first,
+                });
             }
         }
 
@@ -882,17 +1010,36 @@ void VulkanPipelineCache::gc() noexcept {
             return;
         }
 
-        // Compute how many expired pipelines to evict to meet capacity requirements
-        const size_t excessCount = mPipelines.size() - FVK_MAX_PIPELINE_COUNT;
-        const size_t evictCount = std::min(excessCount, expiredCandidates.size());
+        auto const oldestFirst = [](const ExpiredCandidate& a, const ExpiredCandidate& b) {
+            return a.lastUsed < b.lastUsed;
+        };
 
-        // Keep only the evictCount oldest candidates.
-        std::partial_sort(expiredCandidates.begin(), expiredCandidates.begin() + evictCount,
-                expiredCandidates.end(),
-                [](const ExpiredCandidate& a, const ExpiredCandidate& b) {
-                    return a.lastUsed < b.lastUsed;
-                });
-        expiredCandidates.erase(expiredCandidates.begin() + evictCount, expiredCandidates.end());
+        if (policy == PipelineCacheEvictionPolicy::SIZE) {
+            // Sort expired candidates oldest-first and evict enough to get back to 
+            // below FVK_MAX_PIPELINE_CACHE_SIZE
+            std::sort(expiredCandidates.begin(), expiredCandidates.end(), oldestFirst);
+
+            const size_t excessSize = mTotalPipelineBinarySize - FVK_MAX_PIPELINE_CACHE_SIZE;
+            size_t reclaimedSize = 0;
+            size_t evictCount = 0;
+            for (const ExpiredCandidate& candidate : expiredCandidates) {
+                reclaimedSize += candidate.binarySize;
+                ++evictCount;
+                if (reclaimedSize >= excessSize) {
+                    break;
+                }
+            }
+            expiredCandidates.erase(expiredCandidates.begin() + evictCount, expiredCandidates.end());
+        } else {
+            // Compute how many expired pipelines to evict to meet count capacity requirements.
+            const size_t excessCount = mPipelines.size() - FVK_MAX_PIPELINE_COUNT;
+            const size_t evictCount = std::min(excessCount, expiredCandidates.size());
+
+            // Keep only the evictCount oldest candidates.
+            std::partial_sort(expiredCandidates.begin(), expiredCandidates.begin() + evictCount,
+                    expiredCandidates.end(), oldestFirst);
+            expiredCandidates.erase(expiredCandidates.begin() + evictCount, expiredCandidates.end());
+        }
 
         // Erase in place: the iterator returned by erase() is the only one that stays valid. It
         // refers to the entry that was shifted back into the erased bucket, so nothing is skipped.
@@ -907,15 +1054,26 @@ void VulkanPipelineCache::gc() noexcept {
             }
             *candidate = expiredCandidates.back();
             expiredCandidates.pop_back();
+
+            const size_t evictedSize = iter.value().binarySize;
+            mTotalPipelineBinarySize = (mTotalPipelineBinarySize >= evictedSize)
+                    ? (mTotalPipelineBinarySize - evictedSize)
+                    : 0;
+
             vkDestroyPipeline(mDevice, iter.value().handle, VKALLOC);
             iter = mPipelines.erase(iter);
         }
     } else {
-        // Revert back to the previous behavior
+        // Revert back to the previous behavior (TTL_ONLY)
         using ConstPipeIterator = decltype(mPipelines)::const_iterator;
         for (ConstPipeIterator iter = mPipelines.begin(); iter != mPipelines.end();) {
             const PipelineCacheEntry& cacheEntry = iter.value();
             if (cacheEntry.lastUsed + FVK_MAX_PIPELINE_AGE < mCurrentTime) {
+                const size_t evictedSize = cacheEntry.binarySize;
+                mTotalPipelineBinarySize = (mTotalPipelineBinarySize >= evictedSize)
+                        ? (mTotalPipelineBinarySize - evictedSize)
+                        : 0;
+
                 vkDestroyPipeline(mDevice, iter->second.handle, VKALLOC);
                 iter = mPipelines.erase(iter);
             } else {
@@ -923,6 +1081,7 @@ void VulkanPipelineCache::gc() noexcept {
             }
         }
     }
+
 }
 
 bool VulkanPipelineCache::PipelineEqual::operator()(const PipelineKey& k1,
