@@ -131,7 +131,7 @@ vec3 bloom(highp vec2 uv, const vec3 color) {
     if (materialParams.bloom.z > 0.0) {
         float dirtIntensity = materialParams.bloom.z;
         vec3 dirt = textureLod(materialParams_dirtBuffer, uv, 0.0).rgb;
-        result *= dirt * dirtIntensity;
+        result *= 1.0 + dirt * dirtIntensity;
     }
 
     result += color * materialParams.bloom.y;
