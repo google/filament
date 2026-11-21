@@ -277,6 +277,10 @@ bool parseJitterPattern(std::string const& name,
     if (name == "halton8") { *out = JitterPattern::HALTON_23_X8; return true; }
     if (name == "halton16") { *out = JitterPattern::HALTON_23_X16; return true; }
     if (name == "halton32") { *out = JitterPattern::HALTON_23_X32; return true; }
+    if (name == "halton_scaled" || name == "halton-scaled") {
+        *out = JitterPattern::HALTON_23_SCALED;
+        return true;
+    }
     return false;
 }
 
@@ -476,9 +480,17 @@ struct RunMetrics {
     uint32_t timedFramesCount = 0;
 };
 
+struct Record {
+    std::string regime;
+    float upscaling;
+    std::string metric;
+    double value;
+};
+
 struct Run {
     RunConfig config;
     RunMetrics summary;
+    bool metricsAppended = false;
     // Accumulators for the reference phase, in linear light, summed over the jitter samples and
     // divided at the end. STATIC has a single reference shared by every captured frame, since
     // the scene state does not change.
@@ -669,6 +681,8 @@ struct Options {
     bool fixedPerformanceMode = false;
     bool ssrEnabled = false;
     uint32_t size = 512;
+    uint32_t qualityWidth = 512;
+    uint32_t qualityHeight = 512;
     // Measured on a static scene: TAA sharpness is 0.96x converged at 8 frames, 0.87x at 16,
     // 0.985x at 32, 0.996x at 40, and indistinguishable from a 192-frame warmup by 48 (feedback's
     // exponential decay, unsurprisingly). 24 -- roughly 1.5 jitter cycles -- looked reasonable
@@ -766,6 +780,7 @@ struct App {
 
     std::vector<Run> runs;
     std::vector<Shot> shots;
+    std::vector<Record> completedRecords;
     size_t nextShot = 0;
 
     // FilamentApp2 re-applies its own lens projection and viewport after preRender whenever it
@@ -814,8 +829,8 @@ void addScheduledRun(App* app, RunConfig const& cfg) {
     Run run;
     run.config = cfg;
     run.config.kind = RunKind::QUALITY;
-    run.config.width = o.size;
-    run.config.height = o.size;
+    run.config.width = o.qualityWidth;
+    run.config.height = o.qualityHeight;
     run.config.nominalUpscaling = cfg.upscaling;
 
     // With nothing moving there is only one scene state, so one reference serves every captured
@@ -1416,13 +1431,6 @@ void applyShot(App* app, Shot const& shot, bool const updateScene = true) {
 // Metrics
 // ------------------------------------------------------------------------------------------------
 
-struct Record {
-    std::string regime;
-    float upscaling;
-    std::string metric;
-    double value;
-};
-
 struct BenchmarkSummary {
     float upscaling = 2.0f;
     bool hasQuality = false;
@@ -1759,8 +1767,12 @@ void appendMetrics(App* app, Run& run, std::vector<Record>* records) {
     }
 
     run.references.clear();
+    run.references.shrink_to_fit();
     run.captures.clear();
+    run.captures.shrink_to_fit();
     run.capturePoses.clear();
+    run.aliasedReference = {};
+    run.msaaReference = {};
 }
 
 void appendPerfMetrics(App* app, Run& run, std::vector<Record>* records) {
@@ -2332,6 +2344,7 @@ char const* jitterPatternName(TemporalAntiAliasingOptions::JitterPattern const p
         case JP::HALTON_23_X8: return "halton_23_x8";
         case JP::HALTON_23_X16: return "halton_23_x16";
         case JP::HALTON_23_X32: return "halton_23_x32";
+        case JP::HALTON_23_SCALED: return "halton_23_scaled";
     }
     return "halton_23_x16";
 }
@@ -2495,6 +2508,8 @@ std::string serializeBenchmarkJson(App* app, std::vector<Record> const& records,
          << "\",\n";
     json << "  \"backend\": \"" << int(app->engine->getBackend()) << "\",\n";
     json << "  \"size\": " << o.size << ",\n";
+    json << "  \"width\": " << o.qualityWidth << ",\n";
+    json << "  \"height\": " << o.qualityHeight << ",\n";
     json << "  \"warmup_frames\": " << o.warmupFrames << ",\n";
     json << "  \"capture_frames\": " << o.captureFrames << ",\n";
     json << "  \"reference_filter\": \"" << referenceFilterName(o.referenceFilter) << "\",\n";
@@ -3950,6 +3965,14 @@ void postRender(Engine* engine, View* view, Scene*, Renderer* renderer) {
                 std::move(descriptor));
     }
 
+    bool const runEnded = (app->nextShot >= app->shots.size()) ||
+            (app->shots[app->nextShot].runIndex != shot.runIndex);
+    if (runEnded && run.config.kind == RunKind::QUALITY && !run.metricsAppended) {
+        engine->flushAndWait();
+        appendMetrics(app, run, &app->completedRecords);
+        run.metricsAppended = true;
+    }
+
     if (app->nextShot >= app->shots.size()) {
         engine->flushAndWait();
         app->filamentApp->close();
@@ -3965,10 +3988,13 @@ void cleanup(Engine* engine, View*, Scene*) {
 
     if (!app->finished) {
         app->finished = true;
-        std::vector<Record> records;
+        std::vector<Record> records = std::move(app->completedRecords);
         for (Run& run: app->runs) {
             if (run.config.kind == RunKind::QUALITY) {
-                appendMetrics(app, run, &records);
+                if (!run.metricsAppended) {
+                    appendMetrics(app, run, &records);
+                    run.metricsAppended = true;
+                }
             } else {
                 appendPerfMetrics(app, run, &records);
             }
@@ -4061,6 +4087,16 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
     }
     o.visualizeDisocclusion = config.getBool("visualize-disocclusion");
     o.size = uint32_t(config.getInt("size", 512));
+    o.qualityWidth = o.size;
+    o.qualityHeight = o.size;
+    CString const qualityRes = config.getString("resolution");
+    if (!qualityRes.empty() &&
+            !parsePerfResolution(qualityRes.c_str(), &o.qualityWidth, &o.qualityHeight)) {
+        fprintf(stderr,
+                "taa_harness: invalid --resolution '%s' (expected WxH or 720p/1080p/1440p/4k)\n",
+                qualityRes.c_str());
+        exit(1);
+    }
     o.warmupFrames = uint32_t(config.getInt("warmup", 64));
     o.captureFrames = uint32_t(config.getInt("frames", 16));
     CString const perfRes = config.getString("perf-resolution");
@@ -4212,8 +4248,8 @@ std::unique_ptr<FilamentApp2> createSampleApp(SampleConfig config,
     if (config.iblDirectory.empty()) {
         config.iblDirectory = CString("assets/ibl/lightroom_14b");
     }
-    uint32_t const maxW = o.perf ? std::max(o.size, o.perfWidth) : o.size;
-    uint32_t const maxH = o.perf ? std::max(o.size, o.perfHeight) : o.size;
+    uint32_t const maxW = o.perf ? std::max(o.qualityWidth, o.perfWidth) : o.qualityWidth;
+    uint32_t const maxH = o.perf ? std::max(o.qualityHeight, o.perfHeight) : o.qualityHeight;
     config.width = maxW;
     config.height = maxH;
     config.headless = true;
@@ -4250,6 +4286,9 @@ samples::SampleParameters createAppParameters() {
         samples::Parameter::makeString("dump", 'd',
                 "Directory to write captured and reference PNGs into", ""),
         samples::Parameter::makeInt("size", 'S', "Output resolution (square)", 512, 16),
+        samples::Parameter::makeString("resolution", '\0',
+                "Output resolution for quality runs: WxH or 720p/1080p/1440p/4k (overrides --size)",
+                ""),
         samples::Parameter::makeInt("warmup", 'W',
                 "Frames of converged TAA before motion begins (64 measured comfortably past "
                 "feedback's convergence point; see Options::warmupFrames)", 64, 0),
@@ -4273,7 +4312,8 @@ samples::SampleParameters createAppParameters() {
                 "lanczos-filament (what it actually evaluates), or box "
                 "(default: box in --benchmark, lanczos otherwise)", ""),
         samples::Parameter::makeString("jitter-pattern", 'J',
-                "rgss4, helix4, halton8, halton16, halton32 (overrides --settings)", ""),
+                "rgss4, helix4, halton8, halton16, halton32, halton_scaled (overrides --settings)",
+                ""),
         samples::Parameter::makeString("settings", 's',
                 "JSON settings file; view.taa and view.motionVectors are applied to every run", ""),
         samples::Parameter::makeFloat("diff-gain", 'G',

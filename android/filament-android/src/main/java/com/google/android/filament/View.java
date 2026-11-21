@@ -2121,7 +2121,9 @@ public class View {
             /** 16-samples of halton 2,3 */
             HALTON_23_X16,
             /** 32-samples of halton 2,3 */
-            HALTON_23_X32;
+            HALTON_23_X32,
+            /** Halton 2,3 scaled by upscaling^2 in [8, 128] samples */
+            HALTON_23_SCALED;
 
             public int toFilamentNative() { return ordinal(); }
         }

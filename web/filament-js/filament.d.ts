@@ -2348,6 +2348,8 @@ export enum View$TemporalAntiAliasingOptions$JitterPattern {
 
     HALTON_23_X32, // /** 32-samples of halton 2,3 */
 
+    HALTON_23_SCALED, // /** Halton 2,3 scaled by upscaling^2 in [8, 128] samples */
+
 }
 
 /**
