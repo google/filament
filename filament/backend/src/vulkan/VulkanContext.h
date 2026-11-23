@@ -289,7 +289,14 @@ public:
     }
 
     inline PipelineCacheEvictionPolicy getPipelineCacheEvictionPolicy() const noexcept {
-        return mPipelineCacheEvictionPolicy;
+        auto policy = mPipelineCacheEvictionPolicy;
+        // Logic trick to just ensure that if the client asked for size, but we do not
+        // have the extension, we fallback to count (still some eviction policy in place)
+        if (mPipelineCacheEvictionPolicy == PipelineCacheEvictionPolicy::SIZE && 
+            !isPipelineBinarySupported()) {
+                policy = PipelineCacheEvictionPolicy::COUNT;
+            }
+        return policy;
     }
 
     inline bool isPipelineCachePersistenceEnabled() const noexcept {

@@ -967,9 +967,6 @@ void VulkanPipelineCache::gc() noexcept {
     resetBoundPipeline();
 
     auto policy = mContext.getPipelineCacheEvictionPolicy();
-    if (policy == PipelineCacheEvictionPolicy::SIZE && !mContext.isPipelineBinarySupported()) {
-        policy = PipelineCacheEvictionPolicy::COUNT;
-    }
 
     if (policy != PipelineCacheEvictionPolicy::TTL_ONLY) {
         // Capacity based eviction (SIZE or COUNT)
