@@ -3370,6 +3370,261 @@ TEST(glTFIOTangentsJob, GeneratesExpectedQuatsAcrossAllModes) {
     }
 }
 
+TEST_F(glTFIOTest, BaseNormalAndTangentInvalidTypesAreRejected) {
+    AssetLoader* loader = AssetLoader::create({ mEngine, mMaterialProvider, mNameManager });
+    ASSERT_NE(loader, nullptr);
+
+    // Build a minimal glTF JSON with embedded data URI buffer containing a valid VEC3 POSITION
+    // plus a configurable NORMAL and optional TANGENT accessor.
+    auto makeGltf = [](const char* normalType, const char* tangentType, bool sparseNormal) {
+        // 4 vertices * 16 floats * 4 bytes = 256 bytes of zero-filled data URI (base64 of 256 zero bytes).
+        std::string const zeros256(344, 'A'); // 342 'A's + "==" = 256 zero bytes
+        std::string b64 = zeros256.substr(0, 342) + "==";
+
+        std::string attrs = R"("POSITION":0,"NORMAL":1)";
+        std::string accessors =
+                R"({"bufferView":0,"componentType":5126,"count":3,"type":"VEC3",)"
+                R"("min":[0,0,0],"max":[1,1,1]},)";
+        if (sparseNormal) {
+            accessors += std::string(R"({"componentType":5126,"count":3,"type":")") + normalType +
+                    R"(","sparse":{"count":1,"indices":{"bufferView":1,"componentType":5123},)"
+                    R"("values":{"bufferView":0}}})";
+        } else {
+            accessors += std::string(R"({"bufferView":0,"componentType":5126,"count":3,"type":")") +
+                    normalType + R"("})";
+        }
+        if (tangentType != nullptr) {
+            attrs += R"(,"TANGENT":2)";
+            accessors += std::string(R"(,{"bufferView":0,"componentType":5126,"count":3,"type":")") +
+                    tangentType + R"("})";
+        }
+        return std::string(R"({"asset":{"version":"2.0"},"scene":0,"scenes":[{"nodes":[0]}],)") +
+                R"("nodes":[{"mesh":0}],"meshes":[{"primitives":[{"attributes":{)" + attrs +
+                R"(}}]}],"accessors":[)" + accessors +
+                R"(],"bufferViews":[{"buffer":0,"byteOffset":0,"byteLength":192},)" +
+                R"({"buffer":0,"byteOffset":192,"byteLength":8}],)" +
+                R"("buffers":[{"byteLength":256,"uri":"data:application/octet-stream;base64,)" +
+                b64 + R"("}]})";
+    };
+
+    // Invalid base NORMAL types (dense and sparse MAT4) must be rejected at asset load.
+    for (const char* badNormal : { "MAT4", "VEC4", "SCALAR" }) {
+        SCOPED_TRACE(testing::Message() << "badNormal=" << badNormal);
+        std::string const dense = makeGltf(badNormal, nullptr, false);
+        EXPECT_EQ(loader->createAsset(
+                reinterpret_cast<const uint8_t*>(dense.data()), uint32_t(dense.size())), nullptr);
+        std::string const sparse = makeGltf(badNormal, nullptr, true);
+        EXPECT_EQ(loader->createAsset(
+                reinterpret_cast<const uint8_t*>(sparse.data()), uint32_t(sparse.size())), nullptr);
+    }
+
+    // Invalid base TANGENT types (with valid VEC3 NORMAL) must be rejected at asset load.
+    for (const char* badTangent : { "MAT4", "VEC3", "SCALAR" }) {
+        SCOPED_TRACE(testing::Message() << "badTangent=" << badTangent);
+        std::string const gltf = makeGltf("VEC3", badTangent, false);
+        EXPECT_EQ(loader->createAsset(
+                reinterpret_cast<const uint8_t*>(gltf.data()), uint32_t(gltf.size())), nullptr);
+    }
+
+    // Control: valid VEC3 NORMAL + VEC4 TANGENT loads cleanly.
+    {
+        std::string const valid = makeGltf("VEC3", "VEC4", false);
+        FilamentAsset* asset = loader->createAsset(
+                reinterpret_cast<const uint8_t*>(valid.data()), uint32_t(valid.size()));
+        ASSERT_NE(asset, nullptr);
+        ResourceLoader resourceLoader({ mEngine, ".", false });
+        EXPECT_TRUE(resourceLoader.loadResources(asset));
+        loader->destroyAsset(asset);
+    }
+
+    AssetLoader::destroy(&loader);
+}
+
+TEST(glTFIOTangentsJob, InvalidOrMismatchedAccessorsAreSafelyIgnored) {
+    using math::float3;
+    using math::float4;
+    using math::short4;
+
+    float3 positions[3] = {
+        { 0.0f, 0.0f, 0.0f },
+        { 1.0f, 0.0f, 0.0f },
+        { 0.0f, 1.0f, 0.0f },
+    };
+    float3 normals[3] = {
+        { 0.0f, 0.0f, 1.0f },
+        { 0.0f, 0.0f, 1.0f },
+        { 0.0f, 0.0f, 1.0f },
+    };
+    float mat4Values[16] = {};
+    uint16_t sparseIndices[1] = { 2 };
+
+    cgltf_buffer posBuf{ .size = sizeof(positions), .data = positions };
+    cgltf_buffer_view posView{ .buffer = &posBuf, .size = sizeof(positions), .stride = sizeof(float3) };
+    cgltf_accessor posAcc{
+        .component_type = cgltf_component_type_r_32f,
+        .type = cgltf_type_vec3,
+        .count = 3,
+        .stride = sizeof(float3),
+        .buffer_view = &posView,
+    };
+
+    cgltf_buffer normBuf{ .size = sizeof(normals), .data = normals };
+    cgltf_buffer_view normView{ .buffer = &normBuf, .size = sizeof(normals), .stride = sizeof(float3) };
+    cgltf_accessor validNormAcc{
+        .component_type = cgltf_component_type_r_32f,
+        .type = cgltf_type_vec3,
+        .count = 3,
+        .stride = sizeof(float3),
+        .buffer_view = &normView,
+    };
+
+    cgltf_buffer sparseValBuf{ .size = sizeof(mat4Values), .data = mat4Values };
+    cgltf_buffer_view sparseValView{ .buffer = &sparseValBuf, .size = sizeof(mat4Values) };
+    cgltf_buffer sparseIdxBuf{ .size = sizeof(sparseIndices), .data = sparseIndices };
+    cgltf_buffer_view sparseIdxView{ .buffer = &sparseIdxBuf, .size = sizeof(sparseIndices) };
+
+    // Sparse MAT4 accessor targeting vertex 2 (would write 16 floats at index 2 if unpacked).
+    cgltf_accessor sparseMat4Acc{
+        .component_type = cgltf_component_type_r_32f,
+        .type = cgltf_type_mat4,
+        .count = 3,
+        .stride = 16 * sizeof(float),
+        .is_sparse = true,
+        .sparse = {
+            .count = 1,
+            .indices_buffer_view = &sparseIdxView,
+            .indices_component_type = cgltf_component_type_r_16u,
+            .values_buffer_view = &sparseValView,
+        },
+    };
+
+    // 1. Sparse MAT4 NORMAL is skipped safely (falls back to flat normals from positions).
+    {
+        cgltf_attribute attrs[2] = {
+            { .type = cgltf_attribute_type_position, .index = 0, .data = &posAcc },
+            { .type = cgltf_attribute_type_normal, .index = 0, .data = &sparseMat4Acc },
+        };
+        cgltf_primitive prim{
+            .type = cgltf_primitive_type_triangles,
+            .attributes = attrs,
+            .attributes_count = 2,
+        };
+        TangentsJob::Params params{ .in = { .prim = &prim } };
+        TangentsJob::run(&params);
+        ASSERT_EQ(params.out.vertexCount, 3u);
+        ASSERT_NE(params.out.results, nullptr);
+        free(params.out.results);
+    }
+
+    // 2. Sparse MAT4 TANGENT is skipped safely (falls back to normals-only mode).
+    {
+        cgltf_attribute attrs[3] = {
+            { .type = cgltf_attribute_type_position, .index = 0, .data = &posAcc },
+            { .type = cgltf_attribute_type_normal, .index = 0, .data = &validNormAcc },
+            { .type = cgltf_attribute_type_tangent, .index = 0, .data = &sparseMat4Acc },
+        };
+        cgltf_primitive prim{
+            .type = cgltf_primitive_type_triangles,
+            .attributes = attrs,
+            .attributes_count = 3,
+        };
+        TangentsJob::Params params{ .in = { .prim = &prim } };
+        TangentsJob::run(&params);
+        ASSERT_EQ(params.out.vertexCount, 3u);
+        ASSERT_NE(params.out.results, nullptr);
+        free(params.out.results);
+    }
+
+    // 3. Invalid POSITION type (VEC4) with no normals produces zeroed results without OOB write.
+    {
+        float4 pos4[3] = {};
+        cgltf_buffer pos4Buf{ .size = sizeof(pos4), .data = pos4 };
+        cgltf_buffer_view pos4View{ .buffer = &pos4Buf, .size = sizeof(pos4), .stride = sizeof(float4) };
+        cgltf_accessor pos4Acc{
+            .component_type = cgltf_component_type_r_32f,
+            .type = cgltf_type_vec4,
+            .count = 3,
+            .stride = sizeof(float4),
+            .buffer_view = &pos4View,
+        };
+        cgltf_attribute attrs[1] = {
+            { .type = cgltf_attribute_type_position, .index = 0, .data = &pos4Acc },
+        };
+        cgltf_primitive prim{
+            .type = cgltf_primitive_type_triangles,
+            .attributes = attrs,
+            .attributes_count = 1,
+        };
+        TangentsJob::Params params{ .in = { .prim = &prim } };
+        TangentsJob::run(&params);
+        ASSERT_EQ(params.out.vertexCount, 3u);
+        ASSERT_NE(params.out.results, nullptr);
+        for (size_t i = 0; i < 3; ++i) {
+            EXPECT_EQ(params.out.results[i], (short4{ 0, 0, 0, 0 }));
+        }
+        free(params.out.results);
+    }
+
+    // 4. Oversized morph target NORMAL (count > vertexCount) and out-of-range morphTargetIndex.
+    {
+        uint16_t oobIdx[1] = { 99 };
+        cgltf_buffer oobIdxBuf{ .size = sizeof(oobIdx), .data = oobIdx };
+        cgltf_buffer_view oobIdxView{ .buffer = &oobIdxBuf, .size = sizeof(oobIdx) };
+        cgltf_accessor oversizedMorphNorm{
+            .component_type = cgltf_component_type_r_32f,
+            .type = cgltf_type_vec3,
+            .count = 100,
+            .stride = sizeof(float3),
+            .is_sparse = true,
+            .sparse = {
+                .count = 1,
+                .indices_buffer_view = &oobIdxView,
+                .indices_component_type = cgltf_component_type_r_16u,
+                .values_buffer_view = &sparseValView,
+            },
+        };
+        cgltf_attribute attrs[2] = {
+            { .type = cgltf_attribute_type_position, .index = 0, .data = &posAcc },
+            { .type = cgltf_attribute_type_normal, .index = 0, .data = &validNormAcc },
+        };
+        cgltf_attribute morphAttrs[1] = {
+            { .type = cgltf_attribute_type_normal, .index = 0, .data = &oversizedMorphNorm },
+        };
+        cgltf_morph_target target{
+            .attributes = morphAttrs,
+            .attributes_count = 1,
+        };
+        cgltf_primitive prim{
+            .type = cgltf_primitive_type_triangles,
+            .attributes = attrs,
+            .attributes_count = 2,
+            .targets = &target,
+            .targets_count = 1,
+        };
+
+        TangentsJob::Params params{ .in = { .prim = &prim, .morphTargetIndex = 0 } };
+        TangentsJob::run(&params);
+        ASSERT_EQ(params.out.vertexCount, 3u);
+        ASSERT_NE(params.out.results, nullptr);
+        free(params.out.results);
+
+        TangentsJob::Params badIdxParams{ .in = { .prim = &prim, .morphTargetIndex = 5 } };
+        TangentsJob::run(&badIdxParams);
+        ASSERT_EQ(badIdxParams.out.vertexCount, 3u);
+        ASSERT_NE(badIdxParams.out.results, nullptr);
+        free(badIdxParams.out.results);
+    }
+
+    // 5. Empty primitive attributes array returns cleanly with null results.
+    {
+        cgltf_primitive prim{ .type = cgltf_primitive_type_triangles };
+        TangentsJob::Params params{ .in = { .prim = &prim } };
+        TangentsJob::run(&params);
+        EXPECT_EQ(params.out.vertexCount, 0u);
+        EXPECT_EQ(params.out.results, nullptr);
+    }
+}
+
 TEST_F(glTFIOTest, UbershaderBitmaskLookupMatchesFeatureCombinations) {
     MaterialKey const cases[] = {
         { .unlit = true, .hasBaseColorTexture = true },

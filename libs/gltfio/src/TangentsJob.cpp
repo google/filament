@@ -21,6 +21,7 @@
 #include <algorithm>
 #include <cstdint>
 #include <cstdlib>
+#include <limits>
 #include <memory>
 
 using namespace filament::gltfio;
@@ -65,10 +66,16 @@ void TangentsJob::run(Params* params) {
     const bool isMorphTarget = morphTargetIndex != kMorphTargetUnused;
 
     // Extract the vertex count from the first attribute. All attributes must have the same count.
-    assert(prim.attributes_count > 0);
+    if (prim.attributes_count == 0 || !prim.attributes[0].data) {
+        params->out.vertexCount = 0;
+        params->out.results = nullptr;
+        return;
+    }
     const cgltf_size vertexCount = prim.attributes[0].data->count;
     params->out.vertexCount = vertexCount;
-    if (vertexCount == 0) {
+    if (vertexCount == 0 || vertexCount > std::numeric_limits<size_t>::max() / sizeof(float4)) {
+        params->out.vertexCount = 0;
+        params->out.results = nullptr;
         return;
     }
 
@@ -93,15 +100,18 @@ void TangentsJob::run(Params* params) {
     // The SurfaceOrientation helper does not need them anyway.
     for (cgltf_size aindex = 0; aindex < prim.attributes_count; aindex++) {
         const cgltf_attribute& attr = prim.attributes[aindex];
-        if (attr.index == 0) {
+        if (attr.index == 0 && attr.type > cgltf_attribute_type_invalid &&
+                attr.type < NUM_ATTRIBUTES) {
             baseAccessors[attr.type] = attr.data;
         }
     }
-    if (isMorphTarget) {
+    if (isMorphTarget && morphTargetIndex >= 0 &&
+            size_t(morphTargetIndex) < prim.targets_count) {
         const cgltf_morph_target& morphTarget = prim.targets[morphTargetIndex];
         for (cgltf_size aindex = 0; aindex < morphTarget.attributes_count; aindex++) {
             const cgltf_attribute& attr = morphTarget.attributes[aindex];
-            if (attr.index == 0) {
+            if (attr.index == 0 && attr.type > cgltf_attribute_type_invalid &&
+                    attr.type < NUM_ATTRIBUTES) {
                 assert(baseAccessors[attr.type] &&
                         "Morph target data has no corresponding base vertex data.");
                 morphTargetAccessors[attr.type] = attr.data;
@@ -114,10 +124,14 @@ void TangentsJob::run(Params* params) {
     const cgltf_accessor* const basePosInfo = baseAccessors[cgltf_attribute_type_position];
     const cgltf_accessor* const uvInfo = baseAccessors[cgltf_attribute_type_texcoord];
 
-    const bool hasNormals = baseNormalsInfo != nullptr;
-    const bool hasTangents = baseTangentsInfo != nullptr;
-    const bool hasPositions = basePosInfo != nullptr;
-    const bool hasUvs = uvInfo && uvInfo->count == vertexCount && uvInfo->type == cgltf_type_vec2;
+    const bool hasNormals = baseNormalsInfo &&
+            baseNormalsInfo->count == vertexCount && baseNormalsInfo->type == cgltf_type_vec3;
+    const bool hasTangents = baseTangentsInfo &&
+            baseTangentsInfo->count == vertexCount && baseTangentsInfo->type == cgltf_type_vec4;
+    const bool hasPositions = basePosInfo &&
+            basePosInfo->count == vertexCount && basePosInfo->type == cgltf_type_vec3;
+    const bool hasUvs = uvInfo &&
+            uvInfo->count == vertexCount && uvInfo->type == cgltf_type_vec2;
 
     // SurfaceOrientation::Builder selects one of four mutually exclusive algorithms:
     //   1. normals + tangents -> buildWithSuppliedTangents (needs normals, tangents)
@@ -134,16 +148,27 @@ void TangentsJob::run(Params* params) {
     geometry::SurfaceOrientation::Builder sob;
     sob.vertexCount(vertexCount);
 
+    const cgltf_accessor* const mtNormalsInfo =
+            needsNormals ? morphTargetAccessors[cgltf_attribute_type_normal] : nullptr;
+    const cgltf_accessor* const mtTangentsInfo =
+            needsTangents ? morphTargetAccessors[cgltf_attribute_type_tangent] : nullptr;
+    const cgltf_accessor* const mtPositionsInfo =
+            needsPositions ? morphTargetAccessors[cgltf_attribute_type_position] : nullptr;
+
+    const bool hasMorphNormals = mtNormalsInfo &&
+            mtNormalsInfo->count <= vertexCount && mtNormalsInfo->type == cgltf_type_vec3;
+    const bool hasMorphTangents = mtTangentsInfo &&
+            mtTangentsInfo->count <= vertexCount && mtTangentsInfo->type == cgltf_type_vec3;
+    const bool hasMorphPositionsVec3 = mtPositionsInfo &&
+            mtPositionsInfo->count <= vertexCount && mtPositionsInfo->type == cgltf_type_vec3;
+    const bool hasMorphPositionsVec4 = mtPositionsInfo &&
+            mtPositionsInfo->count <= vertexCount && mtPositionsInfo->type == cgltf_type_vec4;
+    const bool hasMorphPositions = hasMorphPositionsVec3 || hasMorphPositionsVec4;
+
     // Allocate scratch space to store morph deltas when bulk unpacking is used.
     if (isMorphTarget) {
-        auto const* mtNorm = needsNormals ? morphTargetAccessors[cgltf_attribute_type_normal] : nullptr;
-        auto const* mtTan = needsTangents ? morphTargetAccessors[cgltf_attribute_type_tangent] : nullptr;
-        auto const* mtPos = needsPositions ? morphTargetAccessors[cgltf_attribute_type_position] : nullptr;
-        bool const needsVec3Scratch =
-                (mtNorm && mtNorm->type == cgltf_type_vec3) ||
-                (mtTan && mtTan->type == cgltf_type_vec3) ||
-                (mtPos && mtPos->type == cgltf_type_vec3);
-        bool const needsVec4Scratch = mtPos && mtPos->type == cgltf_type_vec4 && mtPos->is_sparse;
+        bool const needsVec3Scratch = hasMorphNormals || hasMorphTangents || hasMorphPositionsVec3;
+        bool const needsVec4Scratch = hasMorphPositionsVec4 && mtPositionsInfo->is_sparse;
         if (needsVec4Scratch || needsVec3Scratch) {
             morphDeltas.reset(new float[vertexCount * (needsVec4Scratch ? 4 : 3)]());
         }
@@ -151,10 +176,6 @@ void TangentsJob::run(Params* params) {
 
     // Provide normals (in-place when possible, otherwise unpacked).
     if (needsNormals) {
-        assert(baseNormalsInfo->count == vertexCount);
-        assert(baseNormalsInfo->type == cgltf_type_vec3);
-        auto const* mtNormalsInfo = morphTargetAccessors[cgltf_attribute_type_normal];
-        const bool hasMorphNormals = mtNormalsInfo && mtNormalsInfo->type == cgltf_type_vec3;
         size_t normalStride = 0;
         const void* directNormals = !hasMorphNormals ? getDirectFloatPtr(
                 baseNormalsInfo, cgltf_type_vec3, allowNormalTangentStride, &normalStride) : nullptr;
@@ -164,8 +185,9 @@ void TangentsJob::run(Params* params) {
             unpackedNormals.reset(new float3[vertexCount]());
             cgltf_accessor_unpack_floats(baseNormalsInfo, &unpackedNormals[0].x, vertexCount * 3);
             if (hasMorphNormals) {
-                cgltf_accessor_unpack_floats(mtNormalsInfo, morphDeltas.get(), vertexCount * 3);
-                for (cgltf_size i = 0; i < vertexCount; i++) {
+                cgltf_accessor_unpack_floats(mtNormalsInfo, morphDeltas.get(),
+                        mtNormalsInfo->count * 3);
+                for (cgltf_size i = 0; i < mtNormalsInfo->count; i++) {
                     float const* d = morphDeltas.get() + i * 3;
                     unpackedNormals[i] += float3{ d[0], d[1], d[2] };
                 }
@@ -176,9 +198,6 @@ void TangentsJob::run(Params* params) {
 
     // Provide tangents (in-place when possible, otherwise unpacked).
     if (needsTangents) {
-        assert(baseTangentsInfo->count == vertexCount);
-        auto const* mtTangentsInfo = morphTargetAccessors[cgltf_attribute_type_tangent];
-        const bool hasMorphTangents = mtTangentsInfo && mtTangentsInfo->type == cgltf_type_vec3;
         size_t tangentStride = 0;
         const void* directTangents = !hasMorphTangents ? getDirectFloatPtr(
                 baseTangentsInfo, cgltf_type_vec4, allowNormalTangentStride, &tangentStride) : nullptr;
@@ -188,8 +207,9 @@ void TangentsJob::run(Params* params) {
             unpackedTangents.reset(new float4[vertexCount]());
             cgltf_accessor_unpack_floats(baseTangentsInfo, &unpackedTangents[0].x, vertexCount * 4);
             if (hasMorphTangents) {
-                cgltf_accessor_unpack_floats(mtTangentsInfo, morphDeltas.get(), vertexCount * 3);
-                for (cgltf_size i = 0; i < vertexCount; i++) {
+                cgltf_accessor_unpack_floats(mtTangentsInfo, morphDeltas.get(),
+                        mtTangentsInfo->count * 3);
+                for (cgltf_size i = 0; i < mtTangentsInfo->count; i++) {
                     float const* d = morphDeltas.get() + i * 3;
                     unpackedTangents[i].xyz += float3{ d[0], d[1], d[2] };
                 }
@@ -199,10 +219,6 @@ void TangentsJob::run(Params* params) {
     }
 
     if (needsPositions) {
-        assert(basePosInfo->count == vertexCount && basePosInfo->type == cgltf_type_vec3);
-        auto const* mtPositionsInfo = morphTargetAccessors[cgltf_attribute_type_position];
-        const bool hasMorphPositions = mtPositionsInfo &&
-                (mtPositionsInfo->type == cgltf_type_vec3 || mtPositionsInfo->type == cgltf_type_vec4);
         size_t posStride = 0;
         const void* directPositions = !hasMorphPositions ? getDirectFloatPtr(
                 basePosInfo, cgltf_type_vec3, false, &posStride) : nullptr;
@@ -211,29 +227,27 @@ void TangentsJob::run(Params* params) {
         } else {
             unpackedPositions.reset(new float3[vertexCount]());
             cgltf_accessor_unpack_floats(basePosInfo, &unpackedPositions[0].x, vertexCount * 3);
-            if (mtPositionsInfo) {
-                if (mtPositionsInfo->type == cgltf_type_vec3) {
-                    cgltf_accessor_unpack_floats(mtPositionsInfo, morphDeltas.get(), vertexCount * 3);
-                    for (cgltf_size i = 0; i < vertexCount; i++) {
-                        float const* d = morphDeltas.get() + i * 3;
-                        unpackedPositions[i] += float3{ d[0], d[1], d[2] };
+            if (hasMorphPositionsVec3) {
+                cgltf_accessor_unpack_floats(mtPositionsInfo, morphDeltas.get(),
+                        mtPositionsInfo->count * 3);
+                for (cgltf_size i = 0; i < mtPositionsInfo->count; i++) {
+                    float const* d = morphDeltas.get() + i * 3;
+                    unpackedPositions[i] += float3{ d[0], d[1], d[2] };
+                }
+            } else if (hasMorphPositionsVec4) {
+                if (!mtPositionsInfo->is_sparse) {
+                    float4 delta{};
+                    for (cgltf_size i = 0; i < mtPositionsInfo->count; i++) {
+                        if (cgltf_accessor_read_float(mtPositionsInfo, i, &delta.x, 4)) {
+                            unpackedPositions[i] += delta.xyz;
+                        }
                     }
-                } else if (mtPositionsInfo->type == cgltf_type_vec4) {
-                    if (!mtPositionsInfo->is_sparse) {
-                        float4 delta{};
-                        cgltf_size const count = std::min(vertexCount, mtPositionsInfo->count);
-                        for (cgltf_size i = 0; i < count; i++) {
-                            if (cgltf_accessor_read_float(mtPositionsInfo, i, &delta.x, 4)) {
-                                unpackedPositions[i] += delta.xyz;
-                            }
-                        }
-                    } else {
-                        cgltf_accessor_unpack_floats(mtPositionsInfo, morphDeltas.get(),
-                                vertexCount * 4);
-                        for (cgltf_size i = 0; i < vertexCount; i++) {
-                            float const* d = morphDeltas.get() + i * 4;
-                            unpackedPositions[i] += float3{ d[0], d[1], d[2] };
-                        }
+                } else {
+                    cgltf_accessor_unpack_floats(mtPositionsInfo, morphDeltas.get(),
+                            mtPositionsInfo->count * 4);
+                    for (cgltf_size i = 0; i < mtPositionsInfo->count; i++) {
+                        float const* d = morphDeltas.get() + i * 4;
+                        unpackedPositions[i] += float3{ d[0], d[1], d[2] };
                     }
                 }
             }
@@ -291,7 +305,7 @@ void TangentsJob::run(Params* params) {
             if (directUvs) {
                 sob.uvs(static_cast<const float2*>(directUvs));
             } else {
-                unpackedTexCoords.reset(new float2[vertexCount]);
+                unpackedTexCoords.reset(new float2[vertexCount]());
                 cgltf_accessor_unpack_floats(uvInfo, &unpackedTexCoords[0].x, vertexCount * 2);
                 sob.uvs(unpackedTexCoords.get());
             }

@@ -1198,14 +1198,33 @@ bool FAssetLoader::createPrimitive(const cgltf_primitive& inPrim, const char* na
         const cgltf_accessor* innerAccessor = attribute.data;
         int8_t customIndex = -1;
 
-        // The glTF tangent data is ignored here, but honored in ResourceLoader.
+        // The glTF tangent data is ignored here, but honored in ResourceLoader. Validate its
+        // element type and dimension (VEC4) before TangentsJob unpacks it.
         if (atype == cgltf_attribute_type_tangent) {
+            VertexBuffer::AttributeType fatype;
+            VertexBuffer::AttributeType actualType;
+            if (!innerAccessor || innerAccessor->type != cgltf_type_vec4 ||
+                    !getElementType(innerAccessor->type, innerAccessor->component_type,
+                            &fatype, &actualType)) {
+                LOG(ERROR) << "Unsupported tangent accessor type in " << name;
+                return false;
+            }
             continue;
         }
 
         // At a minimum, surface orientation requires normals to be present in the source data.
         // Here we re-purpose the normals slot to point to the quats that get computed later.
+        // Validate the normal accessor's element type and dimension (VEC3) before TangentsJob
+        // unpacks it.
         if (atype == cgltf_attribute_type_normal) {
+            VertexBuffer::AttributeType fatype;
+            VertexBuffer::AttributeType actualType;
+            if (!innerAccessor || innerAccessor->type != cgltf_type_vec3 ||
+                    !getElementType(innerAccessor->type, innerAccessor->component_type,
+                            &fatype, &actualType)) {
+                LOG(ERROR) << "Unsupported normal accessor type in " << name;
+                return false;
+            }
             vbb.attribute(TANGENTS, slot, VertexBuffer::AttributeType::SHORT4);
             vbb.normalized(TANGENTS);
             hasNormals = true;
