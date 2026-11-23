@@ -31,7 +31,7 @@ namespace filament::backend {
 class VulkanPlatformAndroid : public VulkanPlatform, public AndroidNdk {
 public:
     ExternalImageHandle UTILS_PUBLIC createExternalImage(AHardwareBuffer const* buffer,
-            bool sRGB) noexcept;
+            bool sRGB, ARect const& cropRect = { 0, 0, 0, 0 }) noexcept;
 
     struct UTILS_PUBLIC ExternalImageDescAndroid {
         uint32_t width;      // Texture width
@@ -101,6 +101,10 @@ protected:
 private:
     struct ExternalImageVulkanAndroid : public ExternalImage {
         AHardwareBuffer* aHardwareBuffer = nullptr;
+        ARect cropRect;
+        uint32_t bufferWidth;
+        uint32_t bufferHeight;
+        bool hasCrop = false;
         bool sRGB = false;
 
     protected:
