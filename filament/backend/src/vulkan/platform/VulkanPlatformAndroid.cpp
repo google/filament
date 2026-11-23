@@ -194,12 +194,12 @@ Platform::ExternalImageHandle VulkanPlatformAndroid::createExternalImage(
         AHardwareBuffer_Desc desc = {};
         AHardwareBuffer_describe(buffer, &desc);
 
-        const bool isEmptySentinel =
+        const bool isEmpty =
                 cropRect.left == 0 && cropRect.top == 0 &&
                 cropRect.right == 0 && cropRect.bottom == 0;
 
         bool hasCrop = false;
-        if (!isEmptySentinel) {
+        if (!isEmpty) {
             const bool isValid =
                     cropRect.left >= 0 && cropRect.top >= 0 &&
                     cropRect.right > cropRect.left &&
