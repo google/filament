@@ -137,26 +137,13 @@ struct DynamicSpecConstKey {
                !Variant::isValidDepthVariant(variant) && !Variant::isSSRVariant(variant);
     }
 
-    static constexpr bool isValidProgramSpecKey(Variant const variant,
-            DynamicSpecConstKey const specKey, MaterialDomain const materialDomain,
-            bool const isLit) noexcept {
-        return (!specKey.hasDynamicLighting() ||
-                       canSupportDynamicLighting(variant, materialDomain, isLit)) &&
-               (!specKey.hasExtraDirectionalLights() ||
-                       (specKey.hasDirectionalLighting() &&
-                               canSupportExtraDirectionalLights(
-                                       variant, materialDomain, isLit))) &&
-               (!specKey.hasDirectionalLighting() ||
-                       canSupportDirectionalLighting(variant, materialDomain, isLit)) &&
-               (!specKey.hasFog() ||
-                       canSupportFog(variant, materialDomain, isLit));
-    }
-
     // Clears the specKey bits that are meaningless for this kind of program, based only on the
     // variant, material domain and lighting model (e.g. no fog on depth/SSR variants).
     // This doesn't know about a specific material: when one is available, use
     // MaterialDefinition::filterProgramSpecKey() instead, which also applies the material's
     // compile-time restrictions. The result always satisfies isValidProgramSpecKey().
+    // NOTE: this must only ever clear bits, never set them: isValidProgramSpecKey() relies on
+    // filtering being a no-op exactly for valid keys.
     static constexpr DynamicSpecConstKey filterProgramSpecKey(Variant const variant,
             DynamicSpecConstKey specKey, MaterialDomain const materialDomain, bool const isLit) noexcept {
         if (!canSupportDynamicLighting(variant, materialDomain, isLit)) {
@@ -173,6 +160,14 @@ struct DynamicSpecConstKey {
             specKey.setFog(false);
         }
         return specKey;
+    }
+
+    static constexpr bool isValidProgramSpecKey(Variant const variant,
+            DynamicSpecConstKey const specKey, MaterialDomain const materialDomain,
+            bool const isLit) noexcept {
+        // check if it has no bit that is meaningless for this variant, material domain and lighting
+        // model.
+        return filterProgramSpecKey(variant, specKey, materialDomain, isLit) == specKey;
     }
 
     struct ValidKeys;
