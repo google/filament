@@ -40,6 +40,13 @@ using namespace utils;
 using namespace backend;
 
 size_t HwDescriptorSetLayoutFactory::Parameters::hash() const noexcept {
+    static_assert(sizeof(DescriptorSetLayoutDescriptor) ==
+            sizeof(DescriptorType) + sizeof(ShaderStageFlags) + sizeof(descriptor_binding_t) +
+            sizeof(DescriptorFlags) + sizeof(uint16_t),
+            "DescriptorSetLayoutDescriptor must not contain padding bytes");
+    if (dsl.descriptors.empty()) {
+        return 42;
+    }
     return hash::murmurSlow(
             reinterpret_cast<uint8_t const *>(dsl.descriptors.data()),
             dsl.descriptors.size() * sizeof(DescriptorSetLayoutDescriptor),
