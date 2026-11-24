@@ -314,6 +314,12 @@ private:
     // Set to true on command buffer resets to force all dynamic states to emit on the first draw.
     bool mForceDirtyDynamicState = true;
 
+    // Age of the command buffer that mBoundPipeline, mBoundDynamicState and mBoundVertexHash were
+    // recorded into. Bound state does not carry over to another command buffer, so bindPipeline()
+    // discards it when the age changes. Age 0 is never handed out, so the initial value never
+    // matches.
+    uint64_t mBoundAge = 0;
+
     // Thread pool that allows us to "prewarm" the pipeline cache, reducing draw-time
     // pipeline compilation time.
     CompilerThreadPool mCompilerThreadPool;

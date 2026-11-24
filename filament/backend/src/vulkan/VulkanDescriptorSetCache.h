@@ -20,6 +20,7 @@
 #include "VulkanHandles.h"
 
 #include "vulkan/memory/ResourcePointer.h"
+#include "vulkan/utils/CommandBufferAgeCounter.h"
 #include "vulkan/utils/Definitions.h"  // For DescriptorSetMask
 
 #include <backend/DriverEnums.h>
@@ -32,6 +33,8 @@
 
 #include <tsl/robin_map.h>
 
+#include <array>
+#include <cstdint>
 #include <memory>
 
 namespace filament::backend {
@@ -47,7 +50,10 @@ public:
             std::array<fvkmemory::resource_ptr<VulkanDescriptorSet>, UNIQUE_DESCRIPTOR_SET_COUNT>;
     using DescriptorCount = VulkanDescriptorSetLayout::Count;
 
-    VulkanDescriptorSetCache(VkDevice device, fvkmemory::ResourceManager* resourceManager);
+    // `ageCounter` is the counter shared by the command buffer pools (see
+    // VulkanCommands::getAgeCounter()), and must outlive this cache.
+    VulkanDescriptorSetCache(VkDevice device, fvkmemory::ResourceManager* resourceManager,
+            fvkutils::CommandBufferAgeCounter const& ageCounter);
     ~VulkanDescriptorSetCache();
 
     void terminate() noexcept;
@@ -74,7 +80,9 @@ public:
             fvkmemory::resource_ptr<VulkanDescriptorSetLayout> layout);
 
     // Create and set as current a new VkDescriptorSet using the `set` currently bound layout and
-    // copy all the bindings and ignoring the samplers bindings in the `samplerMask`.
+    // copy all the written bindings except for the samplers bindings in the `samplerMask`.
+    // Uniform buffers whose VkBuffer has been swapped out since they were written (see
+    // VulkanDescriptorSet::getStaleUbos()) are not copied, but rewritten with the current VkBuffer.
     void cloneSet(fvkmemory::resource_ptr<VulkanDescriptorSet> set,
             fvkutils::SamplerBitmask samplerMask) noexcept;
 
@@ -85,7 +93,9 @@ public:
     void manualRecycle(VulkanDescriptorSetLayout::Count const& count, VkDescriptorSetLayout vklayout,
             VkDescriptorSet vkSet);
 
-    DescriptorSetArray const& getBoundSets() const { return mStashedSets; }
+    // Returns the sets stashed by bind() since the last commit(). These are not necessarily the
+    // sets that are bound in the command buffer; see mLastBoundInfo for those.
+    DescriptorSetArray const& getStashedSets() const { return mStashedSets; }
 
     void gc();
 
@@ -99,14 +109,33 @@ private:
 
     VkDevice mDevice;
     fvkmemory::ResourceManager* mResourceManager;
+    // Tells which command buffers are still in flight. It is used to record which command buffers
+    // bind a set, and to only recycle a retired VkDescriptorSet once all of them have completed.
+    fvkutils::CommandBufferAgeCounter const& mAgeCounter;
     std::unique_ptr<DescriptorInfinitePool> mDescriptorPool;
     std::pair<VulkanAttachment, VkDescriptorImageInfo> mInputAttachment;
     DescriptorSetArray mStashedSets = {};
 
+    // What vkCmdBindDescriptorSets has bound in the command buffer of age `age`. Descriptor set
+    // bindings persist across draws (and pipeline layout changes, see commit()) within a command
+    // buffer, but not across command buffers, so commit() discards this when the age changes.
     struct {
+        // Age 0 is never handed out, so the initial value never matches a command buffer.
+        uint64_t age = 0;
+        // The pipeline layout of the most recent commit.
         VkPipelineLayout pipelineLayout = VK_NULL_HANDLE;
-        fvkutils::DescriptorSetMask setMask;
+        // The indices that have been bound with `pipelineLayout` since it last changed. A set bound
+        // with an earlier layout may have been disturbed (in the Vulkan sense) since, so a newly
+        // stashed set is only skipped if its index is in this mask.
+        fvkutils::DescriptorSetMask boundWithLayout;
+        // The set that was last bound at each index. It is kept to check for stale UBOs when the
+        // frontend relies on a binding from an earlier draw.
         DescriptorSetArray boundSets = {};
+        // The VkDescriptorSet that was last bound at each index. This is compared rather than the
+        // wrapper in boundSets, because cloning a set (cloneSet()) changes its VkDescriptorSet in
+        // place. A VkDescriptorSet is only recycled once no command buffer can use it, so within
+        // one command buffer equal handles mean the same descriptors.
+        std::array<VkDescriptorSet, UNIQUE_DESCRIPTOR_SET_COUNT> boundVkSets = {};
     } mLastBoundInfo;
 };
 

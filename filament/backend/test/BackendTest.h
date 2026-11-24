@@ -55,12 +55,13 @@ public:
 
 protected:
     BackendTest();
+    explicit BackendTest(filament::backend::Platform::DriverConfig const& driverConfig);
     ~BackendTest() override;
     template<typename HandleType>
     filament::backend::Handle<HandleType> addCleanup(filament::backend::Handle<HandleType> handle) {
         return mCleanup->add(handle);
     }
-    void initializeDriver();
+    void initializeDriver(filament::backend::Platform::DriverConfig const& driverConfig);
 
     // The config every test driver is created with.
     static filament::backend::Platform::DriverConfig getDriverConfig();
