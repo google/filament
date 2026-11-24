@@ -13,3 +13,5 @@ appropriate header in [RELEASE_NOTES.md](./RELEASE_NOTES.md).
   the output as needing an executable stack
 - gltfio: `AssetLoader::destroyAsset()` now destroys each instance root's transform component
   directly rather than relying on `Engine` garbage collection (#10852)
+- filamentapp: `HeadlessDisplayManager` now waits before retrying a declined frame, so headless
+  runs are no longer dominated by retries of skipped frames

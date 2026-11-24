@@ -20,6 +20,9 @@
 #include <CoreFoundation/CoreFoundation.h>
 #endif
 
+#include <chrono>
+#include <thread>
+
 namespace filament::app {
 
 HeadlessDisplayManager::HeadlessDisplayManager()
@@ -48,6 +51,14 @@ void HeadlessDisplayManager::runFrameLoop(FrameFn frame) {
         CFRunLoopRunInMode(kCFRunLoopDefaultMode, 0.0, false);
 #endif
     }
+}
+
+void HeadlessDisplayManager::onFrameSkipped() {
+    // A frame is declined while the engine is still waiting for an earlier frame to complete on
+    // the GPU. This loop is unpaced, so retrying immediately would only queue more work for the
+    // driver thread and delay that completion further. Wait for the driver thread to make progress
+    // instead; this is paid once per declined frame, not per rendered frame.
+    std::this_thread::sleep_for(std::chrono::milliseconds(1));
 }
 
 WindowHandle HeadlessDisplayManager::createWindow(const char* title, uint32_t w, uint32_t h,
