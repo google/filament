@@ -471,6 +471,7 @@ io::ostream& operator<<(io::ostream& out, RenderPassParams const& params) {
     <<   "clear=" << params.flags.clear
     << ", discardStart=" << params.flags.discardStart
     << ", discardEnd=" << params.flags.discardEnd
+    << ", viewportCleared=" << params.flags.viewportCleared
     << ", left=" << params.viewport.left
     << ", bottom=" << params.viewport.bottom
     << ", width=" << params.viewport.width

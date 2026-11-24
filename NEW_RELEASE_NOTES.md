@@ -13,3 +13,5 @@ appropriate header in [RELEASE_NOTES.md](./RELEASE_NOTES.md).
   the output as needing an executable stack
 - gltfio: `AssetLoader::destroyAsset()` now destroys each instance root's transform component
   directly rather than relying on `Engine` garbage collection (#10852)
+- engine: on Vulkan, a View rendered into the swap chain after others now clears its viewport
+  instead of loading it when `ClearOptions::clear` is set and no earlier View overlaps it

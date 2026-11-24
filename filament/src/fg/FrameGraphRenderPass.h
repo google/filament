@@ -73,6 +73,7 @@ struct FrameGraphRenderPass {
         backend::TargetBufferFlags clearFlags{}; // this overrides Descriptor::clearFlags
         backend::TargetBufferFlags keepOverrideStart{};
         backend::TargetBufferFlags keepOverrideEnd{};
+        backend::TargetBufferFlags viewportCleared{}; // see backend::RenderPassFlags
     };
 
     uint32_t id = 0;
