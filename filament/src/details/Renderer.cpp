@@ -801,6 +801,7 @@ void FRenderer::renderJob(DriverApi& driver, LinearAllocatorArena& arena, FView&
 
     bool hasPostProcess = view.hasPostProcessPass();
     bool hasScreenSpaceRefraction = false;
+    bool isScreenSpaceRefractionEnabled = view.isScreenSpaceRefractionEnabled();
     bool hasColorGrading = hasPostProcess;
     bool hasDithering = view.getDithering() == Dithering::TEMPORAL;
     bool hasFXAA = view.getAntiAliasing() == AntiAliasing::FXAA;
@@ -822,6 +823,7 @@ void FRenderer::renderJob(DriverApi& driver, LinearAllocatorArena& arena, FView&
         hasPostProcess = false;
         msaaOptions.enabled = false;
         ssReflectionsOptions.enabled = false;
+        isScreenSpaceRefractionEnabled = false;
 
         // Picking is not supported for multiview rendering. Clear any pending picking queries.
         view.clearPickingQueries();
@@ -1445,10 +1447,9 @@ void FRenderer::renderJob(DriverApi& driver, LinearAllocatorArena& arena, FView&
     RenderPass const pass{ passBuilder.build(engine, driver) };
 
     // now that we have the commands we can figure out if we have refraction commands
-    auto* const firstRefractionCommand = [&view, isRenderingMultiview](RenderPass const& pass) {
+    auto* const firstRefractionCommand = [isScreenSpaceRefractionEnabled](RenderPass const& pass) {
         RenderPass::Command const* p = nullptr;
-        if (UTILS_UNLIKELY(!isRenderingMultiview && view.isScreenSpaceRefractionEnabled() &&
-                !pass.empty())) {
+        if (UTILS_UNLIKELY(isScreenSpaceRefractionEnabled && !pass.empty())) {
             p = RendererUtils::getFirstRefractionCommand(pass);
         }
         return p;
@@ -1463,7 +1464,7 @@ void FRenderer::renderJob(DriverApi& driver, LinearAllocatorArena& arena, FView&
     // if MSAA is enabled, we end-up rendering in an intermediate buffer. This is the only case where
     // "!hasPostProcess" doesn't guarantee rendering into the swapchain.
     const bool useIntermediateBuffer = hasPostProcess || msaaOptions.enabled ||
-            blendModeTranslucent || ssReflectionsOptions.enabled || hasScreenSpaceRefraction ||
+            ssReflectionsOptions.enabled || hasScreenSpaceRefraction ||
             (isRenderingMultiview && engine.debug.stereo.
             combine_multiview_images);
 
