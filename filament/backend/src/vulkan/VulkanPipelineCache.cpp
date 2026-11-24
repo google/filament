@@ -168,28 +168,29 @@ void printPipelineFeedbackInfo(VkPipelineCreationFeedbackCreateInfo const& feedb
 }
 #endif
 
-/**
- * Queries the total binary size (in bytes) of a compiled VkPipeline
- * using the VK_KHR_pipeline_binary extension. Returns 0 if unsupported or on error.
- */
-size_t queryPipelineBinarySize(VkDevice device, VkPipeline pipeline) noexcept {
-    if (pipeline == VK_NULL_HANDLE ||
+static void releaseCapturedPipelineData(VkDevice device, VkPipeline pipeline) noexcept {
+    if (device == VK_NULL_HANDLE ||
+            pipeline == VK_NULL_HANDLE ||
+            !vkReleaseCapturedPipelineDataKHR) {
+        return;
+    }
+
+    VkReleaseCapturedPipelineDataInfoKHR releaseInfo = {
+        .sType = VK_STRUCTURE_TYPE_RELEASE_CAPTURED_PIPELINE_DATA_INFO_KHR,
+        .pNext = nullptr,
+        .pipeline = pipeline,
+    };
+    vkReleaseCapturedPipelineDataKHR(device, &releaseInfo, VKALLOC);
+}
+
+static size_t queryPipelineBinarySize(VkDevice device, VkPipeline pipeline) noexcept {
+    if (device == VK_NULL_HANDLE ||
+            pipeline == VK_NULL_HANDLE ||
             !vkCreatePipelineBinariesKHR ||
             !vkGetPipelineBinaryDataKHR ||
             !vkDestroyPipelineBinaryKHR) {
         return 0;
     }
-
-    auto releaseCapturedData = [&]() noexcept {
-        if (vkReleaseCapturedPipelineDataKHR) {
-            VkReleaseCapturedPipelineDataInfoKHR releaseInfo = {
-                .sType = VK_STRUCTURE_TYPE_RELEASE_CAPTURED_PIPELINE_DATA_INFO_KHR,
-                .pNext = nullptr,
-                .pipeline = pipeline,
-            };
-            vkReleaseCapturedPipelineDataKHR(device, &releaseInfo, VKALLOC);
-        }
-    };
 
     VkPipelineBinaryCreateInfoKHR binaryCreateInfo = {
         .sType = VK_STRUCTURE_TYPE_PIPELINE_BINARY_CREATE_INFO_KHR,
@@ -206,15 +207,15 @@ size_t queryPipelineBinarySize(VkDevice device, VkPipeline pipeline) noexcept {
         .pPipelineBinaries = nullptr,
     };
 
-    //Query the number of binaries associated with this pipeline.
+    // Query the number of binaries associated with this pipeline.
     VkResult result = vkCreatePipelineBinariesKHR(
             device, &binaryCreateInfo, VKALLOC, &handlesInfo);
     if (result != VK_SUCCESS || handlesInfo.pipelineBinaryCount == 0) {
-        releaseCapturedData();
+        releaseCapturedPipelineData(device, pipeline);
         return 0;
     }
 
-    //Zero-initialize storage to VK_NULL_HANDLE and retrieve the binary handles.
+    // Zero-initialize storage to VK_NULL_HANDLE and retrieve the binary handles.
     std::vector<VkPipelineBinaryKHR> binaries(handlesInfo.pipelineBinaryCount, VK_NULL_HANDLE);
     handlesInfo.pPipelineBinaries = binaries.data();
 
@@ -222,7 +223,7 @@ size_t queryPipelineBinarySize(VkDevice device, VkPipeline pipeline) noexcept {
             device, &binaryCreateInfo, VKALLOC, &handlesInfo);
     const bool querySucceeded = (result == VK_SUCCESS || result == VK_INCOMPLETE);
 
-    //Query each binary's byte size and destroy all non-null handles.
+    // Query each binary's byte size and destroy all non-null handles.
     size_t totalSize = 0;
     for (VkPipelineBinaryKHR binary : binaries) {
         if (binary == VK_NULL_HANDLE) {
@@ -252,12 +253,11 @@ size_t queryPipelineBinarySize(VkDevice device, VkPipeline pipeline) noexcept {
         vkDestroyPipelineBinaryKHR(device, binary, VKALLOC);
     }
 
-    //Free driver-retained captured binary blobs from the VkPipeline.
-    releaseCapturedData();
+    // Free driver-retained captured binary blobs from the VkPipeline.
+    releaseCapturedPipelineData(device, pipeline);
 
     return totalSize;
 }
-
 
 
 } // namespace

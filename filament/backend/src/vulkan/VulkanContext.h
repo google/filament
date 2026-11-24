@@ -257,6 +257,9 @@ public:
         return mPipelineBinaryFeatures.pipelineBinaries == VK_TRUE;
     }
 
+    // https://docs.vulkan.org/refpages/latest/refpages/source/VK_KHR_pipeline_binary.html
+    // We are introducing VK_KHR_pipeline_binary and VK_KHR_maintenance5 is the
+    // minimum Extension/Version Dependency required.
     inline bool isMaintenance5Supported() const noexcept {
         return mMaintenance5.maintenance5 == VK_TRUE;
     }
