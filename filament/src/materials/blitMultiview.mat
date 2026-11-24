@@ -1,0 +1,35 @@
+// Copies each layer of a multiview color buffer into the matching view of a multiview render
+// target. Post-process materials have no stereo variant, so this is an unlit surface material.
+material {
+    name : blitMultiview,
+    parameters : [
+        {
+            type : sampler2dArray,
+            name : color,
+            precision: medium
+        }
+    ],
+    variables : [
+        eyeUv
+    ],
+    vertexDomain : device,
+    shadingModel : unlit,
+    culling : none,
+    depthWrite : false,
+    depthCulling : false,
+    variantFilter : [ skinning, shadowReceiver, vsm, fog, ssr, motionVectors ]
+}
+
+vertex {
+    void materialVertex(inout MaterialVertexInputs material) {
+        material.eyeUv = vec4(uvToRenderTargetUV(getPosition().xy * 0.5 + 0.5),
+                float(getEyeIndex()), 0.0);
+    }
+}
+
+fragment {
+    void material(inout MaterialInputs material) {
+        prepareMaterial(material);
+        material.baseColor = texture(materialParams_color, variable_eyeUv.xyz);
+    }
+}
