@@ -801,6 +801,7 @@ void FRenderer::renderJob(DriverApi& driver, LinearAllocatorArena& arena, FView&
 
     bool hasPostProcess = view.hasPostProcessPass();
     bool hasScreenSpaceRefraction = false;
+    bool isScreenSpaceRefractionEnabled = view.isScreenSpaceRefractionEnabled();
     bool hasColorGrading = hasPostProcess;
     bool hasDithering = view.getDithering() == Dithering::TEMPORAL;
     bool hasFXAA = view.getAntiAliasing() == AntiAliasing::FXAA;
@@ -821,6 +822,8 @@ void FRenderer::renderJob(DriverApi& driver, LinearAllocatorArena& arena, FView&
     if (isRenderingMultiview) {
         hasPostProcess = false;
         msaaOptions.enabled = false;
+        ssReflectionsOptions.enabled = false;
+        isScreenSpaceRefractionEnabled = false;
 
         // Picking is not supported for multiview rendering. Clear any pending picking queries.
         view.clearPickingQueries();
@@ -1444,9 +1447,9 @@ void FRenderer::renderJob(DriverApi& driver, LinearAllocatorArena& arena, FView&
     RenderPass const pass{ passBuilder.build(engine, driver) };
 
     // now that we have the commands we can figure out if we have refraction commands
-    auto* const firstRefractionCommand = [&view](RenderPass const& pass) {
+    auto* const firstRefractionCommand = [isScreenSpaceRefractionEnabled](RenderPass const& pass) {
         RenderPass::Command const* p = nullptr;
-        if (UTILS_UNLIKELY(view.isScreenSpaceRefractionEnabled() && !pass.empty())) {
+        if (UTILS_UNLIKELY(isScreenSpaceRefractionEnabled && !pass.empty())) {
             p = RendererUtils::getFirstRefractionCommand(pass);
         }
         return p;
@@ -1754,10 +1757,25 @@ void FRenderer::renderJob(DriverApi& driver, LinearAllocatorArena& arena, FView&
                     colorGradingConfig.asSubpass ||
                     hasScreenSpaceRefraction ||
                     ssReflectionsOptions.enabled))) {
-            input = ppm.blit(fg, blendModeTranslucent, input, xvp, {
-                            .width = vp.width, .height = vp.height,
-                            .format = colorGradingConfig.ldrFormat },
-                    SamplerMagFilter::NEAREST, SamplerMinFilter::NEAREST);
+#ifdef FILAMENT_ENABLE_MULTIVIEW
+            if (isRenderingMultiview && !engine.debug.stereo.combine_multiview_images) {
+                // blit() reads and writes a single layer, so multiview needs a blit that copies
+                // every eye's layer. Multiview has no post-processing, so `input` matches `vp`.
+                assert_invariant(xvp == svp);
+                input = ppm.blitMultiview(fg, blendModeTranslucent, input, {
+                                .width = vp.width, .height = vp.height,
+                                .depth = engine.getConfig().stereoscopicEyeCount,
+                                .type = SamplerType::SAMPLER_2D_ARRAY,
+                                .format = colorGradingConfig.ldrFormat },
+                        view.getColorPassDescriptorSet());
+            } else
+#endif
+            {
+                input = ppm.blit(fg, blendModeTranslucent, input, xvp, {
+                                .width = vp.width, .height = vp.height,
+                                .format = colorGradingConfig.ldrFormat },
+                        SamplerMagFilter::NEAREST, SamplerMinFilter::NEAREST);
+            }
         }
     }
 

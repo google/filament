@@ -248,6 +248,8 @@ if (FILAMENT_SUPPORTS_VULKAN)
             src/vulkan/VulkanSemaphore.h
             src/vulkan/VulkanSemaphoreManager.cpp
             src/vulkan/VulkanSemaphoreManager.h
+            src/vulkan/VulkanSmallImagePool.cpp
+            src/vulkan/VulkanSmallImagePool.h
             src/vulkan/VulkanStagePool.cpp
             src/vulkan/VulkanStagePool.h
             src/vulkan/VulkanSwapChain.cpp

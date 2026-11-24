@@ -792,7 +792,8 @@ void ViewerGui::updateUserInterface() {
         int jitterSequence = (int)mSettings.view.taa.jitterPattern;
         int boxClipping = (int)mSettings.view.taa.boxClipping;
         int boxType = (int)mSettings.view.taa.boxType;
-        ImGui::Combo("Jitter pattern", &jitterSequence, "RGSS x4\0Uniform Helix x4\0Halton x8\0Halton x16\0Halton x32\0\0");
+        ImGui::Combo("Jitter pattern", &jitterSequence,
+                "RGSS x4\0Uniform Helix x4\0Halton x8\0Halton x16\0Halton x32\0Halton Scaled\0\0");
         ImGui::Combo("Box clipping", &boxClipping, "Accurate\0Clamp\0None\0\0");
         ImGui::Combo("Box type", &boxType, "AABB\0Variance\0\0");
         ImGui::SliderFloat("Variance gamma", &mSettings.view.taa.varianceGamma, 0.6f, 1.25f);

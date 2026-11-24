@@ -15,6 +15,7 @@
 import argparse
 import os
 import glob
+import json
 import yaml
 import hashlib
 import concurrent.futures
@@ -43,6 +44,7 @@ def run_tidy(file, fixes_dir):
   fixes_path = os.path.join(fixes_dir, hashlib.md5(file.encode('utf-8')).hexdigest() + '.yaml')
   subprocess.run(
       ['clang-tidy', f'--export-fixes={fixes_path}', '--quiet',
+       '--header-filter=.*/filament/.*',
        '--checks=-*,bugprone-exception-escape', file],
       stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
   # clang-tidy only writes the fixes file when it has at least one diagnostic to report.
@@ -64,7 +66,6 @@ def run_tidy(file, fixes_dir):
 DEFAULT_SRC_GLOBS=[
   'filament/**/*.mm',
   'filament/**/*.cpp',
-  'filament/**/*.h',
 ]
 
 def can_analyze(path):
@@ -74,13 +75,58 @@ def can_analyze(path):
     return True
   return not path.endswith('.mm') and '/metal/' not in path
 
-def exception_escape_test(src_globs=DEFAULT_SRC_GLOBS, jobs=None):
+def load_compiled_files(cwd):
+  compdb_path = os.path.join(cwd, 'compile_commands.json')
+  if not os.path.exists(compdb_path):
+    return None
+  try:
+    with open(compdb_path, 'r') as f:
+      entries = json.load(f)
+    compiled = set()
+    cwd_real = os.path.realpath(cwd)
+    for entry in entries:
+      fpath = entry.get('file')
+      if not fpath:
+        continue
+      if not os.path.isabs(fpath):
+        fpath = os.path.join(entry.get('directory', cwd), fpath)
+      compiled.add(os.path.relpath(os.path.realpath(fpath), cwd_real))
+    return compiled
+  except Exception as exc:
+    print(f'Warning: failed to read compile_commands.json: {exc}')
+    return None
+
+def load_changed_files(changed_files_file):
+  with open(changed_files_file, 'r') as f:
+    raw = f.read()
+  sep = '\0' if '\0' in raw else '\n'
+  return [os.path.normpath(p.strip()) for p in raw.split(sep) if p.strip()]
+
+def exception_escape_test(src_globs=DEFAULT_SRC_GLOBS, jobs=None, changed_files_file=None):
   files = set()
   if not isinstance(src_globs, list):
     src_globs = [src_globs]
   for i in src_globs:
-    files.update(glob.glob(i, recursive=True))
+    files.update(os.path.normpath(p) for p in glob.glob(i, recursive=True))
   files = [f for f in files if can_analyze(f)]
+
+  compiled_files = load_compiled_files(os.getcwd())
+  if compiled_files is not None:
+    files = [f for f in files if f in compiled_files]
+
+  if changed_files_file:
+    changed = [f for f in load_changed_files(changed_files_file)
+               if f == 'filament' or f.startswith('filament/')]
+    if not changed:
+      print('Skipping exception-escape: no files under filament/ changed.')
+      return (True, [])
+    has_header_change = any(f.endswith(('.h', '.hpp', '.inc')) for f in changed)
+    if not has_header_change:
+      changed_set = set(changed)
+      files = [f for f in files if f in changed_set]
+      if not files:
+        print('Skipping exception-escape: no active translation units under filament/ changed.')
+        return (True, [])
 
   # One clang-tidy process per file, handed out as workers free up, keeps every core busy until
   # the queue drains. Largest files go first, since they tend to take longest and would otherwise
@@ -120,7 +166,8 @@ TESTS = [
     'Consider adding \'NOLINT(bugprone-exception-escape)\' for valid suppression this check.',
 
     # Maps a command line argument to a function argument
-    [('exception_escape_globs', 'src_globs'), ('jobs', 'jobs')],
+    [('exception_escape_globs', 'src_globs'), ('jobs', 'jobs'),
+     ('changed_files_file', 'changed_files_file')],
   )
 ]
 

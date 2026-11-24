@@ -6,5 +6,10 @@
 appropriate header in [RELEASE_NOTES.md](./RELEASE_NOTES.md).
 
 ## Release notes for next branch cut
+- filagui: fix `ImGuiHelper` drawing nothing with Dear ImGui 1.92.9, which no longer updates the
+  obsolete `ImDrawData::CmdListsCount` in `ImGui::Render()`
+- resgen, bluegl: generated ELF assembly and the BlueGL Linux trampolines now carry a
+  `.note.GNU-stack` section, so linking Filament's static libraries with GNU ld no longer marks
+  the output as needing an executable stack
 - gltfio: `AssetLoader::destroyAsset()` now destroys each instance root's transform component
   directly rather than relying on `Engine` garbage collection (#10852)

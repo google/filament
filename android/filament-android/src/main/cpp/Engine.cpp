@@ -318,6 +318,14 @@ Java_com_google_android_filament_Engine_nFlush(JNIEnv *env, jclass clazz, jlong 
     });
 }
 
+extern "C" JNIEXPORT void JNICALL
+Java_com_google_android_filament_Engine_nGc(JNIEnv *env, jclass clazz, jlong nativeEngine) {
+    Engine* const that = (Engine*) nativeEngine;
+    wrapJni(env, [=]() {
+        that->gc();
+    });
+}
+
 extern "C" JNIEXPORT jboolean JNICALL
 Java_com_google_android_filament_Engine_nIsPaused(JNIEnv *env, jclass clazz, jlong nativeEngine) {
     Engine const * const that = (Engine const *) nativeEngine;

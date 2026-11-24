@@ -495,9 +495,38 @@ def parse_from_path(config_path):
     return RenderTestConfig(json_txt, base_dir=base_dir)
 
 
+def list_sample_executables_from_path(config_path):
+  """Extracts sample_test executable targets from a config JSON without resolving glTF paths."""
+  with open(config_path, 'r') as f:
+    data = json.loads(_remove_comments_from_json_txt(f.read()))
+  presets = {
+    p['name']: p.get('sample_test', {}).get('executable')
+    for p in data.get('presets', [])
+  }
+  executables = []
+  seen = set()
+  for t in data.get('tests', []):
+    if 'sample_test' not in t:
+      continue
+    exe = t['sample_test'].get('executable')
+    if not exe:
+      for pname in t.get('apply_presets', []):
+        if presets.get(pname):
+          exe = presets[pname]
+    if exe and exe not in seen:
+      seen.add(exe)
+      executables.append(exe)
+  return executables
+
+
 if __name__ == "__main__":
   parser = ArgParseImpl()
   parser.add_argument('--test', help='Configuration of the test', required=True)
+  parser.add_argument('--list-sample-executables', action='store_true',
+                      help='Print space-separated sample_test executables without resolving models')
 
   args, _ = parser.parse_known_args(sys.argv[1:])
-  test = parse_from_path(args.test)
+  if args.list_sample_executables:
+    print(' '.join(list_sample_executables_from_path(args.test)))
+  else:
+    test = parse_from_path(args.test)
