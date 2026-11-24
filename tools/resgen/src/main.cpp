@@ -110,13 +110,17 @@ _{RESOURCES}PACKAGE:
     .incbin "{resources}.bin"
 )ASM";
 
-// Template for the standard assembly file.
+// Template for the standard assembly file. On ELF targets, the .note.GNU-stack section marks the
+// object as not needing an executable stack; without it, GNU ld assumes that it does.
 static const char* ASM_TEMPLATE = R"ASM(
     .global {RESOURCES}PACKAGE
     .section .rodata
     .balign 8
 {RESOURCES}PACKAGE:
     .incbin "{resources}.bin"
+#if defined(__ELF__)
+    .section .note.GNU-stack,"",%progbits
+#endif
 )ASM";
 
 // Prints the usage string, replacing the placeholder with the actual executable name.

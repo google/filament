@@ -573,7 +573,7 @@ private:
 
     static const JitterSequence<4> sRGSS4;
     static const JitterSequence<4> sUniformHelix4;
-    static const JitterSequence<32> sHaltonSamples;
+    static const JitterSequence<128> sHaltonSamples;
 
     bool mWorkaroundSplitEasu : 1;
     bool mWorkaroundAllowReadOnlyAncillaryFeedbackLoop : 1;

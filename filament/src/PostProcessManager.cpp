@@ -227,8 +227,8 @@ static constexpr auto halton() {
     return h;
 }
 
-const PostProcessManager::JitterSequence<32>
-        PostProcessManager::sHaltonSamples = { halton<32>() };
+const PostProcessManager::JitterSequence<128>
+        PostProcessManager::sHaltonSamples = { halton<128>() };
 
 PostProcessManager::PostProcessManager(FEngine& engine) noexcept
         : mEngine(engine),
@@ -3138,7 +3138,8 @@ void PostProcessManager::TaaJitterCamera(
             ? taaOptions.motionHoldFrames
             : std::max(0.0f, previous.motionHoldRemaining - 1.0f);
 
-    auto jitterPosition = [pattern = taaOptions.jitterPattern](size_t const frameIndex) -> float2 {
+    auto jitterPosition = [pattern = taaOptions.jitterPattern,
+                           upscaling = taaOptions.upscaling](size_t const frameIndex) -> float2 {
         using JitterPattern = TemporalAntiAliasingOptions::JitterPattern;
         switch (pattern) {
             case JitterPattern::RGSS_X4:
@@ -3150,7 +3151,13 @@ void PostProcessManager::TaaJitterCamera(
             case JitterPattern::HALTON_23_X16:
                 return sHaltonSamples(frameIndex % 16);
             case JitterPattern::HALTON_23_X32:
-                return sHaltonSamples(frameIndex);
+                return sHaltonSamples(frameIndex % 32);
+            case JitterPattern::HALTON_23_SCALED: {
+                float const u = std::max(1.0f, upscaling);
+                size_t const phaseCount = std::clamp(
+                        size_t(std::ceil(8.0f * u * u)), size_t(8), size_t(128));
+                return sHaltonSamples(frameIndex % phaseCount);
+            }
         }
         return { 0.0f, 0.0f };
     };

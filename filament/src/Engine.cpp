@@ -386,6 +386,10 @@ void Engine::flush() {
     downcast(this)->flush();
 }
 
+void Engine::gc() {
+    downcast(this)->gc();
+}
+
 EntityManager& Engine::getEntityManager() const noexcept {
     return downcast(this)->getEntityManager();
 }

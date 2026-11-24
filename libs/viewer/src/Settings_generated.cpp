@@ -806,6 +806,7 @@ int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, TemporalAntiAli
     else if (0 == compare(tokens[i], jsonChunk, "HALTON_23_X8")) { *out = TemporalAntiAliasingOptions::JitterPattern::HALTON_23_X8; }
     else if (0 == compare(tokens[i], jsonChunk, "HALTON_23_X16")) { *out = TemporalAntiAliasingOptions::JitterPattern::HALTON_23_X16; }
     else if (0 == compare(tokens[i], jsonChunk, "HALTON_23_X32")) { *out = TemporalAntiAliasingOptions::JitterPattern::HALTON_23_X32; }
+    else if (0 == compare(tokens[i], jsonChunk, "HALTON_23_SCALED")) { *out = TemporalAntiAliasingOptions::JitterPattern::HALTON_23_SCALED; }
     else {
         slog.w << "Invalid TemporalAntiAliasingOptions::JitterPattern: '" << STR(tokens[i], jsonChunk) << "'" << io::endl;
     }
@@ -819,6 +820,7 @@ std::ostream& operator<<(std::ostream& out, TemporalAntiAliasingOptions::JitterP
         case TemporalAntiAliasingOptions::JitterPattern::HALTON_23_X8: return out << "\"HALTON_23_X8\"";
         case TemporalAntiAliasingOptions::JitterPattern::HALTON_23_X16: return out << "\"HALTON_23_X16\"";
         case TemporalAntiAliasingOptions::JitterPattern::HALTON_23_X32: return out << "\"HALTON_23_X32\"";
+        case TemporalAntiAliasingOptions::JitterPattern::HALTON_23_SCALED: return out << "\"HALTON_23_SCALED\"";
     }
     return out << "\"INVALID\"";
 }

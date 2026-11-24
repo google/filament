@@ -55,6 +55,7 @@ enum_<View::TemporalAntiAliasingOptions::JitterPattern>("View$TemporalAntiAliasi
     .value("HALTON_23_X8", View::TemporalAntiAliasingOptions::JitterPattern::HALTON_23_X8)
     .value("HALTON_23_X16", View::TemporalAntiAliasingOptions::JitterPattern::HALTON_23_X16)
     .value("HALTON_23_X32", View::TemporalAntiAliasingOptions::JitterPattern::HALTON_23_X32)
+    .value("HALTON_23_SCALED", View::TemporalAntiAliasingOptions::JitterPattern::HALTON_23_SCALED)
     ;
 
 enum_<View::AntiAliasing>("View$AntiAliasing")
