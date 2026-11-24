@@ -37,6 +37,7 @@
 #include "details/Texture.h"
 #include "details/VertexBuffer.h"
 
+#include "ds/ColorPassDescriptorSet.h"
 #include "ds/DescriptorSet.h"
 #include "ds/SsrPassDescriptorSet.h"
 #include "ds/TypedUniformBuffer.h"
@@ -318,6 +319,9 @@ static const PostProcessManager::StaticMaterialInfo sMaterialListFeatureLevel0[]
 static const PostProcessManager::StaticMaterialInfo sMaterialList[] = {
         { "blitArray",                  MATERIAL(MATERIALS, BLITARRAY) },
         { "blitDepth",                  MATERIAL(MATERIALS, BLITDEPTH) },
+#ifdef FILAMENT_ENABLE_MULTIVIEW
+        { "blitMultiview",              MATERIAL(MATERIALS, BLITMULTIVIEW_MULTIVIEW) },
+#endif
         { "clearDepth",                 MATERIAL(MATERIALS, CLEARDEPTH) },
         { "separableGaussianBlur1",     MATERIAL(MATERIALS, SEPARABLEGAUSSIANBLUR),
                 { {"arraySampler", false}, {"componentCount", 1} } },
@@ -3954,6 +3958,71 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::blit(FrameGraph& fg, bool co
 
     return ppQuadBlit->output;
 }
+
+#ifdef FILAMENT_ENABLE_MULTIVIEW
+FrameGraphId<FrameGraphTexture> PostProcessManager::blitMultiview(FrameGraph& fg,
+        bool const translucent, FrameGraphId<FrameGraphTexture> const input,
+        FrameGraphTexture::Descriptor const& outDesc,
+        ColorPassDescriptorSet const& colorPassDescriptorSet) noexcept {
+
+    assert_invariant(fg.getDescriptor(input).type == SamplerType::SAMPLER_2D_ARRAY);
+    assert_invariant(fg.getDescriptor(input).depth == outDesc.depth);
+    assert_invariant(fg.getSubResourceDescriptor(input).layer == 0);
+    assert_invariant(fg.getSubResourceDescriptor(input).level == 0);
+
+    struct QuadBlitData {
+        FrameGraphId<FrameGraphTexture> input;
+        FrameGraphId<FrameGraphTexture> output;
+    };
+
+    auto const& ppQuadBlit = fg.addPass<QuadBlitData>("blitting multiview",
+            [&](FrameGraph::Builder& builder, auto& data) {
+                data.input = builder.sample(input);
+                data.output = builder.createTexture("blit multiview output", outDesc);
+                data.output = builder.write(data.output,
+                        FrameGraphTexture::Usage::COLOR_ATTACHMENT);
+                builder.declareRenderPass(builder.getName(data.output), {
+                        .attachments = { .color = { data.output }},
+                        .layerCount = uint8_t(outDesc.depth) });
+            },
+            [=, this, &colorPassDescriptorSet](FrameGraphResources const& resources,
+                    auto const& data, DriverApi& driver) {
+                // blitMultiview is an unlit surface material, so it needs the view's color pass
+                // set.
+                colorPassDescriptorSet[ColorPassDescriptorSet::getIndex(false, false, false)]
+                        .bind(driver, DescriptorSetBindingPoints::PER_VIEW);
+                bindPerRenderableDescriptorSet(driver);
+                auto color = resources.getTexture(data.input);
+                auto out = resources.getRenderPassInfo();
+
+                PostProcessMaterial const& material = getPostProcessMaterial("blitMultiview");
+                FMaterial const* const ma = material.getMaterial(mEngine);
+                auto* mi = getMaterialInstance(driver, ma, Variant::STE);
+                mi->setParameter("color", color, SamplerParams{
+                        .filterMag = SamplerMagFilter::NEAREST,
+                        .filterMin = SamplerMinFilter::NEAREST
+                });
+                mi->commit(driver, getUboManager());
+                mi->use(driver);
+
+                auto pipeline = getPipelineState(mi, Variant::STE);
+                // Only the set for the view's current shadow type is committed.
+                pipeline.pipelineLayout.setLayout[+DescriptorSetBindingPoints::PER_VIEW] =
+                        ma->getPerViewDescriptorSetLayout(Variant{ Variant::STE },
+                                colorPassDescriptorSet.isVSM()).getHandle();
+                if (translucent) {
+                    pipeline.rasterState.blendFunctionSrcRGB = BlendFunction::ONE;
+                    pipeline.rasterState.blendFunctionSrcAlpha = BlendFunction::ONE;
+                    pipeline.rasterState.blendFunctionDstRGB = BlendFunction::ONE_MINUS_SRC_ALPHA;
+                    pipeline.rasterState.blendFunctionDstAlpha = BlendFunction::ONE_MINUS_SRC_ALPHA;
+                }
+                renderFullScreenQuad(out, pipeline, driver);
+                unbindAllDescriptorSets(driver);
+            });
+
+    return ppQuadBlit->output;
+}
+#endif
 
 FrameGraphId<FrameGraphTexture> PostProcessManager::blitDepth(FrameGraph& fg,
         FrameGraphId<FrameGraphTexture> const input) noexcept {
