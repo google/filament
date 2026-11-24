@@ -74,6 +74,10 @@ public:
     // backends wait for the main thread from their driver thread (see the definition).
     void runFrameLoop(FrameFn frame) override;
 
+    // An unpaced loop has to wait when a frame is declined, otherwise it retries faster than the
+    // engine can catch up.
+    void onFrameSkipped() override;
+
     // Scripted input and synthetic clock, for deterministic testing. These follow the threading
     // contract documented above: call them from the thread running the frame loop, which in
     // practice means from a FilamentApp2 callback.

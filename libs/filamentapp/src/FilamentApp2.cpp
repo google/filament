@@ -716,6 +716,7 @@ bool FilamentApp2::doFrame() {
             mCurrentFrame++;
         } else {
             ++mSkippedFrames;
+            mDisplayManager->onFrameSkipped();
         }
 
 #ifdef __EXCEPTIONS
