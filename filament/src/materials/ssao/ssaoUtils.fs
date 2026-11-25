@@ -34,15 +34,12 @@ highp float unpack(highp vec2 depth) {
     return (depth.x * (256.0 / 257.0) + depth.y * (1.0 / 257.0));
 }
 
-// Returns the center uv of the level-0 texel that a depth sample at uv reads.
-// The depth texture uses nearest filtering, so a sample reads one texel center, not uv.
-// Each mip level keeps one texel of each 2x2 block below it (see mipmapDepth.mat),
-// and the loop follows that choice down to level 0. A position rebuilt at the returned
-// uv is on the surface. A position rebuilt at uv can be off the surface.
+// returns the uv of the level-0 texel that the depth sampled at uv comes from
 highp vec2 depthTexelUV(const highp sampler2D depthTexture, const highp vec2 uv, int lod) {
     highp vec2 st = uvToRenderTargetUV(uv);
     ivec2 size = textureSize(depthTexture, lod);
     ivec2 texel = clamp(ivec2(floor(st * vec2(size))), ivec2(0), size - 1);
+    // follow mipmapDepth.mat's rotated grid sub-sample down to level 0
     for (int i = 0; i < lod; i++) {
         texel = 2 * texel + ivec2(texel.y & 1, texel.x & 1);
     }
