@@ -138,6 +138,17 @@ public:
             filament::Renderer* renderer) {}
 
     /**
+     * Called when a frame was declined, i.e. Renderer::beginFrame() returned false and no
+     * rendering took place.
+     *
+     * A display manager whose frame loop is already paced, by the default implementation or by an
+     * external frame source, can leave this empty: the next attempt is a frame away anyway. An
+     * unpaced manager should wait here instead, because a frame is declined when the GPU or the
+     * driver thread is behind, and retrying immediately keeps them behind.
+     */
+    virtual void onFrameSkipped() {}
+
+    /**
      * Renders a single frame on behalf of runFrameLoop(). Returns true once the application has
      * finished, after which it must not be invoked again.
      */
