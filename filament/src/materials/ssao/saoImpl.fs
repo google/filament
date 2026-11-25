@@ -69,7 +69,9 @@ void computeAmbientOcclusionSAO(inout float occlusion, inout vec3 bentNormal,
 
     float level = clamp(floor(log2(ssRadius)) - kLog2LodRate, 0.0, float(materialParams.maxLevel));
     highp float occlusionDepth = sampleDepthLinear(materialParams_depth, uvSamplePos, level);
-    highp vec3 p = computeViewSpacePositionFromDepth(uvSamplePos, occlusionDepth, materialParams.positionParams);
+    // reconstruct p at the texel its depth came from, otherwise p is off the surface
+    highp vec2 uvTexel = depthTexelUV(materialParams_depth, uvSamplePos, int(level));
+    highp vec3 p = computeViewSpacePositionFromDepth(uvTexel, occlusionDepth, materialParams.positionParams);
 
     // now we have the sample, compute AO
     highp vec3 v = p - origin;  // sample vector
