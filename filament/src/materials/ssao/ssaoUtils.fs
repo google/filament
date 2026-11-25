@@ -34,6 +34,18 @@ highp float unpack(highp vec2 depth) {
     return (depth.x * (256.0 / 257.0) + depth.y * (1.0 / 257.0));
 }
 
+// returns the uv of the level-0 texel that the depth sampled at uv comes from
+highp vec2 depthTexelUV(const highp sampler2D depthTexture, const highp vec2 uv, int lod) {
+    highp vec2 st = uvToRenderTargetUV(uv);
+    ivec2 size = textureSize(depthTexture, lod);
+    ivec2 texel = clamp(ivec2(floor(st * vec2(size))), ivec2(0), size - 1);
+    // follow mipmapDepth.mat's rotated grid sub-sample down to level 0
+    for (int i = 0; i < lod; i++) {
+        texel = 2 * texel + ivec2(texel.y & 1, texel.x & 1);
+    }
+    return uvToRenderTargetUV((vec2(texel) + 0.5) / vec2(textureSize(depthTexture, 0)));
+}
+
 vec3 packBentNormal(vec3 bn) {
     return bn * 0.5 + 0.5;
 }
