@@ -90,86 +90,10 @@ uint getLightIndex(const uint index) {
     return (d[c] >> s) & 0xFFu;
 }
 
-float getSquareFalloffAttenuation(float distanceSquare, float falloff) {
-    float factor = distanceSquare * falloff;
-    float smoothFactor = saturate(1.0 - factor * factor);
-    // We would normally divide by the square distance here
-    // but we do it at the call site
-    return smoothFactor * smoothFactor;
-}
-
-float getDistanceAttenuation(const highp vec3 posToLight, float falloff) {
-    float distanceSquare = dot(posToLight, posToLight);
-    float attenuation = getSquareFalloffAttenuation(distanceSquare, falloff);
-    // light far attenuation
-    highp vec3 v = getWorldPosition() - getWorldCameraPosition();
-    attenuation *= saturate(frameUniforms.lightFarAttenuationParams.x - dot(v, v) * frameUniforms.lightFarAttenuationParams.y);
-    // Assume a punctual light occupies a volume of 1cm to avoid a division by 0
-    return attenuation / max(distanceSquare, 1e-4);
-}
-
 float getAngleAttenuation(const highp vec3 lightDir, const highp vec3 l, const highp vec2 scaleOffset) {
     float cd = dot(lightDir, l);
     float attenuation = saturate(cd * scaleOffset.x + scaleOffset.y);
     return attenuation * attenuation;
-}
-
-/**
- * Returns a Light structure (see surface_lighting.fs) describing a point or spot light.
- * The colorIntensity field will store the *pre-exposed* intensity of the light
- * in the w component.
- *
- * The light parameters used to compute the Light structure are fetched from the
- * lightsUniforms uniform buffer.
- */
-
-Light getLight(const uint lightIndex) {
-    // retrieve the light data from the UBO
-
-    highp mat4 data = lightsUniforms.lights[lightIndex];
-
-    highp vec4 positionFalloff = data[0];
-    highp vec3 direction = data[1].xyz;
-    vec4 colorIES = vec4(
-        unpackHalf2x16(floatBitsToUint(data[2][0])),
-        unpackHalf2x16(floatBitsToUint(data[2][1]))
-    );
-    highp vec2 scaleOffset = data[2].zw;
-    highp float intensity = data[3][1];
-    highp uint typeShadow = floatBitsToUint(data[3][2]);
-    highp uint channels = floatBitsToUint(data[3][3]);
-
-    // poition-to-light vector
-    highp vec3 worldPosition = getWorldPosition();
-    highp vec3 posToLight = positionFalloff.xyz - worldPosition;
-
-    // and populate the Light structure
-    Light light;
-    light.colorIntensity.rgb = colorIES.rgb;
-    light.colorIntensity.w = computePreExposedIntensity(intensity, frameUniforms.exposure);
-    light.l = normalize(posToLight);
-    light.attenuation = getDistanceAttenuation(posToLight, positionFalloff.w);
-    light.direction = direction;
-    light.NoL = saturate(dot(shading_normal, light.l));
-    light.worldPosition = positionFalloff.xyz;
-    light.channels = int(channels);
-    light.contactShadows = bool(typeShadow & 0x10u);
-#if defined(MATERIAL_HAS_LIGHTING)
-    if (RUNTIME_CONFIG_HAS_DYNAMIC_LIGHTING) {
-        light.lightType = (typeShadow & 0x1u);
-#if defined(VARIANT_HAS_SHADOWING)
-        light.shadowIndex = int((typeShadow >>  8u) & 0xFFu);
-        light.castsShadows   = bool(channels & 0x10000u);
-        if (light.lightType == LIGHT_TYPE_SPOT) {
-            light.zLight = dot(shadowUniforms.shadows[light.shadowIndex].lightFromWorldZ, vec4(worldPosition, 1.0));
-        }
-#endif
-        if (light.lightType == LIGHT_TYPE_SPOT) {
-            light.attenuation *= getAngleAttenuation(-direction, light.l, scaleOffset);
-        }
-    }
-#endif
-    return light;
 }
 
 /**
@@ -179,6 +103,16 @@ Light getLight(const uint lightIndex) {
  */
 void evaluatePunctualLights(const MaterialInputs material,
         const PixelParams pixel, inout vec3 color) {
+
+#if !defined(MATERIAL_HAS_CUSTOM_SURFACE_SHADING)
+    if (!CONFIG_DEBUG_FROXEL_VISUALIZATION) {
+        highp vec3 v = getWorldPosition() - getWorldCameraPosition();
+        if (dot(v, v) * frameUniforms.lightFarAttenuationParams.y >=
+                frameUniforms.lightFarAttenuationParams.x) {
+            return;
+        }
+    }
+#endif
 
     // Fetch the light information stored in the froxel that contains the
     // current fragment
@@ -197,16 +131,76 @@ void evaluatePunctualLights(const MaterialInputs material,
     // Iterate point lights
     for ( ; index < end; index++) {
         uint lightIndex = getLightIndex(index);
-        Light light = getLight(lightIndex);
-        if ((light.channels & channels) == 0) {
+
+        highp vec4 data3 = lightsUniforms.lights[lightIndex][3];
+        highp uint lightChannels = floatBitsToUint(data3[3]);
+        if ((int(lightChannels) & channels) == 0) {
             continue;
         }
 
-#if defined(MATERIAL_CAN_SKIP_LIGHTING)
-        if (light.NoL <= 0.0 || light.attenuation <= 0.0) {
+        highp vec4 positionFalloff = lightsUniforms.lights[lightIndex][0];
+        highp vec3 worldPosition = getWorldPosition();
+        highp vec3 posToLight = positionFalloff.xyz - worldPosition;
+        highp float distanceSquare = dot(posToLight, posToLight);
+        float factor = distanceSquare * positionFalloff.w;
+#if !defined(MATERIAL_HAS_CUSTOM_SURFACE_SHADING)
+        if (factor >= 1.0) {
             continue;
         }
 #endif
+
+        highp float rawNoL = dot(shading_normal, posToLight);
+#if defined(MATERIAL_CAN_SKIP_LIGHTING)
+        if (rawNoL <= 0.0) {
+            continue;
+        }
+#endif
+
+        highp float invDist = inversesqrt(max(distanceSquare, 1e-12));
+        vec3 l = posToLight * invDist;
+
+        float smoothFactor = saturate(1.0 - factor * factor);
+        float attenuation = smoothFactor * smoothFactor;
+        highp vec3 v = worldPosition - getWorldCameraPosition();
+        attenuation *= saturate(frameUniforms.lightFarAttenuationParams.x -
+                dot(v, v) * frameUniforms.lightFarAttenuationParams.y);
+        // Assume a punctual light occupies a volume of 1cm to avoid a division by 0
+        attenuation *= min(invDist * invDist, 1e4);
+
+        highp uint typeShadow = floatBitsToUint(data3[2]);
+        highp vec3 direction = lightsUniforms.lights[lightIndex][1].xyz;
+        highp vec4 data2 = lightsUniforms.lights[lightIndex][2];
+
+        Light light;
+        light.attenuation = attenuation;
+        light.direction = direction;
+        light.l = l;
+        light.NoL = saturate(rawNoL * invDist);
+        light.worldPosition = positionFalloff.xyz;
+        light.channels = int(lightChannels);
+        light.contactShadows = bool(typeShadow & 0x10u);
+#if defined(MATERIAL_HAS_LIGHTING)
+        if (RUNTIME_CONFIG_HAS_DYNAMIC_LIGHTING) {
+            light.lightType = (typeShadow & 0x1u);
+#if defined(VARIANT_HAS_SHADOWING)
+            light.shadowIndex = int((typeShadow >> 8u) & 0xFFu);
+            light.castsShadows = bool(lightChannels & 0x10000u);
+#endif
+            if (light.lightType == LIGHT_TYPE_SPOT) {
+                light.attenuation *= getAngleAttenuation(-direction, light.l, data2.zw);
+            }
+        }
+#endif
+
+#if !defined(MATERIAL_HAS_CUSTOM_SURFACE_SHADING)
+        if (light.attenuation <= 0.0) {
+            continue;
+        }
+#endif
+
+        light.colorIntensity.rg = unpackHalf2x16(floatBitsToUint(data2[0]));
+        light.colorIntensity.b = unpackHalf2x16(floatBitsToUint(data2[1])).x;
+        light.colorIntensity.w = computePreExposedIntensity(data3[1], frameUniforms.exposure);
 
         float visibility = 1.0;
 #if defined(VARIANT_HAS_SHADOWING)
@@ -215,15 +209,15 @@ void evaluatePunctualLights(const MaterialInputs material,
                 int shadowIndex = light.shadowIndex;
                 if (light.lightType == LIGHT_TYPE_POINT) {
                     // point-light shadows are sampled from a direction
-                    highp vec3 r = getWorldPosition() - light.worldPosition;
-                    int face = getPointLightFace(r);
+                    int face = getPointLightFace(-posToLight);
                     shadowIndex += face;
-                    light.zLight = dot(shadowUniforms.shadows[shadowIndex].lightFromWorldZ,
-                            vec4(getWorldPosition(), 1.0));
                 }
-                highp vec4 shadowPosition = getShadowPosition(shadowIndex, light.direction, light.zLight);
+                highp float zLight = dot(shadowUniforms.shadows[shadowIndex].lightFromWorldZ,
+                        vec4(worldPosition, 1.0));
+                light.zLight = zLight;
+                highp vec4 shadowPosition = getShadowPosition(shadowIndex, light.direction, zLight);
                 visibility = shadow(false, sampler0_shadowMap, shadowIndex,
-                        shadowPosition, light.zLight);
+                        shadowPosition, zLight);
 #if defined(MATERIAL_HAS_SHADOW_STRENGTH)
                 applyShadowStrength(visibility, material.shadowStrength);
 #endif

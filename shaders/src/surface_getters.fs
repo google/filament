@@ -49,6 +49,11 @@ highp vec3 getWorldPosition() {
     return shading_position;
 }
 
+highp float getViewSpaceZ() {
+    highp mat4 m = getViewFromWorldMatrix();
+    return dot(vec3(m[0].z, m[1].z, m[2].z), getWorldPosition()) + m[3].z;
+}
+
 /** @public-api */
 highp vec3 getUserWorldPosition() {
     return mulMat4x4Float3(getUserWorldFromWorldMatrix(), getWorldPosition()).xyz;
@@ -130,7 +135,7 @@ bool isDoubleSided() {
  * Returns the cascade index for this fragment (between 0 and CONFIG_MAX_SHADOW_CASCADES - 1).
  */
 int getShadowCascade() {
-    highp float z = mulMat4x4Float3(getViewFromWorldMatrix(), getWorldPosition()).z;
+    highp float z = getViewSpaceZ();
     ivec4 greaterZ = ivec4(greaterThan(frameUniforms.cascadeSplits, vec4(z)));
     int cascadeCount = frameUniforms.cascades & 0xF;
     return clamp(greaterZ.x + greaterZ.y + greaterZ.z + greaterZ.w, 0, cascadeCount - 1);

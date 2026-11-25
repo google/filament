@@ -11,19 +11,13 @@
 // Ambient occlusion helpers
 //------------------------------------------------------------------------------
 
-float unpack(vec2 depth) {
-    // this is equivalent to (x8 * 256 + y8) / 65535, which gives a value between 0 and 1
-    return (depth.x * (256.0 / 257.0) + depth.y * (1.0 / 257.0));
+vec3 unpackBentNormal(vec3 bn) {
+    // this must match src/materials/ssao/ssaoUtils.fs
+    return bn * 2.0 - 1.0;
 }
 
-struct SSAOInterpolationCache {
-    highp vec4 weights;
-#if defined(BLEND_MODE_OPAQUE) || defined(BLEND_MODE_MASKED) || defined(MATERIAL_HAS_REFLECTIONS)
-    highp vec2 uv;
-#endif
-};
-
-float evaluateSSAO(inout SSAOInterpolationCache cache) {
+float evaluateSSAO(out vec3 ssBentNormal) {
+    ssBentNormal = vec3(0.0);
 #if defined(BLEND_MODE_OPAQUE) || defined(BLEND_MODE_MASKED)
 
     if (frameUniforms.aoSamplingQualityAndEdgeDistance < 0.0) {
@@ -31,39 +25,51 @@ float evaluateSSAO(inout SSAOInterpolationCache cache) {
         return 1.0;
     }
 
+    highp vec2 uv = uvToRenderTargetUV(getNormalizedPhysicalViewportCoord().xy);
+
     // Upscale the SSAO buffer in real-time, in high quality mode we use a custom bilinear
     // filter. This adds about 2.0ms @ 250MHz on Pixel 4.
 
     if (frameUniforms.aoSamplingQualityAndEdgeDistance > 0.0) {
-        highp vec2 size = vec2(textureSize(sampler0_ssao, 0));
+        highp ivec2 texSize = textureSize(sampler0_ssao, 0).xy;
+        highp vec2 size = vec2(texSize);
 
         // Read four AO samples and their depths values
         vec4 ao, dg, db;
-        filament_textureGatherFetchRGB(sampler0_ssao, vec3(cache.uv, 0.0), ao, dg, db);
-        // bilateral weights
-        vec4 depths;
-        depths.x = unpack(vec2(dg.x, db.x));
-        depths.y = unpack(vec2(dg.y, db.y));
-        depths.z = unpack(vec2(dg.z, db.z));
-        depths.w = unpack(vec2(dg.w, db.w));
-        depths *= -frameUniforms.cameraFar;
+        filament_textureGatherFetchRGB(sampler0_ssao, vec3(uv, 0.0), texSize, ao, dg, db);
+        // bilateral weights (unpacked in highp to preserve 16-bit depth precision
+        // and avoid fp16 overflow)
+        highp vec2 depthScale = -frameUniforms.cameraFar * vec2(256.0 / 257.0, 1.0 / 257.0);
+        highp vec4 depths = dg * depthScale.x + db * depthScale.y;
 
         // bilinear weights
-        vec2 f = fract(cache.uv * size - 0.5);
+        vec2 f = fract(uv * size - 0.5);
         vec4 b;
         b.x = (1.0 - f.x) * f.y;
         b.y = f.x * f.y;
         b.z = f.x * (1.0 - f.y);
         b.w = (1.0 - f.x) * (1.0 - f.y);
 
-        highp mat4 m = getViewFromWorldMatrix();
-        highp float d = dot(vec3(m[0].z, m[1].z, m[2].z), shading_position) + m[3].z;
+        highp float d = getViewSpaceZ();
         highp vec4 w = (vec4(d) - depths) * frameUniforms.aoSamplingQualityAndEdgeDistance;
         w = max(vec4(MEDIUMP_FLT_MIN), 1.0 - w * w) * b;
-        cache.weights = w / (w.x + w.y + w.z + w.w);
-        return dot(ao, cache.weights);
+        highp vec4 weights = w / (w.x + w.y + w.z + w.w);
+
+        if (frameUniforms.aoBentNormals > 0.0) {
+            vec4 bnr, bng, bnb;
+            filament_textureGatherFetchRGB(sampler0_ssao, vec3(uv, 1.0), texSize, bnr, bng, bnb);
+            ssBentNormal.r = dot(bnr, weights);
+            ssBentNormal.g = dot(bng, weights);
+            ssBentNormal.b = dot(bnb, weights);
+            ssBentNormal = normalize(unpackBentNormal(ssBentNormal));
+        }
+        return dot(ao, weights);
     } else {
-        return textureLod(sampler0_ssao, vec3(cache.uv, 0.0), 0.0).r;
+        if (frameUniforms.aoBentNormals > 0.0) {
+            ssBentNormal = textureLod(sampler0_ssao, vec3(uv, 1.0), 0.0).xyz;
+            ssBentNormal = normalize(unpackBentNormal(ssBentNormal));
+        }
+        return textureLod(sampler0_ssao, vec3(uv, 0.0), 0.0).r;
     }
 #else
     // SSAO is not applied when blending is enabled
@@ -73,7 +79,10 @@ float evaluateSSAO(inout SSAOInterpolationCache cache) {
 
 float SpecularAO_Lagarde(float NoV, float visibility, float roughness) {
     // Lagarde and de Rousiers 2014, "Moving Frostbite to PBR"
-    return saturate(pow(NoV + visibility, exp2(-16.0 * roughness - 1.0)) - 1.0 + visibility);
+    if (visibility >= 1.0) {
+        return 1.0;
+    }
+    return saturate(exp2(log2(NoV + visibility) * exp2(-16.0 * roughness - 1.0)) - 1.0 + visibility);
 }
 
 float sphericalCapsIntersection(float cosCap1, float cosCap2, float cosDistance) {
@@ -123,12 +132,7 @@ float SpecularAO_Cones(vec3 bentNormal, float visibility, float roughness) {
 /**
  * Computes a specular occlusion term from the ambient occlusion term.
  */
-vec3 unpackBentNormal(vec3 bn) {
-    // this must match src/materials/ssao/ssaoUtils.fs
-    return bn * 2.0 - 1.0;
-}
-
-float specularAO(float NoV, float visibility, float roughness, const in SSAOInterpolationCache cache) {
+float specularAO(float NoV, float visibility, float roughness, const vec3 ssBentNormal) {
     float specularAO = 1.0;
 
 // SSAO is not applied when blending is enabled
@@ -146,21 +150,7 @@ float specularAO(float NoV, float visibility, float roughness, const in SSAOInte
 #endif
 
     if (frameUniforms.aoBentNormals > 0.0) {
-        vec3 bn;
-        if (frameUniforms.aoSamplingQualityAndEdgeDistance > 0.0) {
-            vec4 bnr, bng, bnb;
-            filament_textureGatherFetchRGB(sampler0_ssao, vec3(cache.uv, 1.0), bnr, bng, bnb);
-            bn.r = dot(bnr, cache.weights);
-            bn.g = dot(bng, cache.weights);
-            bn.b = dot(bnb, cache.weights);
-        } else {
-            bn = textureLod(sampler0_ssao, vec3(cache.uv, 1.0), 0.0).xyz;
-        }
-
-        bn = unpackBentNormal(bn);
-        bn = normalize(bn);
-
-        float ssSpecularAO = SpecularAO_Cones(bn, visibility, roughness);
+        float ssSpecularAO = SpecularAO_Cones(ssBentNormal, visibility, roughness);
         // Combine the specular AO from the texture with screen space specular AO
         specularAO = min(specularAO, ssSpecularAO);
 

@@ -391,15 +391,9 @@ float ShadowSample_EVSSM(const bool DIRECTIONAL, const highp sampler2DArray shad
 // Screen-space Contact Shadows
 //------------------------------------------------------------------------------
 
-struct ScreenSpaceRay {
-    highp vec3 ssRayStart;
-    highp vec3 ssRayEnd;
-    highp vec3 ssViewRayEnd;
-    highp vec3 uvRayStart;
-    highp vec3 uvRay;
-};
-
-void initScreenSpaceRay(out ScreenSpaceRay ray, highp vec3 wsRayStart, vec3 wsRayDirection, float wsRayLength) {
+void initScreenSpaceRay(out highp vec3 uvRayStart, out highp vec3 uvRay,
+        out highp float ssViewRayDiffZ, highp vec3 wsRayStart, vec3 wsRayDirection,
+        float wsRayLength) {
     highp mat4 worldToClip = getClipFromWorldMatrix();
     highp mat4 viewToClip = getClipFromViewMatrix();
 
@@ -407,19 +401,20 @@ void initScreenSpaceRay(out ScreenSpaceRay ray, highp vec3 wsRayStart, vec3 wsRa
     highp vec3 wsRayEnd = wsRayStart + wsRayDirection * wsRayLength;
 
     // ray start/end in clip space (z is inverted: [1,0])
-    highp vec4 csRayStart = worldToClip * vec4(wsRayStart, 1.0);
-    highp vec4 csRayEnd = worldToClip * vec4(wsRayEnd, 1.0);
-    highp vec4 csViewRayEnd = csRayStart + viewToClip * vec4(0.0, 0.0, wsRayLength, 0.0);
+    highp vec4 csRayStart = mulMat4x4Float3(worldToClip, wsRayStart);
+    highp vec4 csRayEnd = mulMat4x4Float3(worldToClip, wsRayEnd);
+    highp vec2 csViewRayEndZW = csRayStart.zw + viewToClip[2].zw * wsRayLength;
 
     // ray start/end in screen space (z is inverted: [1,0])
-    ray.ssRayStart = csRayStart.xyz * (1.0 / csRayStart.w);
-    ray.ssRayEnd = csRayEnd.xyz * (1.0 / csRayEnd.w);
-    ray.ssViewRayEnd = csViewRayEnd.xyz * (1.0 / csViewRayEnd.w);
+    highp vec3 ssRayStart = csRayStart.xyz * (1.0 / csRayStart.w);
+    highp vec3 ssRayEnd = csRayEnd.xyz * (1.0 / csRayEnd.w);
+    highp float ssViewRayEndZ = csViewRayEndZW.x / csViewRayEndZW.y;
+    ssViewRayDiffZ = abs(ssViewRayEndZ - ssRayStart.z);
 
-    // convert all to uv (texture) space (z is inverted: [1,0])
-    highp vec3 uvRayEnd = vec3(ray.ssRayEnd.xy * 0.5 + 0.5, ray.ssRayEnd.z);
-    ray.uvRayStart = vec3(ray.ssRayStart.xy * 0.5 + 0.5, ray.ssRayStart.z);
-    ray.uvRay = uvRayEnd - ray.uvRayStart;
+    // convert all to render-target uv (texture) space (z is inverted: [1,0])
+    highp vec3 uvRayEnd = vec3(uvToRenderTargetUV(ssRayEnd.xy * 0.5 + 0.5), ssRayEnd.z);
+    uvRayStart = vec3(uvToRenderTargetUV(ssRayStart.xy * 0.5 + 0.5), ssRayStart.z);
+    uvRay = uvRayEnd - uvRayStart;
 }
 
 float screenSpaceContactShadow(vec3 lightDirection) {
@@ -428,25 +423,26 @@ float screenSpaceContactShadow(vec3 lightDirection) {
     int kStepCount = (frameUniforms.directionalShadows >> 8) & 0xFF;
     float kDistanceMax = frameUniforms.ssContactShadowDistance;
 
-    ScreenSpaceRay rayData;
-    initScreenSpaceRay(rayData, shading_position, lightDirection, kDistanceMax);
+    highp vec3 uvRayStart;
+    highp vec3 uvRay;
+    highp float ssViewRayDiffZ;
+    initScreenSpaceRay(uvRayStart, uvRay, ssViewRayDiffZ,
+            shading_position, lightDirection, kDistanceMax);
 
     // step
     highp float dt = 1.0 / float(kStepCount);
 
     // tolerance
-    highp float tolerance = abs(rayData.ssViewRayEnd.z - rayData.ssRayStart.z) * dt;
+    highp float tolerance = ssViewRayDiffZ * dt;
 
     // dither the ray with interleaved gradient noise
     float dither = interleavedGradientNoise(gl_FragCoord.xy) - 0.5;
 
-    // normalized position on the ray (0 to 1)
-    highp float t = dt * dither + dt;
-
-    highp vec3 ray;
-    for (int i = 0 ; i < kStepCount ; i++, t += dt) {
-        ray = rayData.uvRayStart + rayData.uvRay * t;
-        highp float z = textureLod(sampler0_structure, uvToRenderTargetUV(ray.xy), 0.0).r;
+    // step ray directly in render-target UV space (edge fade below is symmetric under 1.0 - y)
+    highp vec3 rayStep = uvRay * dt;
+    highp vec3 ray = uvRayStart + rayStep * (dither + 1.0);
+    for (int i = 0 ; i < kStepCount ; i++, ray += rayStep) {
+        highp float z = textureLod(sampler0_structure, ray.xy, 0.0).r;
         highp float dz = z - ray.z;
         if (abs(tolerance - dz) < tolerance) {
             occlusion = 1.0;

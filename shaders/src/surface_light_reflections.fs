@@ -4,18 +4,6 @@
 
 #if defined(MATERIAL_HAS_REFLECTIONS)
 
-// Copied from depthUtils.fs
-highp float linearizeDepth(highp float depth) {
-    // Our far plane is at infinity, which causes a division by zero below, which in turn
-    // causes some issues on some GPU. We workaround it by replacing "infinity" by the closest
-    // value representable in  a 24 bit depth buffer.
-    const highp float preventDiv0 = 1.0 / 16777216.0;
-    highp mat4 p = getViewFromClipMatrix();
-    // this works with perspective and ortho projections, for a perspective projection
-    // this resolves to -near/depth, for an ortho projection this resolves to depth*(far - near) - far
-    return (depth * p[2].z + p[3].z) / max(depth * p[2].w + p[3].w, preventDiv0);
-}
-
 // Code adapted from McGuire and Mara, Efficient GPU Screen-Space Ray Tracing, Journal of Computer
 // Graphics Techniques, 2014
 //
@@ -58,7 +46,7 @@ highp float distanceSquared(highp vec2 a, highp vec2 b) {
 // Note: McGuire and Mara use the "cs" prefix to stand for "camera space", equivalent to Filament's
 // "view space". "cs" has been replaced with "vs" to avoid confusion.
 bool traceScreenSpaceRay(const highp vec3 vsOrigin, const highp vec3 vsDirection,
-        highp_mat4 uvFromViewMatrix, const highp sampler2D vsZBuffer,
+        const highp vec2 res, const highp sampler2D vsZBuffer,
         const float vsZThickness, const highp float nearPlaneZ, const float stride,
         const float jitterFraction, const highp float maxSteps, const float maxRayTraceDistance,
         out highp vec2 hitPixel, out highp vec3 vsHitPoint) {
@@ -69,8 +57,8 @@ bool traceScreenSpaceRay(const highp vec3 vsOrigin, const highp vec3 vsDirection
     highp vec3 vsEndPoint = vsDirection * rayLength + vsOrigin;
 
     // Project into screen space
-    highp vec4 H0 = mulMat4x4Float3(uvFromViewMatrix, vsOrigin);
-    highp vec4 H1 = mulMat4x4Float3(uvFromViewMatrix, vsEndPoint);
+    highp vec4 H0 = mulMat4x4Float3(frameUniforms.ssrUvFromViewMatrix, vsOrigin);
+    highp vec4 H1 = mulMat4x4Float3(frameUniforms.ssrUvFromViewMatrix, vsEndPoint);
 
     // There are a lot of divisions by w that can be turned into multiplications at some minor
     // precision loss...and we need to interpolate these 1/w values anyway.
@@ -85,14 +73,55 @@ bool traceScreenSpaceRay(const highp vec3 vsOrigin, const highp vec3 vsDirection
     highp vec3 Q1 = vsEndPoint * k1;
 
     // Screen-space endpoints
-    highp vec2 P0 = H0.xy * k0;
-    highp vec2 P1 = H1.xy * k1;
-
-    // TODO:
-    // [Optional clipping to frustum sides here]
+    highp vec2 P0 = H0.xy * k0 * res;
+    highp vec2 P1 = H1.xy * k1 * res;
 
     // Initialize to off screen
     hitPixel = vec2(-1.0, -1.0);
+    vsHitPoint = vec3(0.0);
+
+    // Clip 2D segment [P0, P1] to [0.0, res - 0.5] so out-of-bounds steps are never marched
+    highp vec2 dP01 = P1 - P0;
+    highp vec2 maxBound = res - 0.5;
+    highp float tMin = 0.0;
+    highp float tMax = 1.0;
+
+    if (abs(dP01.x) > 1e-5) {
+        highp float invDx01 = 1.0 / dP01.x;
+        highp float tx0 = -P0.x * invDx01;
+        highp float tx1 = (maxBound.x - P0.x) * invDx01;
+        tMin = max(tMin, min(tx0, tx1));
+        tMax = min(tMax, max(tx0, tx1));
+    } else if (P0.x < 0.0 || P0.x > maxBound.x) {
+        return false;
+    }
+
+    if (abs(dP01.y) > 1e-5) {
+        highp float invDy01 = 1.0 / dP01.y;
+        highp float ty0 = -P0.y * invDy01;
+        highp float ty1 = (maxBound.y - P0.y) * invDy01;
+        tMin = max(tMin, min(ty0, ty1));
+        tMax = min(tMax, max(ty0, ty1));
+    } else if (P0.y < 0.0 || P0.y > maxBound.y) {
+        return false;
+    }
+
+    if (tMin >= tMax) {
+        return false;
+    }
+
+    highp vec3 dQ01 = Q1 - Q0;
+    highp float dk01 = k1 - k0;
+    if (tMax < 1.0) {
+        P1 = P0 + dP01 * tMax;
+        Q1 = Q0 + dQ01 * tMax;
+        k1 = k0 + dk01 * tMax;
+    }
+    if (tMin > 0.0) {
+        P0 += dP01 * tMin;
+        Q0 += dQ01 * tMin;
+        k0 += dk01 * tMin;
+    }
 
     // If the line is degenerate, make it cover at least one pixel to avoid handling zero-pixel
     // extent as a special case later
@@ -127,68 +156,68 @@ bool traceScreenSpaceRay(const highp vec3 vsOrigin, const highp vec3 vsDirection
     // Offset the starting values by the jitter fraction
     P0 += dP * jitterFraction; Q0 += dQ * jitterFraction; k0 += dk * jitterFraction;
 
-    // Slide P from P0 to P1, (now-homogeneous) Q from Q0 to Q1, and k from k0 to k1
-    highp vec3  Q = Q0;
-    highp float k = k0;
-
     // We track the ray depth at +/- 1/2 pixel to treat pixels as clip-space solid voxels. Because
     // the depth at -1/2 for a given pixel will be the same as at +1/2 for the previous iteration,
     // we actually only have to compute one value per iteration.
-    highp float prevZMaxEstimate = vsOrigin.z;
+    highp float prevZMaxEstimate = Q0.z / k0;
     highp float stepCount = 0.0;
     highp float rayZMax = prevZMaxEstimate;
     highp float rayZMin = prevZMaxEstimate;
-    highp float sceneZMax = rayZMax + 1e4;
+
+    // Slide P from P0 to P1, (now-homogeneous) Q from Q0 to Q1, and k from k0 to k1.
+    // Pre-advance Q.z and k by 1/2 step so the inner loop evaluates depth at +1/2 pixel directly.
+    highp vec3  Q = vec3(Q0.xy, Q0.z + dQ.z * 0.5);
+    highp float k = k0 + dk * 0.5;
 
     // P1.x is never modified after this point, so pre-scale it by the step direction for a signed
     // comparison
     highp float end = P1.x * stepDirection;
 
+    // Replace "infinity" (far plane at 0 in reversed-Z) by the closest value representable in a
+    // 24-bit depth buffer, keeping denom strictly positive so we can cross-multiply without a
+    // per-iteration depth linearization divide.
+    const highp float preventDiv0 = 1.0 / 16777216.0;
+    bool hit = false;
+
     // We only advance the z field of Q in the inner loop, since Q.xy is never used until after the
     // loop terminates.
 
     for (highp vec2 P = P0;
-        ((P.x * stepDirection) <= end) &&
-        (stepCount < maxSteps) &&
-        ((rayZMax < sceneZMax - vsZThickness) ||
-            (rayZMin > sceneZMax)) &&
-        (sceneZMax != 0.0);
+        ((P.x * stepDirection) <= end) && (stepCount < maxSteps);
         P += dP, Q.z += dQ.z, k += dk, stepCount += 1.0) {
 
         hitPixel = permute ? P.yx : P;
 
-        // The depth range that the ray covers within this loop iteration.  Assume that the ray is
-        // moving in increasing z and swap if backwards.  Because one end of the interval is shared
+        // The depth range that the ray covers within this loop iteration. Assume that the ray is
+        // moving in increasing z and swap if backwards. Because one end of the interval is shared
         // between adjacent iterations, we track the previous value and then swap as needed to
-        // ensure correct ordering
+        // ensure correct ordering.
         rayZMin = prevZMaxEstimate;
 
         // Compute the value at 1/2 pixel into the future
-        rayZMax = (dQ.z * 0.5 + Q.z) / (dk * 0.5 + k);
+        rayZMax = Q.z / k;
         prevZMaxEstimate = rayZMax;
         if (rayZMin > rayZMax) { swap(rayZMin, rayZMax); }
 
-        // View-space z of the background
-        // TODO: explore if we can avoid the linearization of the depth sample here.
-        sceneZMax = linearizeDepth(texelFetch(vsZBuffer, int2(hitPixel), 0).r);
+        // Cross-multiplied view-space Z overlap check against the background depth
+        highp float depth = texelFetch(vsZBuffer, int2(hitPixel), 0).r;
+        highp mat4 vfc = getViewFromClipMatrix();
+        highp float numer = depth * vfc[2].z + vfc[3].z;
+        highp float denom = max(depth * vfc[2].w + vfc[3].w, preventDiv0);
+        if ((rayZMax + vsZThickness) * denom >= numer && rayZMin * denom <= numer) {
+            hit = true;
+            break;
+        }
     } // pixel on ray
 
     Q.xy += dQ.xy * stepCount;
+    Q.z -= dQ.z * 0.5;
+    k -= dk * 0.5;
     vsHitPoint = Q * (1.0 / k);
-    // Matches the new loop condition:
-    return (rayZMax >= sceneZMax - vsZThickness) && (rayZMin <= sceneZMax);
+    return hit;
 }
 
 // -- end "BSD 2-clause license" -------------------------------------------------------------------
-
-highp mat4 scaleMatrix(const highp float x, const highp float y) {
-    mat4 m = mat4(1.0);
-    m[0].x = x;
-    m[1].y = y;
-    m[2].z = 1.0;
-    m[3].w = 1.0;
-    return m;
-}
 
 /**
  * Evaluates screen-space reflections, returning a color if there's a hit.
@@ -221,17 +250,13 @@ vec4 evaluateScreenSpaceReflections(const highp vec3 wsRayDirection) {
     float maxRayTraceDistance = frameUniforms.ssrDistance;
 
     highp vec2 res = vec2(textureSize(sampler0_structure, 0).xy);
-    highp mat4 uvFromViewMatrix =
-        scaleMatrix(res.x, res.y) *
-        frameUniforms.ssrUvFromViewMatrix;
-
     highp float maxSteps = float(max(res.x, res.y));
 
     // Outputs from the traceScreenSpaceRay function.
     highp vec2 hitPixel;  // not currently used
     highp vec3 vsHitPoint;
 
-    if (traceScreenSpaceRay(vsOrigin, vsDirection, uvFromViewMatrix, sampler0_structure,
+    if (traceScreenSpaceRay(vsOrigin, vsDirection, res, sampler0_structure,
             vsZThickness, nearPlaneZ, stride, jitterFraction, maxSteps,
             maxRayTraceDistance, hitPixel, vsHitPoint)) {
         highp vec4 reprojected = mulMat4x4Float3(frameUniforms.ssrReprojection, vsHitPoint);

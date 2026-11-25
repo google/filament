@@ -196,18 +196,18 @@ vec3 surfaceShading(const PixelParams pixel, const Light light, float occlusion)
     color += sheen;
 #endif
 
-#if defined(MATERIAL_HAS_DIFFUSE_TRANSMISSION)
-    // Kill NoL here since we applied it before
-    NoL = 1.0;
-#endif
-
 #if defined(MATERIAL_HAS_CLEAR_COAT)
     float Fcc;
     float clearCoat = clearCoatLobe(pixel, h, NoH, LoH, Fcc);
     float attenuation = 1.0 - Fcc;
 
 #if defined(MATERIAL_HAS_NORMAL) || defined(MATERIAL_HAS_CLEAR_COAT_NORMAL)
+#if defined(MATERIAL_HAS_DIFFUSE_TRANSMISSION)
+    // We already applied NoL to the lobes, so we don't multiply by it again here.
+    color *= attenuation;
+#else
     color *= attenuation * NoL;
+#endif
 
     // If the material has a normal map, we want to use the geometric normal
     // instead to avoid applying the normal map details to the clear coat layer
@@ -222,6 +222,13 @@ vec3 surfaceShading(const PixelParams pixel, const Light light, float occlusion)
     color += clearCoat;
 #endif
 #endif
+
+#if defined(MATERIAL_HAS_DIFFUSE_TRANSMISSION)
+    // We already applied NoL to the lobes, so we don't multiply by it again here.
+    return (color * light.colorIntensity.rgb) *
+            (light.colorIntensity.w * light.attenuation * occlusion);
+#else
     return (color * light.colorIntensity.rgb) *
             (light.colorIntensity.w * light.attenuation * NoL * occlusion);
+#endif
 }
