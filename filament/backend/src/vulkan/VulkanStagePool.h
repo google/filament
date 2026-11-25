@@ -259,12 +259,15 @@ private:
     // never flush more atoms than we need to.
     VkDeviceSize alignToNonCoherentAtomSize(VkDeviceSize numBytes);
 
-    // Allocates a new stage buffer, and optionally subdivides it into stage
-    // blocks. If subdivideBlocks is true, predefined divisions will be used.
-    // Otherwise, it's expected that capacity is defined to a value, and that
-    // is the size that will be used for the buffer (as well as the only block
-    // being created).
+    // Allocates a new staging buffer of the given capacity. Standard stages (<= STAGE_SIZE) are
+    // suballocated from shared VMA blocks, while large stages (> STAGE_SIZE) request a
+    // dedicated VkDeviceMemory (falling back to a shared VMA allocation if dedicated fails).
     VulkanStage* allocateNewStage(uint32_t capacity);
+
+    // Handles requests larger than STAGE_SIZE. A large stage backs exactly one segment at
+    // offset 0, so it is either in use (owned by its live segment and absent from any map) or
+    // free (in mFreeLargeStages). Releasing the segment returns the stage to the free map.
+    fvkmemory::resource_ptr<VulkanStage::Segment> acquireLargeStage(uint32_t numBytes);
 
     // Performs any bookkeeping required to delete a VulkanStage object; namely,
     // unmapping memory, freeing the allocation, and deleting the VulkanStage
@@ -274,6 +277,15 @@ private:
 
     // Use an ordered multimap for quick (capacity => stage) lookups using lower_bound().
     std::multimap<uint32_t, VulkanStage*> mStages;
+
+    struct FreeLargeStage {
+        VulkanStage* stage;
+        uint64_t lastUsed;
+    };
+
+    // Free large stages keyed by capacity. Kept separate from mStages so that small requests
+    // never land on (and pin) a large allocation.
+    std::multimap<uint32_t, FreeLargeStage> mFreeLargeStages;
 
     std::unordered_set<VulkanStageImage*> mFreeImages;
 
