@@ -23,6 +23,7 @@ OS_NAME=$(uname -s)
 LLVM_VERSION=${GITHUB_LLVM_VERSION-17}
 MESA_VERSION=${GITHUB_MESA_VERSION-25.0.6}
 ORIG_DIR=$(pwd)
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 MESA_DIR=${MESA_DIR-${ORIG_DIR}/mesa}
 
 # When MESA_SKIP_BUILD is "true" and ${MESA_DIR}/out already holds an installed Mesa (for example,
@@ -48,12 +49,7 @@ if [[ "$SKIP_BUILD" != "true" ]]; then
     python3 -m venv ${ORIG_DIR}/venv
     source ${ORIG_DIR}/venv/bin/activate
 
-    NEEDED_PYTHON_DEPS=("mako" "setuptools" "pyyaml")
-    for cmd in "${NEEDED_PYTHON_DEPS[@]}"; do
-        if ! python3 -m pip show -q "${cmd}" >/dev/null 2>&1; then
-            python3 -m pip install ${cmd}
-        fi
-    done
+    python3 -m pip install --require-hashes -r "${SCRIPT_DIR}/mesa-requirements.txt"
     deactivate
 fi
 
