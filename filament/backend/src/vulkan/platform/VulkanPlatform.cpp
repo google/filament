@@ -333,6 +333,9 @@ ExtensionSet getDeviceExtensions(VkPhysicalDevice device, bool enableDebugUtils 
 #endif
         VK_KHR_MULTIVIEW_EXTENSION_NAME,
 
+        // Required for VK_KHR_pipeline_binary
+        VK_KHR_PIPELINE_BINARY_EXTENSION_NAME,
+
         // Required for dynamic rendering
         VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME,
         VK_EXT_VERTEX_INPUT_DYNAMIC_STATE_EXTENSION_NAME,
@@ -757,6 +760,12 @@ Driver* VulkanPlatform::createDriver(void* sharedContext,
         setErase(deviceExts, VK_EXT_HOST_QUERY_RESET_EXTENSION_NAME);
     }
 
+    if (!mImpl->mContext.isMaintenance5Supported() ||
+            !mImpl->mContext.isPipelineBinarySupported()) {
+        setErase(deviceExts, VK_KHR_MAINTENANCE_5_EXTENSION_NAME);
+        setErase(deviceExts, VK_KHR_PIPELINE_BINARY_EXTENSION_NAME);
+    }
+
     mImpl->mContext.mDebugUtilsNamesEnabled =
             mImpl->mContext.mDebugUtilsEnabled && enableDebugUtilsNames;
     mImpl->mContext.mRenderDocCaptureEnabled = enableRenderDocCapture;
@@ -1157,6 +1166,13 @@ void VulkanPlatform::queryAndSetDeviceFeatures(Platform::DriverConfig const& dri
         chainStruct(&context.mPhysicalDeviceFeatures, &context.mHostQueryResetFeatures);
     }
 
+    if (setContains(deviceExts, VK_KHR_PIPELINE_BINARY_EXTENSION_NAME)) {
+        context.mPipelineBinaryFeatures = {
+            .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PIPELINE_BINARY_FEATURES_KHR,
+        };
+        chainStruct(&context.mPhysicalDeviceFeatures, &context.mPipelineBinaryFeatures);
+    }
+
     VkPhysicalDevicePipelineProtectedAccessFeaturesEXT pipelineProtectedAccessFeatures = {
         .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PIPELINE_PROTECTED_ACCESS_FEATURES_EXT,
     };
@@ -1223,11 +1239,6 @@ void VulkanPlatform::queryAndSetDeviceFeatures(Platform::DriverConfig const& dri
     context.mPipelineCachePersistenceEnabled =
             (driverConfig.featureFlagManager ? driverConfig.featureFlagManager->features.backend
                                                        .vulkan.enable_pipeline_cache_persistence
-                                             : false);
-
-    context.mPipelineCacheEvictionEnabled =
-            (driverConfig.featureFlagManager ? driverConfig.featureFlagManager->features.backend.vulkan
-                                                       .enable_pipeline_cache_threshold_eviction
                                              : false);
 
     {
@@ -1558,6 +1569,29 @@ void VulkanPlatform::createLogicalDeviceAndQueues(
 
     if (setContains(deviceExtensions, VK_EXT_COLOR_WRITE_ENABLE_EXTENSION_NAME)) {
         chainStruct(&deviceCreateInfo, &context.mColorWriteEnableFeatures);
+    }
+
+    if (setContains(deviceExtensions, VK_KHR_MAINTENANCE_5_EXTENSION_NAME)) {
+        chainStruct(&deviceCreateInfo, &context.mMaintenance5);
+    }
+
+    // Enable pipeline binaries if supported by the device extensions
+    if (setContains(deviceExtensions, VK_KHR_PIPELINE_BINARY_EXTENSION_NAME) &&
+        context.isPipelineBinarySupported()) {
+        chainStruct(&deviceCreateInfo, &context.mPipelineBinaryFeatures);
+    }
+
+    // Note this part of the logic can take into account input from the frontend
+    // of from the caller of the platform API, but for now just use the logic
+    // of whether the extension is present. Right now the flag is off.
+    if (false) {
+        if (context.isPipelineBinarySupported()) {
+            context.mPipelineCacheEvictionPolicy = 
+                PipelineCacheEvictionPolicy::SIZE;
+        } else {
+            context.mPipelineCacheEvictionPolicy = 
+                PipelineCacheEvictionPolicy::COUNT;
+        }
     }
 
     VkPhysicalDeviceHostQueryResetFeaturesEXT hostQueryReset = {
