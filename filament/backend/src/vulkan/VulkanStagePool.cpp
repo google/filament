@@ -56,7 +56,10 @@ fvkmemory::resource_ptr<VulkanStage::Segment> VulkanStage::acquireSegment(
     utils::LockGuard const lock(mLock);
     assert_invariant(numBytes <= mCapacity && segmentOffset <= mCapacity - numBytes);
     auto segment = fvkmemory::resource_ptr<Segment>::construct(resManager, this, numBytes,
-            segmentOffset, [this](uint32_t offset) { mSegments.erase(offset); });
+            segmentOffset, [this](uint32_t offset) {
+                utils::LockGuard const lock(mLock);
+                mSegments.erase(offset);
+            });
     mSegments.insert({ segmentOffset, segment.get() });
     mCurrentOffset = segmentOffset + numBytes;
     return segment;

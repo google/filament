@@ -410,6 +410,10 @@ void VulkanDriver::terminate() {
     mDefaultRenderTarget = {};
     mPipelineState = {};
 
+    if constexpr (ASYNC_VER_2) {
+        mAsyncWorker.terminate();
+    }
+
     mQueryManager.terminate();
 
     mBlitter.terminate();
@@ -516,6 +520,10 @@ void VulkanDriver::collectGarbage() {
     mPipelineCache.gc();
 
     mResourceManager.gc();
+
+    if constexpr (ASYNC_VER_2) {
+        mAsyncWorker.gc();
+    }
 
 #if FVK_ENABLED(FVK_DEBUG_RESOURCE_LEAK)
     mResourceManager.print();

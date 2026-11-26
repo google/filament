@@ -36,6 +36,22 @@ void VulkanAsyncWorker::terminate() noexcept{
         mTaskHandler->shutdown();
         mTaskHandler.reset();
     }
+    if (mAsyncCommands) {
+        mAsyncCommands->terminate();
+        mAsyncCommands.reset();
+    }
+    if (mSemaphoreManager) {
+        mSemaphoreManager->terminate();
+        mSemaphoreManager.reset();
+    }
+}
+
+void VulkanAsyncWorker::gc() {
+    if (mTaskHandler) {
+        mTaskHandler->post([this] (bool const success){
+            mAsyncCommands->gc();
+        });
+    }
 }
 
 void VulkanAsyncWorker::runUntilComplete() {
@@ -54,7 +70,7 @@ void VulkanAsyncWorker::postUpdateJob(std::function<void(VulkanCommandBuffer&)> 
         if (success) {
             mAsyncCommands->flush();
             mAsyncCommands->wait();
-            mAsyncCommands->gc();
+            //mAsyncCommands->gc();
             queue->push([completion]()  {
                 completion->schedule(AsyncCallStatus::COMPLETED);
                 delete completion;
