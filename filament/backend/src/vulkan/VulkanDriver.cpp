@@ -301,7 +301,8 @@ VulkanDriver::VulkanDriver(VulkanPlatform* platform, VulkanContext& context,
                           : false),
           mStereoscopicType(driverConfig.stereoscopicType),
           mStereoscopicEyeCount(driverConfig.stereoscopicEyeCount),
-          mAsynchronousMode(driverConfig.asynchronousMode) {
+          mAsynchronousMode(driverConfig.asynchronousMode),
+          mAsyncWorker(platform, context, &mResourceManager, ASYNC_VER_2) {
 
     if (mAsynchronousMode != AsynchronousMode::NONE) {
         mJobQueue = JobQueue::create();
@@ -409,6 +410,10 @@ void VulkanDriver::terminate() {
     mDefaultRenderTarget = {};
     mPipelineState = {};
 
+    if constexpr (ASYNC_VER_2) {
+        mAsyncWorker.terminate();
+    }
+
     mQueryManager.terminate();
 
     mBlitter.terminate();
@@ -432,6 +437,10 @@ void VulkanDriver::terminate() {
     mDescriptorSetLayoutCache.terminate();
     mDescriptorSetCache.terminate();
     mPipelineLayoutCache.terminate();
+
+    if constexpr(ASYNC_VER_2) {
+        mAsyncWorker.terminate();
+    }
 
     // Before terminating ResourceManager, we must make sure all of the resource_ptrs have been unset.
     mResourceManager.terminate();
@@ -511,6 +520,10 @@ void VulkanDriver::collectGarbage() {
     mPipelineCache.gc();
 
     mResourceManager.gc();
+
+    if constexpr (ASYNC_VER_2) {
+        mAsyncWorker.gc();
+    }
 
 #if FVK_ENABLED(FVK_DEBUG_RESOURCE_LEAK)
     mResourceManager.print();
@@ -666,6 +679,9 @@ void VulkanDriver::finish(int dummy) {
     mCommands.wait();
 
     mReadPixels.runUntilComplete();
+    if constexpr (ASYNC_VER_2) {
+        mAsyncWorker.runUntilComplete();
+    }
 }
 
 void VulkanDriver::createRenderPrimitiveR(Handle<HwRenderPrimitive> rph,
@@ -2056,8 +2072,7 @@ void VulkanDriver::setVertexBufferObjectAsyncR(AsyncCallId jobId, Handle<HwVerte
 }
 
 void VulkanDriver::updateIndexBufferCommon(resource_ptr<VulkanIndexBuffer> ib,
-        BufferDescriptor&& p, uint32_t byteOffset) {
-    VulkanCommandBuffer& commands = mCommands.get();
+        BufferDescriptor&& p, uint32_t byteOffset, VulkanCommandBuffer& commands) {
     commands.acquire(ib);
     ib->loadFromCpu(commands, p.buffer, byteOffset, p.size);
     scheduleDestroy(std::move(p));
@@ -2066,7 +2081,7 @@ void VulkanDriver::updateIndexBufferCommon(resource_ptr<VulkanIndexBuffer> ib,
 void VulkanDriver::updateIndexBuffer(Handle<HwIndexBuffer> ibh, BufferDescriptor&& p,
         uint32_t byteOffset) {
     auto ib = resource_ptr<VulkanIndexBuffer>::cast(&mResourceManager, ibh);
-    updateIndexBufferCommon(ib, std::move(p), byteOffset);
+    updateIndexBufferCommon(ib, std::move(p), byteOffset, mCommands.get());
 }
 
 void VulkanDriver::updateIndexBufferAsyncR(AsyncCallId jobId, Handle<HwIndexBuffer> ibh,
@@ -2080,18 +2095,24 @@ void VulkanDriver::updateIndexBufferAsyncR(AsyncCallId jobId, Handle<HwIndexBuff
     // resource is still pending in the queue, the `cast` call inside the lambda will crash. So we
     // pass a resource_ptr instead, which is ref-counted.
     auto ib = promoteToAsync(resource_ptr<VulkanIndexBuffer>::cast(&mResourceManager, ibh));
-
-    getJobQueue()->push([this, ib, byteOffset,
-            bufferRelease = AsyncBufferRelease(this, std::move(p)),
-            completion = AsyncCompletion(this, handler, callback, user)]() mutable {
-        updateIndexBufferCommon(ib, bufferRelease.detach(), byteOffset);
-        completion.schedule(AsyncCallStatus::COMPLETED);
-    }, jobId);
+    if constexpr (ASYNC_VER_2) {
+        AsyncCompletion* completion = new AsyncCompletion(this, handler, callback, user);
+        auto asyncJobFunc = [this, ib, &p, byteOffset](VulkanCommandBuffer& commands) mutable {
+            updateIndexBufferCommon(ib, std::move(p), byteOffset, commands);
+        };
+        mAsyncWorker.postUpdateJob(asyncJobFunc, jobId, completion, getJobQueue());
+    } else {
+        getJobQueue()->push([this, ib, byteOffset,
+                bufferRelease = AsyncBufferRelease(this, std::move(p)),
+                completion = AsyncCompletion(this, handler, callback, user)]() mutable {
+            updateIndexBufferCommon(ib, bufferRelease.detach(), byteOffset, mCommands.get());
+            completion.schedule(AsyncCallStatus::COMPLETED);
+        }, jobId);
+    }
 }
 
 void VulkanDriver::updateBufferObjectCommon(resource_ptr<VulkanBufferObject> bo,
-        BufferDescriptor&& bd, uint32_t byteOffset) {
-    VulkanCommandBuffer& commands = mCommands.get();
+        BufferDescriptor&& bd, uint32_t byteOffset, VulkanCommandBuffer& commands) {
     commands.acquire(bo);
     bo->loadFromCpu(commands, bd.buffer, byteOffset, bd.size);
     scheduleDestroy(std::move(bd));
@@ -2100,7 +2121,7 @@ void VulkanDriver::updateBufferObjectCommon(resource_ptr<VulkanBufferObject> bo,
 void VulkanDriver::updateBufferObject(Handle<HwBufferObject> boh, BufferDescriptor&& bd,
         uint32_t byteOffset) {
     auto bo = resource_ptr<VulkanBufferObject>::cast(&mResourceManager, boh);
-    updateBufferObjectCommon(bo, std::move(bd), byteOffset);
+    updateBufferObjectCommon(bo, std::move(bd), byteOffset, mCommands.get());
 }
 
 void VulkanDriver::updateBufferObjectAsyncR(AsyncCallId jobId, Handle<HwBufferObject> boh,
@@ -2114,13 +2135,20 @@ void VulkanDriver::updateBufferObjectAsyncR(AsyncCallId jobId, Handle<HwBufferOb
     // resource is still pending in the queue, the `cast` call inside the lambda will crash. So we
     // pass a resource_ptr instead, which is ref-counted.
     auto bo = promoteToAsync(resource_ptr<VulkanBufferObject>::cast(&mResourceManager, boh));
-
-    getJobQueue()->push([this, bo, byteOffset,
-            bufferRelease = AsyncBufferRelease(this, std::move(bd)),
-            completion = AsyncCompletion(this, handler, callback, user)]() mutable {
-        updateBufferObjectCommon(bo, bufferRelease.detach(), byteOffset);
-        completion.schedule(AsyncCallStatus::COMPLETED);
-    }, jobId);
+    if constexpr (ASYNC_VER_2) {
+        AsyncCompletion* completion = new AsyncCompletion(this, handler, callback, user);
+        auto asyncJobFunc = [this, bo, &bd, byteOffset](VulkanCommandBuffer& commands) mutable {
+            updateBufferObjectCommon(bo, std::move(bd), byteOffset, commands);
+        };
+        mAsyncWorker.postUpdateJob(asyncJobFunc, jobId, completion, getJobQueue());
+    } else {
+        getJobQueue()->push([this, bo, byteOffset,
+                bufferRelease = AsyncBufferRelease(this, std::move(bd)),
+                completion = AsyncCompletion(this, handler, callback, user)]() mutable {
+            updateBufferObjectCommon(bo, bufferRelease.detach(), byteOffset, mCommands.get());
+            completion.schedule(AsyncCallStatus::COMPLETED);
+        }, jobId);
+    }
 }
 
 void VulkanDriver::updateBufferObjectUnsynchronized(Handle<HwBufferObject> boh,

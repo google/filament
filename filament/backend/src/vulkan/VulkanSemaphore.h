@@ -25,7 +25,7 @@ namespace filament::backend {
 
 class VulkanSemaphoreManager;
 
-struct VulkanSemaphore : public fvkmemory::Resource {
+struct VulkanSemaphore : public fvkmemory::ThreadSafeResource {
 public:
     VulkanSemaphore(VulkanSemaphoreManager* manager, VkSemaphore semaphore);
     ~VulkanSemaphore();
