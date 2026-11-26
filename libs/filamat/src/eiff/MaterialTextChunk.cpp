@@ -115,9 +115,15 @@ void compressShader(const std::string& src, ShaderStage const stage, Flattener& 
         }
     }
 
-    f.writeRaw(reinterpret_cast<const char*>(base_stream.data()), base_stream.size());
-    f.writeRaw(reinterpret_cast<const char*>(ext_stream.data()), ext_stream.size());
-    f.writeRaw(reinterpret_cast<const char*>(numeric_stream.data()), numeric_stream.size());
+    if (!base_stream.empty()) {
+        f.writeRaw(reinterpret_cast<const char*>(base_stream.data()), base_stream.size());
+    }
+    if (!ext_stream.empty()) {
+        f.writeRaw(reinterpret_cast<const char*>(ext_stream.data()), ext_stream.size());
+    }
+    if (!numeric_stream.empty()) {
+        f.writeRaw(reinterpret_cast<const char*>(numeric_stream.data()), numeric_stream.size());
+    }
 
     f.writeValue(static_cast<uint32_t>(numeric_stream.size()));
     f.writeValue(static_cast<uint32_t>(base_stream.size()));
