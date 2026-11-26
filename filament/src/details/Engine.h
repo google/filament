@@ -637,11 +637,10 @@ public:
     static utils::FixedCapacityVector<Variant> getMaterialCompileVariants(
         FView const* view,
         FMaterial const* material,
-        utils::tribool shadowReceiver,
         utils::tribool skinning) noexcept;
 
     static utils::FixedCapacityVector<DynamicSpecConstKey> getMaterialCompileDynamicSpecConstKey(
-        FView const* view, FMaterial const* material) noexcept;
+        FView const* view, FMaterial const* material, utils::tribool shadowReceiver) noexcept;
 
 private:
     explicit FEngine(Builder const& builder);

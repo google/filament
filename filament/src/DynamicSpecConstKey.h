@@ -42,6 +42,7 @@ struct DynamicSpecConstKey {
     static constexpr type_t EXTRA_DIRECTIONAL_LIGHTS = 0x2;
     static constexpr type_t DIRECTIONAL_LIGHTING = 0x4;
     static constexpr type_t FOG = 0x8;
+    static constexpr type_t SHADOW_RECEIVER = 0x10;
 
     constexpr bool operator==(DynamicSpecConstKey rhs) const noexcept {
         return key == rhs.key;
@@ -95,6 +96,14 @@ struct DynamicSpecConstKey {
         key = (key & ~FOG) | (v ? FOG : type_t(0));
     }
 
+    constexpr bool hasShadowReceiver() const noexcept {
+        return key & SHADOW_RECEIVER;
+    }
+
+    constexpr void setShadowReceiver(bool v) noexcept {
+        key = (key & ~SHADOW_RECEIVER) | (v ? SHADOW_RECEIVER : type_t(0));
+    }
+
     static constexpr DynamicSpecConstKey filterUserVariant(
             DynamicSpecConstKey key, UserVariantFilterMask filterMask) noexcept {
         if (filterMask & uint32_t(UserVariantFilterBit::DYNAMIC_LIGHTING)) {
@@ -106,6 +115,9 @@ struct DynamicSpecConstKey {
         }
         if (filterMask & uint32_t(UserVariantFilterBit::FOG)) {
             key.setFog(false);
+        }
+        if (filterMask & uint32_t(UserVariantFilterBit::SHADOW_RECEIVER)) {
+            key.setShadowReceiver(false);
         }
         return key;
     }
@@ -132,8 +144,15 @@ struct DynamicSpecConstKey {
         MaterialDomain const materialDomain, bool const /*isLit*/) noexcept {
         // Fog applies to lit and unlit surface materials alike, but never to depth or SSR
         // variants. Whether the material was compiled with fog support at all (variantFilter:
-        // [fog]) is handled by MaterialDefinition::filterProgramSpecKey() and isValidProgram().
+        // [fog]) is handled by MaterialDefinition::resolveProgram() and isValidProgram().
         return materialDomain == MaterialDomain::SURFACE &&
+               !Variant::isValidDepthVariant(variant) && !Variant::isSSRVariant(variant);
+    }
+
+    static constexpr bool canSupportShadowReceiver(Variant const variant,
+        MaterialDomain const materialDomain, bool const isLit) noexcept {
+        // isLit includes lit materials and unlit materials with a shadow multiplier
+        return materialDomain == MaterialDomain::SURFACE && isLit &&
                !Variant::isValidDepthVariant(variant) && !Variant::isSSRVariant(variant);
     }
 
@@ -149,13 +168,15 @@ struct DynamicSpecConstKey {
                (!specKey.hasDirectionalLighting() ||
                        canSupportDirectionalLighting(variant, materialDomain, isLit)) &&
                (!specKey.hasFog() ||
-                       canSupportFog(variant, materialDomain, isLit));
+                       canSupportFog(variant, materialDomain, isLit)) &&
+               (!specKey.hasShadowReceiver() ||
+                       canSupportShadowReceiver(variant, materialDomain, isLit));
     }
 
     // Clears the specKey bits that are meaningless for this kind of program, based only on the
     // variant, material domain and lighting model (e.g. no fog on depth/SSR variants).
     // This doesn't know about a specific material: when one is available, use
-    // MaterialDefinition::filterProgramSpecKey() instead, which also applies the material's
+    // MaterialDefinition::resolveProgram() instead, which also applies the material's
     // compile-time restrictions. The result always satisfies isValidProgramSpecKey().
     static constexpr DynamicSpecConstKey filterProgramSpecKey(Variant const variant,
             DynamicSpecConstKey specKey, MaterialDomain const materialDomain, bool const isLit) noexcept {
@@ -171,6 +192,9 @@ struct DynamicSpecConstKey {
         }
         if (!canSupportFog(variant, materialDomain, isLit)) {
             specKey.setFog(false);
+        }
+        if (!canSupportShadowReceiver(variant, materialDomain, isLit)) {
+            specKey.setShadowReceiver(false);
         }
         return specKey;
     }

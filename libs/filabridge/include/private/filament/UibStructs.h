@@ -148,7 +148,7 @@ struct PerViewUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
     math::float2 shadowFarAttenuationParams;    // a, a/far (a=1/pct-of-far)
 
     // --------------------------------------------------------------------------------------------
-    // Directional light shadowing [variant: SRE]
+    // Directional light shadowing [specialization constant: RUNTIME_CONFIG_HAS_SHADOWING]
     // --------------------------------------------------------------------------------------------
     // bit 0: directional (sun) shadow enabled
     // bit 1: directional (sun) screen-space contact shadow enabled

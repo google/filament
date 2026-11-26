@@ -2,7 +2,7 @@
 // Shadowing
 //------------------------------------------------------------------------------
 
-#if defined(VARIANT_HAS_SHADOWING)
+#if defined(MATERIAL_HAS_SHADOWING)
 /**
  * Computes the light space position of the specified world space point.
  * The returned point may contain a bias to attempt to eliminate common
@@ -25,4 +25,4 @@ highp vec4 computeLightSpacePosition(highp vec3 p, const highp vec3 n,
     return mulMat4x4Float3(lightFromWorldMatrix, p);
 }
 
-#endif // VARIANT_HAS_SHADOWING
+#endif // MATERIAL_HAS_SHADOWING

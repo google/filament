@@ -166,7 +166,7 @@ BufferInterfaceBlock const& UibGenerator::getPerViewUib() noexcept  {
             { "shadowFarAttenuationParams", 0, Type::FLOAT2, Precision::HIGH },
 
             // ------------------------------------------------------------------------------------
-            // Directional light shadowing [variant: SRE]
+            // Directional light shadowing [specialization constant: RUNTIME_CONFIG_HAS_SHADOWING]
             // ------------------------------------------------------------------------------------
             { "directionalShadows",       0, Type::INT                      },
             { "ssContactShadowDistance",  0, Type::FLOAT                    },

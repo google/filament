@@ -162,8 +162,8 @@ void main() {
     vertex_worldNormal = material.worldNormal;
 #endif
 
-#if defined(VARIANT_HAS_SHADOWING) && defined(MATERIAL_HAS_LIGHTING)
-    if (RUNTIME_CONFIG_HAS_DIRECTIONAL_LIGHTING) {
+#if defined(MATERIAL_HAS_SHADOWING) && defined(MATERIAL_HAS_LIGHTING)
+    if (RUNTIME_CONFIG_HAS_SHADOWING && RUNTIME_CONFIG_HAS_DIRECTIONAL_LIGHTING) {
         vertex_lightSpacePosition = computeLightSpacePosition(
                 vertex_worldPosition.xyz, vertex_worldNormal,
                 frameUniforms.lightDirection,

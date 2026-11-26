@@ -352,6 +352,7 @@ io::sstream& CodeGenerator::generateCommonProlog(io::sstream& out, ShaderStage c
         out << "const bool RUNTIME_CONFIG_HAS_EXTRA_DIRECTIONAL_LIGHTS = false;\n";
         out << "const bool RUNTIME_CONFIG_HAS_DIRECTIONAL_LIGHTING = false;\n";
         out << "const bool RUNTIME_CONFIG_HAS_FOG = false;\n";
+        out << "const bool RUNTIME_CONFIG_HAS_SHADOWING = false;\n";
     } else {
         bool const litVariants = material.isLit || material.hasShadowMultiplier;
         generateSpecializationConstant(out, "RUNTIME_CONFIG_HAS_DYNAMIC_LIGHTING",
@@ -369,6 +370,10 @@ io::sstream& CodeGenerator::generateCommonProlog(io::sstream& out, ShaderStage c
         generateSpecializationConstant(out, "RUNTIME_CONFIG_HAS_FOG",
                 CONFIG_MAX_RESERVED_SPEC_CONSTANTS +
                         +DynamicSpecializationConstants::RUNTIME_CONFIG_HAS_FOG,
+                false);
+        generateSpecializationConstant(out, "RUNTIME_CONFIG_HAS_SHADOWING",
+                CONFIG_MAX_RESERVED_SPEC_CONSTANTS +
+                        +DynamicSpecializationConstants::RUNTIME_CONFIG_HAS_SHADOWING,
                 false);
     }
 
@@ -1119,10 +1124,10 @@ io::sstream& CodeGenerator::generateSurfaceParameters(io::sstream& out, ShaderSt
 }
 
 io::sstream& CodeGenerator::generateSurfaceLit(io::sstream& out, ShaderStage const stage,
-        filament::Variant const variant, Shading const shading, bool const customSurfaceShading) {
+        bool const hasShadowing, Shading const shading, bool const customSurfaceShading) {
     if (stage == ShaderStage::FRAGMENT) {
         out << SHADERS_SURFACE_LIGHTING_FS_DATA;
-        if (filament::Variant::isShadowReceiverVariant(variant)) {
+        if (hasShadowing) {
             out << SHADERS_SURFACE_SHADOWING_FS_DATA;
         }
 
@@ -1161,10 +1166,10 @@ io::sstream& CodeGenerator::generateSurfaceLit(io::sstream& out, ShaderStage con
 }
 
 io::sstream& CodeGenerator::generateSurfaceUnlit(io::sstream& out, ShaderStage const stage,
-        filament::Variant const variant, bool const hasShadowMultiplier) {
+        bool const hasShadowing, bool const hasShadowMultiplier) {
     if (stage == ShaderStage::FRAGMENT) {
         if (hasShadowMultiplier) {
-            if (filament::Variant::isShadowReceiverVariant(variant)) {
+            if (hasShadowing) {
                 out << SHADERS_SURFACE_SHADOWING_FS_DATA;
             }
         }

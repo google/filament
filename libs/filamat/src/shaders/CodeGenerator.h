@@ -95,11 +95,11 @@ public:
 
     // generate the shader's code for the lit shading model
     static utils::io::sstream& generateSurfaceLit(utils::io::sstream& out, ShaderStage stage,
-            filament::Variant variant, filament::Shading shading, bool customSurfaceShading);
+            bool hasShadowing, filament::Shading shading, bool customSurfaceShading);
 
     // generate the shader's code for the unlit shading model
     static utils::io::sstream& generateSurfaceUnlit(utils::io::sstream& out, ShaderStage stage,
-            filament::Variant variant, bool hasShadowMultiplier);
+            bool hasShadowing, bool hasShadowMultiplier);
 
     // generate the shader's code for the screen-space reflections
     static utils::io::sstream& generateSurfaceReflections(utils::io::sstream& out, ShaderStage stage);

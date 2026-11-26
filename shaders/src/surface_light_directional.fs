@@ -48,8 +48,8 @@ void evaluateDirectionalLight(const MaterialInputs material,
 #endif
 
     float visibility = 1.0;
-#if defined(VARIANT_HAS_SHADOWING)
-    if (light.NoL > 0.0) {
+#if defined(MATERIAL_HAS_SHADOWING)
+    if (RUNTIME_CONFIG_HAS_SHADOWING && light.NoL > 0.0) {
         float ssContactShadowOcclusion = 0.0;
 
         int cascade = getShadowCascade();
@@ -136,8 +136,10 @@ void evaluateExtraDirectionalLights(const MaterialInputs material,
                 if (light.NoL > 0.0) {
 #endif
                     float visibility = 1.0;
-#if defined(VARIANT_HAS_SHADOWING) && defined(MATERIAL_HAS_AMBIENT_OCCLUSION)
-                    visibility = computeMicroShadowing(light.NoL, material.ambientOcclusion);
+#if defined(MATERIAL_HAS_SHADOWING) && defined(MATERIAL_HAS_AMBIENT_OCCLUSION)
+                    if (RUNTIME_CONFIG_HAS_SHADOWING) {
+                        visibility = computeMicroShadowing(light.NoL, material.ambientOcclusion);
+                    }
 #endif
 #if defined(MATERIAL_HAS_CUSTOM_SURFACE_SHADING)
                     color.rgb += customSurfaceShading(material, pixel, light, visibility);

@@ -45,17 +45,13 @@ using namespace utils;
 
 void ShaderGenerator::generateSurfaceMaterialVariantDefines(io::sstream& out,
         ShaderStage const stage, MaterialBuilder::FeatureLevel featureLevel,
-        MaterialInfo const& material, filament::Variant const variant) noexcept {
-
-    bool const litVariants = material.isLit || material.hasShadowMultiplier;
+        MaterialInfo const& material, filament::Variant const variant,
+        UserVariantFilterMask const variantFilter) noexcept {
 
     assert_invariant(filament::Variant::isValidDepthVariant(variant) ?
         !filament::Variant::isShadowSampler2DVariant(variant) :
         !filament::Variant::isDepthMomentsVariant(variant));
 
-    if (litVariants && filament::Variant::isShadowReceiverVariant(variant)) {
-        CodeGenerator::generateDefine(out, "VARIANT_HAS_SHADOWING");
-    }
     if (filament::Variant::isDepthMomentsVariant(variant)) {
         CodeGenerator::generateDefine(out, "VARIANT_HAS_MNT");
     }
@@ -100,6 +96,10 @@ void ShaderGenerator::generateSurfaceMaterialVariantDefines(io::sstream& out,
 
     if (hasLighting(material, variant)) {
         CodeGenerator::generateDefine(out, "MATERIAL_HAS_LIGHTING");
+    }
+
+    if (hasShadowing(material, variant, variantFilter, featureLevel)) {
+        CodeGenerator::generateDefine(out, "MATERIAL_HAS_SHADOWING");
     }
 
     if (material.instanced) {
@@ -405,7 +405,8 @@ std::string ShaderGenerator::createSurfaceVertexProgram(ShaderModel const shader
         MaterialBuilder::TargetApi const targetApi, MaterialBuilder::TargetLanguage const targetLanguage,
         MaterialBuilder::FeatureLevel const featureLevel,
         MaterialInfo const& material, const filament::Variant variant, Interpolation const interpolation,
-        VertexDomain const vertexDomain, const uint32_t apiLevel) const noexcept {
+        VertexDomain const vertexDomain, UserVariantFilterMask const variantFilter,
+        const uint32_t apiLevel) const noexcept {
 
     assert_invariant(filament::Variant::isValid(variant));
     assert_invariant(mMaterialDomain != MaterialBuilder::MaterialDomain::COMPUTE);
@@ -444,7 +445,8 @@ std::string ShaderGenerator::createSurfaceVertexProgram(ShaderModel const shader
         CodeGenerator::generateDefine(vs, "USE_OPTIMIZED_DEPTH_VERTEX_SHADER");
     }
 
-    generateSurfaceMaterialVariantDefines(vs, ShaderStage::VERTEX, featureLevel, material, variant);
+    generateSurfaceMaterialVariantDefines(
+            vs, ShaderStage::VERTEX, featureLevel, material, variant, variantFilter);
 
     generateSurfaceMaterialVariantProperties(vs, mProperties, mDefines);
 
@@ -496,8 +498,7 @@ std::string ShaderGenerator::createSurfaceVertexProgram(ShaderModel const shader
             +PerRenderableBindingPoints::OBJECT_UNIFORMS,
             UibGenerator::getPerRenderableUib());
 
-    const bool litVariants = material.isLit || material.hasShadowMultiplier;
-    if (litVariants && filament::Variant::isShadowReceiverVariant(variant)) {
+    if (hasShadowing(material, variant, variantFilter, featureLevel)) {
         cg.generateUniforms(vs, ShaderStage::FRAGMENT,
                 DescriptorSetBindingPoints::PER_VIEW,
                 +PerViewBindingPoints::SHADOWS,
@@ -564,7 +565,10 @@ std::string ShaderGenerator::createSurfaceFragmentProgram(ShaderModel const shad
     generateUserSpecConstants(cg, fs, mConstants);
 
     generateSurfaceMaterialVariantDefines(
-            fs, ShaderStage::FRAGMENT, featureLevel, material, variant);
+            fs, ShaderStage::FRAGMENT, featureLevel, material, variant, variantFilter);
+
+    bool const materialHasShadowing =
+            hasShadowing(material, variant, variantFilter, featureLevel);
 
     auto const defaultSpecularAO = shaderModel == ShaderModel::MOBILE ?
             SpecularAmbientOcclusion::NONE : SpecularAmbientOcclusion::SIMPLE;
@@ -636,7 +640,7 @@ std::string ShaderGenerator::createSurfaceFragmentProgram(ShaderModel const shad
         cg.generateUniforms(fs, ShaderStage::FRAGMENT, DescriptorSetBindingPoints::PER_VIEW,
                 +PerViewBindingPoints::LIGHTS, UibGenerator::getLightsUib());
 
-        if (filament::Variant::isShadowReceiverVariant(variant)) {
+        if (materialHasShadowing) {
             cg.generateUniforms(fs, ShaderStage::FRAGMENT, DescriptorSetBindingPoints::PER_VIEW,
                     +PerViewBindingPoints::SHADOWS, UibGenerator::getShadowUib());
         }
@@ -716,11 +720,11 @@ std::string ShaderGenerator::createSurfaceFragmentProgram(ShaderModel const shad
             if (filament::Variant::isSSRVariant(variant)) {
                 CodeGenerator::generateSurfaceReflections(fs, ShaderStage::FRAGMENT);
             } else {
-                CodeGenerator::generateSurfaceLit(fs, ShaderStage::FRAGMENT, variant,
+                CodeGenerator::generateSurfaceLit(fs, ShaderStage::FRAGMENT, materialHasShadowing,
                         material.shading,material.hasCustomSurfaceShading);
             }
         } else {
-            CodeGenerator::generateSurfaceUnlit(fs, ShaderStage::FRAGMENT, variant,
+            CodeGenerator::generateSurfaceUnlit(fs, ShaderStage::FRAGMENT, materialHasShadowing,
                     material.hasShadowMultiplier);
         }
         // entry point
@@ -918,6 +922,21 @@ bool ShaderGenerator::hasLighting(MaterialInfo const& material,
         filament::Variant const variant) noexcept {
     return (material.isLit || material.hasShadowMultiplier) &&
            !filament::Variant::isSSRVariant(variant);
+}
+
+bool ShaderGenerator::hasShadowing(MaterialInfo const& material,
+        filament::Variant const variant, UserVariantFilterMask const variantFilter,
+        MaterialBuilder::FeatureLevel const featureLevel) noexcept {
+    return (material.isLit || material.hasShadowMultiplier) &&
+           !(variantFilter & UserVariantFilterMask(UserVariantFilterBit::SHADOW_RECEIVER)) &&
+           // variantFilter: [vsm] keeps S2D programs for non-PCF views (see
+           // determineSurfaceVariants()), but strips their shadowing code.
+           !(filament::Variant::isShadowSampler2DVariant(variant) &&
+                   (variantFilter & UserVariantFilterMask(UserVariantFilterBit::VSM))) &&
+           !filament::Variant::isValidDepthVariant(variant) &&
+           !filament::Variant::isSSRVariant(variant) &&
+           // shadows are not supported on ESSL 1.0
+           featureLevel > MaterialBuilder::FeatureLevel::FEATURE_LEVEL_0;
 }
 
 } // namespace filament

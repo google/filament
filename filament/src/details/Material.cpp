@@ -298,25 +298,26 @@ void FMaterial::compile(CompilerPriorityQueue const priority,
 
     if (UTILS_LIKELY(isParallelShaderCompileSupported)) {
         for (auto const variant : variants) {
-            for (auto specKey : specKeys) {
-                specKey = mDefinition.filterProgramSpecKey(variant, specKey);
-                if (isValidProgram(variant, specKey, shaderModel, isStereoSupported)) {
+            for (auto const specKey : specKeys) {
+                auto const resolved = mDefinition.resolveProgram(variant, specKey);
+                if (isValidProgram(resolved.variant, resolved.specKey, shaderModel,
+                            isStereoSupported)) {
 #ifndef NDEBUG
                     FILAMENT_TRACING_EVENT(FILAMENT_TRACING_CATEGORY_FILAMENT,
                             "prepareProgram(variant found)",
                             "name", getName().c_str(),
-                            "variantKey", static_cast<uint32_t>(variant.key),
-                            "specKey", static_cast<uint32_t>(specKey.key),
+                            "variantKey", static_cast<uint32_t>(resolved.variant.key),
+                            "specKey", static_cast<uint32_t>(resolved.specKey.key),
                             "priority", static_cast<uint32_t>(priority));
 #endif
-                    mi->prepareProgram(driver, variant, specKey, priority);
+                    mi->prepareProgram(driver, resolved.variant, resolved.specKey, priority);
                 } else {
 #ifndef NDEBUG
                     FILAMENT_TRACING_EVENT(FILAMENT_TRACING_CATEGORY_FILAMENT,
                             "requested variant missing",
                             "name", getName().c_str(),
-                            "variantKey", static_cast<uint32_t>(variant.key),
-                            "specKey", static_cast<uint32_t>(specKey.key),
+                            "variantKey", static_cast<uint32_t>(resolved.variant.key),
+                            "specKey", static_cast<uint32_t>(resolved.specKey.key),
                             "priority", static_cast<uint32_t>(priority));
 #endif
                 }
@@ -325,12 +326,13 @@ void FMaterial::compile(CompilerPriorityQueue const priority,
 #ifndef NDEBUG
     } else {
         for (UTILS_UNUSED_WITHOUT_TRACING auto const variant : variants) {
-            for (UTILS_UNUSED_WITHOUT_TRACING auto specKey: specKeys) {
-                specKey = mDefinition.filterProgramSpecKey(variant, specKey);
+            for (UTILS_UNUSED_WITHOUT_TRACING auto const specKey: specKeys) {
+                UTILS_UNUSED_WITHOUT_TRACING auto const resolved =
+                        mDefinition.resolveProgram(variant, specKey);
                 FILAMENT_TRACING_EVENT(FILAMENT_TRACING_CATEGORY_FILAMENT,
                         "parallel compilation disabled", "name", getName().c_str(), "variantKey",
-                        static_cast<uint32_t>(variant.key), "specKey",
-                        static_cast<uint32_t>(specKey.key), "priority",
+                        static_cast<uint32_t>(resolved.variant.key), "specKey",
+                        static_cast<uint32_t>(resolved.specKey.key), "priority",
                         static_cast<uint32_t>(priority));
             }
         }

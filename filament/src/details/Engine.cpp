@@ -1819,11 +1819,10 @@ bool* FEngine::getFeatureFlagPtr(std::string_view name, bool const allowConstant
 FixedCapacityVector<Variant> FEngine::getMaterialCompileVariants(
         FView const* view,
         FMaterial const* material,
-        tribool const shadowReceiver,
         tribool const skinning) noexcept {
 
-    // the maximum possible is 8 variants (4 color + 2 depth + 2 motion vectors)
-    auto variants = FixedCapacityVector<Variant>::with_capacity(8);
+    // the maximum possible is 6 variants (2 color + 2 depth + 2 motion vectors)
+    auto variants = FixedCapacityVector<Variant>::with_capacity(6);
 
     // apply() iteratively expands the `variants` vector by mutating existing elements
     // in-place if `value` is determinate, or by duplicating them if `value` is indeterminate.
@@ -1855,17 +1854,11 @@ FixedCapacityVector<Variant> FEngine::getMaterialCompileVariants(
     // isMaterialLit means shading != Shading::UNLIT || hasShadowMultiplier;
     const bool isMaterialLit = material->getDefinition().isVariantLit;
     Variant baseVariant{};
-    baseVariant.setShadowSampler2D(isMaterialLit && view->hasShadowing() && (view->getShadowType() != ShadowType::PCF));
+    baseVariant.setShadowSampler2D(isMaterialLit && (view->getShadowType() != ShadowType::PCF));
     baseVariant.setStereo(view->hasStereo());
 
     variants.push_back(baseVariant);
     apply(0, skinning, &Variant::setSkinning);
-    // Only respect shadowReceiver variant when the shading model is lit or hasShadowMultiplier.
-    if (isMaterialLit) {
-        apply(0, shadowReceiver, &Variant::setShadowReceiver);
-    } else {
-        apply(0, tribool(false), &Variant::setShadowReceiver);
-    }
 
     Variant depthVariant{};
     if (isMaterialLit && view->hasShadowing()) {
@@ -1906,9 +1899,10 @@ FixedCapacityVector<Variant> FEngine::getMaterialCompileVariants(
 }
 
 FixedCapacityVector<DynamicSpecConstKey> FEngine::getMaterialCompileDynamicSpecConstKey(
-        FView const* view, FMaterial const* material) noexcept {
+        FView const* view, FMaterial const* material, tribool const shadowReceiver) noexcept {
     // Will add more as we turn more variants into spec constants
-    auto keys = FixedCapacityVector<DynamicSpecConstKey>::with_capacity(1);
+    // the maximum possible is 2 keys (with and without shadow receiving)
+    auto keys = FixedCapacityVector<DynamicSpecConstKey>::with_capacity(2);
     DynamicSpecConstKey baseKey;
     const bool isMaterialLit = material->getDefinition().isVariantLit;
     baseKey.setDynamicLighting(isMaterialLit && view->hasDynamicLighting());
@@ -1918,7 +1912,16 @@ FixedCapacityVector<DynamicSpecConstKey> FEngine::getMaterialCompileDynamicSpecC
     // the variant-based precompile before it, we only precompile the view-level choice here.
     baseKey.setFog(view->hasFog());
 
-    keys.push_back(baseKey);
+    // Only respect shadowReceiver when the shading model is lit or hasShadowMultiplier.
+    if (isMaterialLit && shadowReceiver.is_indeterminate()) {
+        DynamicSpecConstKey shadowReceiverKey = baseKey;
+        shadowReceiverKey.setShadowReceiver(true);
+        keys.push_back(baseKey);
+        keys.push_back(shadowReceiverKey);
+    } else {
+        baseKey.setShadowReceiver(isMaterialLit && shadowReceiver.is_true());
+        keys.push_back(baseKey);
+    }
 
     return keys;
 }
@@ -1931,8 +1934,9 @@ void FEngine::compile(
         tribool const skinning,
         CallbackHandler* handler,
         Invocable<void(Material*)>&& callback) {
-    auto const variants = getMaterialCompileVariants(view, material, shadowReceiver, skinning);
-    auto const dynamicSpecConstKeys = getMaterialCompileDynamicSpecConstKey(view, material);
+    auto const variants = getMaterialCompileVariants(view, material, skinning);
+    auto const dynamicSpecConstKeys =
+            getMaterialCompileDynamicSpecConstKey(view, material, shadowReceiver);
     const_cast<FMaterial*>(material)->compile(priority, variants, dynamicSpecConstKeys, handler,
             std::move(callback));
 }
