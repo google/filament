@@ -26,7 +26,12 @@
 
 #include <backend/platforms/VulkanPlatform.h>
 
+#include <utils/debug.h>
+#include <utils/FixedCapacityVector.h>
+
 #include <algorithm>
+#include <tuple>
+#include <utility>
 
 namespace filament::backend {
 
@@ -50,8 +55,16 @@ VulkanExternalImageManager::VulkanExternalImageManager(VulkanSamplerCache* sampl
 
 VulkanExternalImageManager::~VulkanExternalImageManager() = default;
 
+void VulkanExternalImageManager::gc() {
+    ++mImportFrame;
+    erasep<ExternalImageImport>(mImports, [frame = mImportFrame](ExternalImageImport const& entry) {
+        return frame - entry.lastUsedFrame > EXTERNAL_IMAGE_IMPORT_MAX_IDLE_FRAMES;
+    });
+}
+
 void VulkanExternalImageManager::terminate() {
     mSetBindings.clear();
+    mImports.clear();
 }
 
 void VulkanExternalImageManager::updateSetAndLayout(
@@ -134,6 +147,47 @@ VkSamplerYcbcrConversion VulkanExternalImageManager::getVkSamplerYcbcrConversion
     return mYcbcrConversionCache->getConversion(ycbcrParams);
 }
 
+fvkmemory::resource_ptr<VulkanTexture> VulkanExternalImageManager::findImport(
+        ImportKey const& key) {
+    if (!key.bufferKey) {
+        return {};
+    }
+    for (auto it = mImports.begin(); it != mImports.end(); ++it) {
+        if (it->key.bufferKey != key.bufferKey) {
+            continue;
+        }
+        if (it->key != key) {
+            // The buffer's metadata changed. The import cannot be reused. We drop it here, but the
+            // in-flight textures sharing it will keep it alive until the GPU is done.
+            mImports.erase(it);
+            return {};
+        }
+        // Move to the back (most recently used).
+        ExternalImageImport entry = std::move(*it);
+        mImports.erase(it);
+        entry.lastUsedFrame = mImportFrame;
+        mImports.push_back(std::move(entry));
+        return mImports.back().texture;
+    }
+    return {};
+}
+
+void VulkanExternalImageManager::cacheImport(ImportKey const& key,
+        fvkmemory::resource_ptr<VulkanTexture> texture) {
+    assert_invariant(key.bufferKey != nullptr);
+    erasep<ExternalImageImport>(mImports, [&key](ExternalImageImport const& entry) {
+        return entry.key.bufferKey == key.bufferKey;
+    });
+    mImports.push_back({
+        .key = key,
+        .texture = std::move(texture),
+        .lastUsedFrame = mImportFrame,
+    });
+    if (mImports.size() > MAX_EXTERNAL_IMAGE_IMPORTS) {
+        mImports.erase(mImports.begin());
+    }
+}
+
 void VulkanExternalImageManager::removeDescriptorSet(
         fvkmemory::resource_ptr<VulkanDescriptorSet> inSet) {
     erasep<SetBindingInfo>(mSetBindings,
@@ -181,4 +235,4 @@ void VulkanExternalImageManager::clearTextureBinding(
     });
 }
 
-} // namesapce filament::backend
+} // namespace filament::backend
