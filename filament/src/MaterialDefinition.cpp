@@ -1115,15 +1115,7 @@ bool MaterialDefinition::isValidProgram(Variant const variant, DynamicSpecConstK
         }
     }
 
-    if (!DynamicSpecConstKey::isValidProgramSpecKey(variant, specKey, materialDomain,
-                isVariantLit)) {
-        return false;
-    }
-
-    // Materials compiled without fog support (variantFilter: [fog]) have no fog code, so the fog
-    // specialization would be identical to the non-fog one. When FOG was a variant, the missing
-    // shader rejected it implicitly; now that it is a spec constant we must reject it here.
-    if (specKey.hasFog() && !isFogSupported()) {
+    if (filterProgramSpecKey(variant, specKey) != specKey) {
         return false;
     }
 
