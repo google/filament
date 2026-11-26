@@ -467,6 +467,10 @@ VkPhysicalDevice selectPhysicalDevice(VkInstance instance,
         VulkanPlatform::Customization::GPUPreference const& gpuPreference) {
     FixedCapacityVector<VkPhysicalDevice> const physicalDevices =
             fvkutils::enumerate(vkEnumeratePhysicalDevices, instance);
+    if (physicalDevices.empty()) {
+        FVK_LOGE << "Unable to find any Vulkan physical devices.";
+        return VK_NULL_HANDLE;
+    }
     struct DeviceInfo {
         VkPhysicalDevice device = VK_NULL_HANDLE;
         VkPhysicalDeviceType deviceType = VK_PHYSICAL_DEVICE_TYPE_OTHER;
@@ -548,7 +552,9 @@ VkPhysicalDevice selectPhysicalDevice(VkInstance instance,
                 return deviceTypeOrder(a.deviceType) < deviceTypeOrder(b.deviceType);
             });
     auto device = deviceList.back().device;
-    FILAMENT_CHECK_POSTCONDITION(device != VK_NULL_HANDLE) << "Unable to find suitable device.";
+    if (device == VK_NULL_HANDLE) {
+        FVK_LOGE << "Unable to find suitable device.";
+    }
     return device;
 }
 
@@ -637,8 +643,14 @@ using SwapChainPtr = VulkanPlatform::SwapChainPtr;
 
 void VulkanPlatform::terminate() {
     if (!mImpl->mSharedContext) {
-        vkDestroyDevice(mImpl->mDevice, VKALLOC);
-        vkDestroyInstance(mImpl->mInstance, VKALLOC);
+        if (mImpl->mDevice != VK_NULL_HANDLE) {
+            vkDestroyDevice(mImpl->mDevice, VKALLOC);
+            mImpl->mDevice = VK_NULL_HANDLE;
+        }
+        if (mImpl->mInstance != VK_NULL_HANDLE) {
+            vkDestroyInstance(mImpl->mInstance, VKALLOC);
+            mImpl->mInstance = VK_NULL_HANDLE;
+        }
     }
 }
 
@@ -646,7 +658,31 @@ void VulkanPlatform::terminate() {
 Driver* VulkanPlatform::createDriver(void* sharedContext,
         Platform::DriverConfig const& driverConfig) {
     // Load Vulkan entry points.
-    FILAMENT_CHECK_POSTCONDITION(bluevk::initialize()) << "BlueVK is unable to load entry points.";
+    if (!bluevk::initialize()) {
+        FVK_LOGE << "BlueVK is unable to load entry points.";
+        return nullptr;
+    }
+
+    if (vkEnumerateInstanceVersion == nullptr) {
+        FVK_LOGE << "Vulkan 1.1 loader is required (vkEnumerateInstanceVersion not found).";
+        return nullptr;
+    }
+    uint32_t instanceVersion = 0;
+    if (VkResult const result = vkEnumerateInstanceVersion(&instanceVersion);
+            result != VK_SUCCESS) {
+        FVK_LOGE << "vkEnumerateInstanceVersion failed. error=" << static_cast<int32_t>(result);
+        return nullptr;
+    }
+    int const loaderMajor = VK_VERSION_MAJOR(instanceVersion);
+    int const loaderMinor = VK_VERSION_MINOR(instanceVersion);
+    if (loaderMajor < FVK_REQUIRED_VERSION_MAJOR ||
+            (loaderMajor == FVK_REQUIRED_VERSION_MAJOR &&
+                    loaderMinor < FVK_REQUIRED_VERSION_MINOR)) {
+        FVK_LOGE << "Vulkan loader version " << loaderMajor << "." << loaderMinor
+                 << " is below required " << FVK_REQUIRED_VERSION_MAJOR << "."
+                 << FVK_REQUIRED_VERSION_MINOR << ".";
+        return nullptr;
+    }
 
     if (sharedContext) {
         VulkanSharedContext const* scontext = (VulkanSharedContext const*) sharedContext;
@@ -670,6 +706,28 @@ Driver* VulkanPlatform::createDriver(void* sharedContext,
 
         mImpl->mSharedContext = true;
     }
+
+    // When createDriver() returns nullptr, FEngine::~FEngine() destroys mPlatform without calling
+    // terminate() (which is only called from VulkanDriver::terminate()). Destroy any owned
+    // VkInstance and clear initialized handles/fields so callers do not leak resources or observe
+    // dangling handles via getters or terminate().
+    auto cleanupOnFailure = [this]() noexcept {
+        if (!mImpl->mSharedContext && mImpl->mInstance != VK_NULL_HANDLE) {
+            vkDestroyInstance(mImpl->mInstance, VKALLOC);
+        }
+        mImpl->mDevice = VK_NULL_HANDLE;
+        mImpl->mInstance = VK_NULL_HANDLE;
+        mImpl->mPhysicalDevice = VK_NULL_HANDLE;
+        mImpl->mGraphicsQueue = {};
+        mImpl->mGraphicsQueueHandle = VK_NULL_HANDLE;
+        mImpl->mAsyncQueue = {};
+        mImpl->mAsyncQueueHandle = VK_NULL_HANDLE;
+        mImpl->mProtectedGraphicsQueue = {};
+        mImpl->mProtectedGraphicsQueueHandle = VK_NULL_HANDLE;
+        mImpl->mEnabledLayers.clear();
+        mImpl->mSharedContext = false;
+        mImpl->mForceXCBSwapchain = false;
+    };
 
     bool enableDebugUtils = false;
     bool enableDebugUtilsNames = false;
@@ -702,10 +760,9 @@ Driver* VulkanPlatform::createDriver(void* sharedContext,
         // build where only XCB is available.
         if (setContains(swapchainExts, VK_KHR_XCB_SURFACE_EXTENSION_NAME) &&
                 setContains(swapchainExts, VK_KHR_XLIB_SURFACE_EXTENSION_NAME)) {
-            // Assume only XCB is left, then we force the XCB path in the swapchain creation.
-            mImpl->mForceXCBSwapchain = !setContains(instExts, VK_KHR_XLIB_SURFACE_EXTENSION_NAME);
-            assert_invariant(!mImpl->mForceXCBSwapchain ||
-                             setContains(instExts, VK_KHR_XCB_SURFACE_EXTENSION_NAME));
+            // If only XCB is supported (and not Xlib), force the XCB path in swapchain creation.
+            mImpl->mForceXCBSwapchain = !setContains(instExts, VK_KHR_XLIB_SURFACE_EXTENSION_NAME) &&
+                                        setContains(instExts, VK_KHR_XCB_SURFACE_EXTENSION_NAME);
         }
 #endif
 
@@ -716,7 +773,11 @@ Driver* VulkanPlatform::createDriver(void* sharedContext,
     if (mImpl->mInstance == VK_NULL_HANDLE) {
         createInstance(instExts, enableRenderDocCapture);
     }
-    assert_invariant(mImpl->mInstance != VK_NULL_HANDLE);
+    if (mImpl->mInstance == VK_NULL_HANDLE) {
+        FVK_LOGE << "Failed to create Vulkan instance.";
+        cleanupOnFailure();
+        return nullptr;
+    }
 
     bluevk::bindInstance(mImpl->mInstance);
 
@@ -728,7 +789,11 @@ Driver* VulkanPlatform::createDriver(void* sharedContext,
     if (mImpl->mPhysicalDevice == VK_NULL_HANDLE) {
         mImpl->mPhysicalDevice = selectVkPhysicalDevice(mImpl->mInstance);
     }
-    assert_invariant(mImpl->mPhysicalDevice != VK_NULL_HANDLE);
+    if (mImpl->mPhysicalDevice == VK_NULL_HANDLE) {
+        FVK_LOGE << "Failed to select Vulkan physical device.";
+        cleanupOnFailure();
+        return nullptr;
+    }
 
     printDeviceInfo(mImpl->mInstance, mImpl->mPhysicalDevice);
 
@@ -798,7 +863,11 @@ Driver* VulkanPlatform::createDriver(void* sharedContext,
                 requestedFeatures);
     }
 
-    assert_invariant(mImpl->mDevice != VK_NULL_HANDLE);
+    if (mImpl->mDevice == VK_NULL_HANDLE) {
+        FVK_LOGE << "Failed to create Vulkan logical device.";
+        cleanupOnFailure();
+        return nullptr;
+    }
     assert_invariant(mImpl->mGraphicsQueue.family != INVALID_VK_INDEX);
     assert_invariant(mImpl->mGraphicsQueue.index != INVALID_VK_INDEX);
 
@@ -1003,22 +1072,26 @@ void VulkanPlatform::registerPipelineCachePrewarmExternalFormat(
 
 VkInstance VulkanPlatform::createVkInstance(const VkInstanceCreateInfo& createInfo) noexcept {
     VkInstance instance = VK_NULL_HANDLE;
-    VkResult result = vkCreateInstance(&createInfo, VKALLOC, &instance);
-    FILAMENT_CHECK_POSTCONDITION(result == VK_SUCCESS)
-            << "Unable to create Vulkan instance. error=" << static_cast<int32_t>(result);
+    VkResult const result = vkCreateInstance(&createInfo, VKALLOC, &instance);
+    if (result != VK_SUCCESS) {
+        FVK_LOGE << "Unable to create Vulkan instance. error=" << static_cast<int32_t>(result);
+        return VK_NULL_HANDLE;
+    }
     return instance;
 }
 
 VkPhysicalDevice VulkanPlatform::selectVkPhysicalDevice(VkInstance instance) noexcept {
     VulkanPlatform::Customization::GPUPreference const pref = getCustomization().gpu;
-    return selectPhysicalDevice(mImpl->mInstance, pref);
+    return selectPhysicalDevice(instance, pref);
 }
 
 VkDevice VulkanPlatform::createVkDevice(const VkDeviceCreateInfo& createInfo) noexcept {
     VkDevice device = VK_NULL_HANDLE;
-    VkResult result = vkCreateDevice(mImpl->mPhysicalDevice, &createInfo, VKALLOC, &device);
-    FILAMENT_CHECK_POSTCONDITION(result == VK_SUCCESS)
-            << "vkCreateDevice error=" << static_cast<int32_t>(result);
+    VkResult const result = vkCreateDevice(mImpl->mPhysicalDevice, &createInfo, VKALLOC, &device);
+    if (result != VK_SUCCESS) {
+        FVK_LOGE << "vkCreateDevice error=" << static_cast<int32_t>(result);
+        return VK_NULL_HANDLE;
+    }
     return device;
 }
 

@@ -129,6 +129,125 @@ TEST_F(PlatformTest, VulkanRenderTargetFormatSupport) {
     }
     EXPECT_FALSE(getDriver().isTextureFormatMipmappable(TextureFormat::STENCIL8));
 }
+
+namespace {
+
+class FailingVulkanPlatform : public VulkanPlatform {
+public:
+    enum class FailureStage {
+        CREATE_INSTANCE,
+        SELECT_PHYSICAL_DEVICE,
+        CREATE_LOGICAL_DEVICE,
+    };
+
+    explicit FailingVulkanPlatform(FailureStage stage) noexcept : mStage(stage) {}
+
+    bool createInstanceCalled = false;
+    bool selectPhysicalDeviceCalled = false;
+    bool createDeviceCalled = false;
+    VkInstance createdInstance = VK_NULL_HANDLE;
+    VkInstance selectPhysicalDeviceInstanceArg = VK_NULL_HANDLE;
+    VkPhysicalDevice selectedPhysicalDevice = VK_NULL_HANDLE;
+
+protected:
+    ExtensionSet getSwapchainInstanceExtensions() const override {
+        return {};
+    }
+
+    SurfaceBundle createVkSurfaceKHR(void*, VkInstance, uint64_t) const noexcept override {
+        return { VK_NULL_HANDLE, VkExtent2D{} };
+    }
+
+    VkInstance createVkInstance(VkInstanceCreateInfo const& createInfo) noexcept override {
+        createInstanceCalled = true;
+        if (mStage == FailureStage::CREATE_INSTANCE) {
+            return VK_NULL_HANDLE;
+        }
+        createdInstance = VulkanPlatform::createVkInstance(createInfo);
+        return createdInstance;
+    }
+
+    VkPhysicalDevice selectVkPhysicalDevice(VkInstance instance) noexcept override {
+        selectPhysicalDeviceCalled = true;
+        selectPhysicalDeviceInstanceArg = instance;
+        if (mStage == FailureStage::SELECT_PHYSICAL_DEVICE) {
+            return VK_NULL_HANDLE;
+        }
+        selectedPhysicalDevice = VulkanPlatform::selectVkPhysicalDevice(instance);
+        return selectedPhysicalDevice;
+    }
+
+    VkDevice createVkDevice(VkDeviceCreateInfo const& createInfo) noexcept override {
+        createDeviceCalled = true;
+        if (mStage == FailureStage::CREATE_LOGICAL_DEVICE) {
+            return VK_NULL_HANDLE;
+        }
+        return VulkanPlatform::createVkDevice(createInfo);
+    }
+
+private:
+    FailureStage mStage;
+};
+
+} // namespace
+
+TEST(VulkanPlatformTest, CreateDriverFailsGracefullyOnNullInstance) {
+    if (BackendTest::sBackend != Backend::VULKAN) {
+        GTEST_SKIP() << "This test requires the Vulkan backend.";
+    }
+
+    FailingVulkanPlatform platform(FailingVulkanPlatform::FailureStage::CREATE_INSTANCE);
+    Platform::DriverConfig const driverConfig;
+    Driver* const driver = platform.createDriver(nullptr, driverConfig);
+
+    EXPECT_EQ(driver, nullptr);
+    EXPECT_TRUE(platform.createInstanceCalled);
+    EXPECT_FALSE(platform.selectPhysicalDeviceCalled);
+    EXPECT_FALSE(platform.createDeviceCalled);
+    EXPECT_EQ(platform.getInstance(), VK_NULL_HANDLE);
+    EXPECT_EQ(platform.getPhysicalDevice(), VK_NULL_HANDLE);
+    EXPECT_EQ(platform.getDevice(), VK_NULL_HANDLE);
+}
+
+TEST(VulkanPlatformTest, CreateDriverFailsGracefullyOnNullPhysicalDevice) {
+    if (BackendTest::sBackend != Backend::VULKAN) {
+        GTEST_SKIP() << "This test requires the Vulkan backend.";
+    }
+
+    FailingVulkanPlatform platform(FailingVulkanPlatform::FailureStage::SELECT_PHYSICAL_DEVICE);
+    Platform::DriverConfig const driverConfig;
+    Driver* const driver = platform.createDriver(nullptr, driverConfig);
+
+    EXPECT_EQ(driver, nullptr);
+    EXPECT_TRUE(platform.createInstanceCalled);
+    EXPECT_NE(platform.createdInstance, VK_NULL_HANDLE);
+    EXPECT_TRUE(platform.selectPhysicalDeviceCalled);
+    EXPECT_EQ(platform.selectPhysicalDeviceInstanceArg, platform.createdInstance);
+    EXPECT_FALSE(platform.createDeviceCalled);
+    EXPECT_EQ(platform.getInstance(), VK_NULL_HANDLE);
+    EXPECT_EQ(platform.getPhysicalDevice(), VK_NULL_HANDLE);
+    EXPECT_EQ(platform.getDevice(), VK_NULL_HANDLE);
+}
+
+TEST(VulkanPlatformTest, CreateDriverFailsGracefullyOnNullLogicalDevice) {
+    if (BackendTest::sBackend != Backend::VULKAN) {
+        GTEST_SKIP() << "This test requires the Vulkan backend.";
+    }
+
+    FailingVulkanPlatform platform(FailingVulkanPlatform::FailureStage::CREATE_LOGICAL_DEVICE);
+    Platform::DriverConfig const driverConfig;
+    Driver* const driver = platform.createDriver(nullptr, driverConfig);
+
+    EXPECT_EQ(driver, nullptr);
+    EXPECT_TRUE(platform.createInstanceCalled);
+    EXPECT_NE(platform.createdInstance, VK_NULL_HANDLE);
+    EXPECT_TRUE(platform.selectPhysicalDeviceCalled);
+    EXPECT_NE(platform.selectedPhysicalDevice, VK_NULL_HANDLE);
+    EXPECT_TRUE(platform.createDeviceCalled);
+    EXPECT_EQ(platform.getInstance(), VK_NULL_HANDLE);
+    EXPECT_EQ(platform.getPhysicalDevice(), VK_NULL_HANDLE);
+    EXPECT_EQ(platform.getDevice(), VK_NULL_HANDLE);
+}
 #endif
 
 } // namespace test

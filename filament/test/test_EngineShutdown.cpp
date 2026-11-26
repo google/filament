@@ -26,6 +26,9 @@
 #include <backend/CallbackHandler.h>
 #include <backend/DriverEnums.h>
 #include <backend/Platform.h>
+#if defined(FILAMENT_DRIVER_SUPPORTS_VULKAN)
+#include <backend/platforms/VulkanPlatform.h>
+#endif
 
 #include <utils/CString.h>
 #include <utils/Mutex.h>
@@ -180,6 +183,23 @@ private:
     ShutdownTrace* mTrace;
 };
 
+#if defined(FILAMENT_DRIVER_SUPPORTS_VULKAN)
+class FailingVulkanPlatform : public VulkanPlatform {
+protected:
+    ExtensionSet getSwapchainInstanceExtensions() const override {
+        return {};
+    }
+
+    SurfaceBundle createVkSurfaceKHR(void*, VkInstance, uint64_t) const noexcept override {
+        return { VK_NULL_HANDLE, VkExtent2D{} };
+    }
+
+    VkPhysicalDevice selectVkPhysicalDevice(VkInstance) noexcept override {
+        return VK_NULL_HANDLE;
+    }
+};
+#endif
+
 } // namespace
 
 TEST(EngineShutdownTest, DrainsUserCallbacksScheduledWhileTheQueueIsBeingDispatched) {
@@ -205,3 +225,19 @@ TEST(EngineShutdownTest, DrainsUserCallbacksScheduledWhileTheQueueIsBeingDispatc
     EXPECT_EQ(0, trace.callbacksLeftAtDestruction.load(std::memory_order_acquire))
             << "the driver was destroyed with callbacks still queued";
 }
+
+#if defined(FILAMENT_DRIVER_SUPPORTS_VULKAN)
+TEST(EngineShutdownTest, ReturnsNullEngineWhenVulkanPhysicalDeviceSelectionFails) {
+    FailingVulkanPlatform platform;
+
+    Engine* const engine = Engine::Builder()
+            .backend(Backend::VULKAN)
+            .platform(&platform)
+            .build();
+
+    EXPECT_EQ(nullptr, engine);
+    EXPECT_EQ(VK_NULL_HANDLE, platform.getInstance());
+    EXPECT_EQ(VK_NULL_HANDLE, platform.getPhysicalDevice());
+    EXPECT_EQ(VK_NULL_HANDLE, platform.getDevice());
+}
+#endif
