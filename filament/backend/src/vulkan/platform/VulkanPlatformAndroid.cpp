@@ -189,17 +189,51 @@ VulkanPlatformAndroid::~VulkanPlatformAndroid() noexcept {
 }
 
 Platform::ExternalImageHandle VulkanPlatformAndroid::createExternalImage(
-        AHardwareBuffer const* buffer, bool sRGB) noexcept {
+        AHardwareBuffer const* buffer, bool sRGB, ARect const& cropRect) noexcept {
     if (__builtin_available(android 26, *)) {
+        AHardwareBuffer_Desc desc = {};
+        AHardwareBuffer_describe(buffer, &desc);
+
+        const bool isEmpty =
+                cropRect.left == 0 && cropRect.top == 0 &&
+                cropRect.right == 0 && cropRect.bottom == 0;
+
+        bool hasCrop = false;
+        if (!isEmpty) {
+            const bool isValid =
+                    cropRect.left >= 0 && cropRect.top >= 0 &&
+                    cropRect.right > cropRect.left &&
+                    cropRect.bottom > cropRect.top &&
+                    static_cast<uint32_t>(cropRect.right) <= desc.width &&
+                    static_cast<uint32_t>(cropRect.bottom) <= desc.height;
+            assert_invariant(isValid);
+            if (!isValid) {
+                return Platform::ExternalImageHandle{};
+            }
+
+            const bool isFullFrame =
+                    cropRect.left == 0 && cropRect.top == 0 &&
+                    static_cast<uint32_t>(cropRect.right) == desc.width &&
+                    static_cast<uint32_t>(cropRect.bottom) == desc.height;
+            hasCrop = !isFullFrame;
+        }
+
+        auto* const p = new (std::nothrow) ExternalImageVulkanAndroid;
+        if (!p) {
+            return Platform::ExternalImageHandle{};
+        }
+
         auto bufferImpl = const_cast<AHardwareBuffer*>(buffer);
         AHardwareBuffer_acquire(bufferImpl);
 
-        AHardwareBuffer_Desc hardwareBufferDescription = {};
-        AHardwareBuffer_describe(buffer, &hardwareBufferDescription);
-
-        auto* const p = new (std::nothrow) ExternalImageVulkanAndroid;
-        p->aHardwareBuffer = const_cast<AHardwareBuffer*>(buffer);
+        p->aHardwareBuffer = bufferImpl;
         p->sRGB = sRGB;
+        p->hasCrop = hasCrop;
+        if (hasCrop) {
+            p->cropRect = cropRect;
+            p->bufferWidth = desc.width;
+            p->bufferHeight = desc.height;
+        }
         return Platform::ExternalImageHandle{ p };
     }
 
