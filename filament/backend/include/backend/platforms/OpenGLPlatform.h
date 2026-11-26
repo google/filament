@@ -63,6 +63,9 @@ public:
         // Number of mip levels the driver sized this texture for. Set by the driver before
         // setExternalImage() so the platform imports exactly the levels the driver expects.
         uint8_t levels = 1;
+        // External image backing this texture, if any. Released when the
+        // texture is destroyed.
+        Platform::ExternalImageHandle image;
     };
 
     /**
