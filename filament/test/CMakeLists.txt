@@ -72,6 +72,7 @@ if (FILAMENT_BUILD_TESTING)
                 test_EngineShutdown.cpp
                 test_FenceManager.cpp
                 test_FramePacer.cpp
+                test_HwDescriptorSetLayoutFactory.cpp
                 test_LocalProgramCache.cpp
                 test_RenderPassAutoInstancing.cpp
                 test_TextureCache.cpp

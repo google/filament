@@ -539,9 +539,10 @@ struct DescriptorSetLayoutDescriptor {
     friend bool operator==(DescriptorSetLayoutDescriptor const& lhs,
             DescriptorSetLayoutDescriptor const& rhs) noexcept {
         return lhs.type == rhs.type &&
+               lhs.stageFlags == rhs.stageFlags &&
+               lhs.binding == rhs.binding &&
                lhs.flags == rhs.flags &&
-               lhs.count == rhs.count &&
-               lhs.stageFlags == rhs.stageFlags;
+               lhs.count == rhs.count;
     }
 };
 
