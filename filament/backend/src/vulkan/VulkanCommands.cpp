@@ -255,7 +255,8 @@ CommandBufferPool::CommandBufferPool(VulkanContext const& context, VkDevice devi
       mRecording(INVALID),
       mFencePool(context, device, CAPACITY),
       mCounter(ageCounter),
-      mDrainAllPools(std::move(drainAllPools)) {
+      mDrainAllPools(std::move(drainAllPools)),
+      mSerializeFenceQueries(context.isFenceQuerySerializationNeeded()) {
     VkCommandPoolCreateInfo createInfo = {
         .sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
         .flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT |
@@ -369,7 +370,18 @@ void CommandBufferPool::wait() {
         fences[count++] = mBuffers[index]->getVkFence();
     });
     if (count) {
-        VkResult const result = vkWaitForFences(mDevice, count, fences, VK_TRUE, UINT64_MAX);
+        VkResult result = VK_SUCCESS;
+        if (mSerializeFenceQueries) {
+            // Fence by fence, each through its own query lock.
+            mSubmitted.forEachSetBit([this, &result] (size_t index) {
+                if (result == VK_SUCCESS) {
+                    result = mBuffers[index]->getFenceStatus()->waitForFence(mDevice, UINT64_MAX,
+                            std::chrono::steady_clock::time_point::max());
+                }
+            });
+        } else {
+            result = vkWaitForFences(mDevice, count, fences, VK_TRUE, UINT64_MAX);
+        }
         assert_invariant(result == VK_SUCCESS);
         if (UTILS_UNLIKELY(result != VK_SUCCESS)) {
             static bool sLoggedWaitError = false;

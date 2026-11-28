@@ -189,8 +189,9 @@ void VulkanProgram::flushPushConstants(VkPipelineLayout layout) {
     mQueuedPushConstants.clear();
 }
 
-VulkanCmdFence::VulkanCmdFence(VkFence fence, std::function<void(VkFence)> recycleFn)
-    : mFence(fence), mRecycleFn(recycleFn) {
+VulkanCmdFence::VulkanCmdFence(VkFence fence, std::function<void(VkFence)> recycleFn,
+        bool serializeQueries)
+    : mFence(fence), mRecycleFn(recycleFn), mSerializeQueries(serializeQueries) {
 }
 
 VulkanCmdFence::~VulkanCmdFence() {
@@ -205,9 +206,50 @@ std::shared_ptr<VulkanCmdFence> VulkanCmdFence::completed() noexcept {
     return cmdFence;
 }
 
+VkResult VulkanCmdFence::queryFence(VkDevice device) {
+    if (!mSerializeQueries) {
+        return vkGetFenceStatus(device, mFence);
+    }
+    std::unique_lock const l(mQueryLock, std::try_to_lock);
+    if (!l.owns_lock()) {
+        return VK_NOT_READY;
+    }
+    return vkGetFenceStatus(device, mFence);
+}
+
+VkResult VulkanCmdFence::waitForFence(VkDevice device, uint64_t const timeout,
+        std::chrono::steady_clock::time_point const until) {
+    VkResult status;
+    if (!mSerializeQueries) {
+        status = vkWaitForFences(device, 1, &mFence, VK_TRUE, timeout);
+    } else {
+        using namespace std::chrono;
+        bool const forever = until == steady_clock::time_point::max();
+        std::unique_lock l(mQueryLock, std::defer_lock);
+        if (forever) {
+            l.lock();
+        } else if (!l.try_lock_until(until)) {
+            return VK_TIMEOUT;
+        }
+        // Waiting for the lock used part of the timeout.
+        uint64_t remaining = timeout;
+        if (!forever) {
+            auto const left = duration_cast<nanoseconds>(until - steady_clock::now()).count();
+            remaining = left > 0 ? uint64_t(left) : 0;
+        }
+        status = vkWaitForFences(device, 1, &mFence, VK_TRUE, remaining);
+    }
+    // Published here, with mQueryLock released (it is never held with mLock): a later
+    // refreshStatus() can find another thread's query in flight and miss the signal.
+    if (status == VK_SUCCESS) {
+        setStatus(status);
+    }
+    return status;
+}
+
 void VulkanCmdFence::refreshStatus(VkDevice device) {
     if (mFence != VK_NULL_HANDLE) {
-        VkResult const status = vkGetFenceStatus(device, mFence);
+        VkResult const status = queryFence(device);
         if (status == VK_SUCCESS) {
             setStatus(status);
         } else if (status < 0) {
@@ -253,13 +295,12 @@ FenceStatus VulkanCmdFence::wait(VkDevice device, uint64_t const timeout,
     // However, since we're going to wait on the fence, and because the fence is guaranteed
     // to stay in scope as long as this VulkanCmdFence is still alive, we do not need a lock
     // here.
-    VkResult const status = vkWaitForFences(device, 1, &mFence, VK_TRUE, timeout);
+    VkResult const status = waitForFence(device, timeout, until);
     if (status == VK_TIMEOUT) {
         return FenceStatus::TIMEOUT_EXPIRED;
     }
 
     if (status == VK_SUCCESS) {
-        setStatus(status);
         return FenceStatus::CONDITION_SATISFIED;
     }
 

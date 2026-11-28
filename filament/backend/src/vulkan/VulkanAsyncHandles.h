@@ -36,6 +36,7 @@
 #include <cstdint>
 #include <functional>
 #include <memory>
+#include <mutex>
 #include <shared_mutex>
 #include <utility>
 #include <vector>
@@ -169,7 +170,8 @@ private:
 // Wrapper to enable use of shared_ptr for implementing shared ownership of low-level Vulkan fences.
 struct VulkanCmdFence {
     explicit VulkanCmdFence(VkFence fence,
-                            std::function<void(VkFence)> recycleFn = nullptr);
+                            std::function<void(VkFence)> recycleFn = nullptr,
+                            bool serializeQueries = false);
     ~VulkanCmdFence();
 
     // Creates a VulkanCmdFence with its status set to VK_SUCCESS. It holds
@@ -204,6 +206,12 @@ struct VulkanCmdFence {
     FenceStatus wait(VkDevice device, uint64_t timeout,
         std::chrono::steady_clock::time_point until);
 
+    // vkWaitForFences() on this fence alone, publishing a signal to getStatus(). Unlike wait(),
+    // cancel() doesn't end it. The fence must be submitted, and timeout and until must name the
+    // same deadline (until is time_point::max() for an unbounded wait).
+    VkResult waitForFence(VkDevice device, uint64_t timeout,
+            std::chrono::steady_clock::time_point until);
+
     void cancel() {
         std::lock_guard const l(mLock);
         mCanceled = true;
@@ -236,6 +244,8 @@ private:
     // to this VulkanCmdFence.
     void swapRecycleFn(std::function<void(VkFence)> recycleFn);
 
+    VkResult queryFence(VkDevice device);
+
     std::shared_mutex mLock; // NOLINT(*-include-cleaner)
     std::condition_variable_any mCond;
     bool mCanceled = false;
@@ -246,6 +256,13 @@ private:
     VkFence const mFence;
 
     std::function<void(VkFence)> mRecycleFn;
+
+    // Set when the driver is not safe against two threads querying this fence at once (see
+    // VulkanContext::isFenceQuerySerializationNeeded). Only the holder of mQueryLock then calls
+    // into the driver with mFence: a poll that finds it held reports the fence unsignaled, since
+    // the holder will see it signal, and a wait queues for it until its deadline.
+    bool const mSerializeQueries;
+    std::timed_mutex mQueryLock;
 };
 
 struct VulkanFence : public HwFence, fvkmemory::ThreadSafeResource {

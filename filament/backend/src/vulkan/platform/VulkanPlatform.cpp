@@ -35,6 +35,7 @@
 #include <utils/PrivateImplementation-impl.h>
 
 #include <algorithm>
+#include <cstdio>
 #include <iterator>
 
 using namespace utils;
@@ -1302,6 +1303,26 @@ void VulkanPlatform::queryAndSetDeviceFeatures(Platform::DriverConfig const& dri
     context.mBlittableDepthStencilFormats =
             findBlittableDepthStencilFormats(mImpl->mPhysicalDevice);
     context.mFenceExportFlags = getFenceExportFlags();
+
+    // The proprietary PowerVR driver releases a submitted fence's sync fd in whichever query
+    // first sees the fence signaled, unguarded: two threads querying one fence at once, which
+    // the spec allows, both release it and close the same fd twice (seen on Rogue GE8320,
+    // GE8322 and GE9215, DDK 1.13 to 23.2). The first release seen that takes a per-fence lock
+    // around that release is DDK 25.2; 24.2 doesn't. driverInfo names the DDK release
+    // ("23.2@6468538"); driverVersion is the build number after the '@', and 25.2's is
+    // 6850647. Mesa's PowerVR driver shares the vendor ID but none of that code.
+    bool const isImgTec = context.getPhysicalDeviceVendorId() == 0x1010;
+    bool const isMesaPowerVR =
+            context.mDriverProperties.driverID == VK_DRIVER_ID_IMAGINATION_OPEN_SOURCE_MESA;
+    int ddkMajor = 0;
+    int ddkMinor = 0;
+    char separator = 0;
+    int const parsed = std::sscanf(context.getDriverInfo(), "%d.%d%c", // NOLINT(cert-err34-c)
+            &ddkMajor, &ddkMinor, &separator);
+    bool const locksFenceRelease = parsed == 3 && separator == '@'
+            ? ddkMajor > 25 || (ddkMajor == 25 && ddkMinor >= 2)
+            : context.getPhysicalDeviceProperties().driverVersion >= 6850647;
+    context.mFenceQuerySerializationNeeded = isImgTec && !isMesaPowerVR && !locksFenceRelease;
 }
 
 QueueAssignment VulkanPlatform::getQueueAssignment(VkPhysicalDevice physicalDevice,
